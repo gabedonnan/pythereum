@@ -3,7 +3,8 @@ from jsonschema import validate, ValidationError, SchemaError
 import requests
 import eth_utils
 from eth_typing import ChecksumAddress
-
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
 
 class BlockTag(str, Enum):
     """ Data type encapsulating all possible non-integer values for a DefaultBlock parameter
@@ -41,6 +42,32 @@ call_object_schema = {  # A schema for validating call objects
             },
             "required": ["to"]
         }
+
+
+@dataclass_json
+@dataclass
+class Block:
+    difficulty: str
+    extraData: str
+    gasLimit: str
+    gasUsed: str
+    hash: str
+    logsBloom: str
+    miner: str
+    mixHash: str
+    nonce: str
+    number: str
+    parentHash: str
+    receiptsRoot: str
+    sha3Uncles: str
+    size: str
+    stateRoot: str
+    timestamp: str
+    totalDifficulty: str
+    transactions: list
+    transactionsRoot: str
+    uncles: list
+
 
 class EthereumRPC:
     def __init__(self, url: str) -> None:
