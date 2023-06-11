@@ -1,10 +1,12 @@
 from enum import Enum
 from jsonschema import validate, ValidationError, SchemaError
 import requests
+from requests import ConnectionError
 import eth_utils
 from eth_typing import ChecksumAddress
 from dataclasses import dataclass
-from dataclasses_json import dataclass_json
+from dataclasses_json import dataclass_json, LetterCase
+
 
 class BlockTag(str, Enum):
     """ Data type encapsulating all possible non-integer values for a DefaultBlock parameter
@@ -44,28 +46,28 @@ call_object_schema = {  # A schema for validating call objects
         }
 
 
-@dataclass_json
+@dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Block:
     difficulty: str
-    extraData: str
-    gasLimit: str
-    gasUsed: str
+    extra_data: str
+    gas_limit: str
+    gas_used: str
     hash: str
-    logsBloom: str
+    logs_bloom: str
     miner: str
-    mixHash: str
+    mix_hash: str
     nonce: str
     number: str
-    parentHash: str
-    receiptsRoot: str
-    sha3Uncles: str
+    parent_hash: str
+    receipts_root: str
+    sha3_uncles: str
     size: str
-    stateRoot: str
+    state_root: str
     timestamp: str
-    totalDifficulty: str
+    total_difficulty: str
     transactions: list
-    transactionsRoot: str
+    transactions_root: str
     uncles: list
 
 
@@ -81,15 +83,18 @@ class EthereumRPC:
         """
         :return: Integer number indicating the number of the most recently mined block
         """
-        res = requests.post(
-            self._url,
-            json={
-                "jsonrpc": "2.0",
-                "method": "eth_blockNumber",
-                "params": [],
-                "id": self._id
-            }
-        ).json()
+        try:
+            res = requests.post(
+                self._url,
+                json={
+                    "jsonrpc": "2.0",
+                    "method": "eth_blockNumber",
+                    "params": [],
+                    "id": self._id
+                }
+            ).json()
+        except ConnectionError:
+            raise ConnectionError(f"ConnectionError: Maximum connection retries exceeded for URL: {self._url}")
         self._next_id()
         try:
             return int(res["result"], 16)
@@ -199,7 +204,8 @@ class EthereumRPC:
             }
         ).json()  # Use dataclasses json to parse objects
         self._next_id()
-        return Block.from_dict(res["result"])
+        print(res["result"])
+        return Block.from_dict(res["result"], infer_missing=True)
 
     def get_block_by_hash(self, data: Hex64, full_object: bool = True) -> Block:
         """
@@ -369,7 +375,7 @@ class EthereumRPC:
 
             :key to: (OPTIONAL WHEN CREATING CONTRACT) The address the transaction is directed to
             :type: 20 Byte Hex Address
-            
+
             :key gas: (OPTIONAL) Integer of gas provided for transaction execution
             :type: Hex int
                 Note: Unused gas will be returned
@@ -380,14 +386,14 @@ class EthereumRPC:
 
             :key maxPriorityFeePerGas: (OPTIONAL) Incentive fee you are willing to pay to ensure transaction execution
             :type: Hex int
-            
+
             :key value: (OPTIONAL) Integer of the value sent with the transaction
             :type: Hex int
 
             :key data: Compiled contract code OR the hash of the invoked method signature with its encoded params
             :type: Hash (Ethereum contract ABI)
-            
-            :key nonce: (OPTIONAL) Integer of a nonce. 
+
+            :key nonce: (OPTIONAL) Integer of a nonce.
             This allows overwriting your pending transactions with the same nonce
             :type: Hex Int
         :return: Transaction hash (or zero hash if the transaction is not yet available)
