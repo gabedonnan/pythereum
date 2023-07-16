@@ -50,6 +50,8 @@ HexString = str
 
 RawTransaction = str
 
+HexInt = str  # Hexadecimal representation of an integer number
+
 call_object_schema = {  # A schema for validating call objects
             "type": "object",
             "properties": {
@@ -444,3 +446,17 @@ class EthereumRPC:
     def _next_id(self) -> int:
         self._id += 1
         return self._id
+
+
+class UniswapERPC(EthereumRPC):
+    def __init__(self, url: str):
+        super().__init__(url)
+
+    def quote_exact_input(self, path: HexString, amount_in: int) -> int:
+        res = requests.post(
+            self._url,
+            json={
+                "path": path,
+                "amountIn": amount_in
+            }
+        )
