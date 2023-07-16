@@ -6,6 +6,7 @@ import eth_utils
 from eth_typing import ChecksumAddress
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json, LetterCase
+from typing import List
 
 
 class BlockTag(str, Enum):
@@ -19,6 +20,26 @@ class BlockTag(str, Enum):
     finalized = "finalized"  # Latest finalized block
 
 
+class ERPCRequestException(Exception):
+    """
+    Raised when an error is returned from the Ethereum RPC
+    """
+
+    def __init__(self, code: int, message: str = "Generic ERPC Error"):
+        self.code = code
+        self.message = message
+        super().__init__(f"Error {code}: " + self.message)
+
+
+class ERPCInvalidReturnException(Exception):
+    """
+    Raised when the Ethereum RPC returns a value which is incorrectly formatted
+    """
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
+
 DefaultBlock = int | BlockTag
 
 Hex64 = str  # 64 bit hex string
@@ -31,7 +52,7 @@ RawTransaction = str
 
 call_object_schema = {  # A schema for validating call objects
             "type": "object",
-            "properties" : {
+            "properties": {
                 "from": {"type": "string"},  # Hex20
                 "to": {"type": "string"},  # Hex20
                 "gas": {"type": "string"},  # int
@@ -66,9 +87,9 @@ class Block:
     state_root: str
     timestamp: str
     total_difficulty: str
-    transactions: list
+    transactions: List[str]
     transactions_root: str
-    uncles: list
+    uncles: List[str]
 
 
 class EthereumRPC:
@@ -204,7 +225,6 @@ class EthereumRPC:
             }
         ).json()  # Use dataclasses json to parse objects
         self._next_id()
-        print(res["result"])
         return Block.from_dict(res["result"], infer_missing=True)
 
     def get_block_by_hash(self, data: Hex64, full_object: bool = True) -> Block:
@@ -279,7 +299,11 @@ class EthereumRPC:
             }
         ).json()  # Use dataclasses json to parse objects
         self._next_id()
-        return res["result"]
+        print(res)
+        try:
+            return res["result"]
+        except KeyError:
+            raise ERPCRequestException(res["error"]["code"], res["error"]["message"])
 
     def get_transaction_receipt(self, tx_hash: HexString):
         try:
@@ -364,7 +388,10 @@ class EthereumRPC:
         ).json()
         self._next_id()
         print(res)
-        return res["result"]
+        try:
+            return res["result"]
+        except KeyError:
+            raise ERPCRequestException(res["error"]["code"], res["error"]["message"])
 
     def send_transaction(self, transaction: dict):
         """
@@ -409,8 +436,10 @@ class EthereumRPC:
             }
         ).json()
         self._next_id()
-
-        return res["result"]
+        try:
+            return res["result"]
+        except KeyError:
+            raise ERPCRequestException(res["error"]["code"], res["error"]["message"])
 
     def _next_id(self) -> int:
         self._id += 1
