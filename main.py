@@ -1,11 +1,15 @@
 from enum import Enum
 from jsonschema import validate, ValidationError, SchemaError
 import requests
+import json
+import asyncio
+import websockets
 from requests import ConnectionError
 import eth_utils
 from eth_typing import ChecksumAddress
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json, LetterCase
+from websockets.sync.client import connect
 from typing import List
 
 
@@ -93,6 +97,115 @@ class Block:
     transactions_root: str
     uncles: List[str]
 
+
+class EthereumRPCWebsocket:
+    def __init__(self, url: str) -> None:
+        self._url = url
+        self._id = 0
+
+    def _next_id(self) -> None:
+        self._id += 1
+
+    def build_json(self, method: str, params: List) -> str:
+        return json.dumps({
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+            "id": self._id
+        })
+
+    def get_block_number(self) -> int:
+        with connect(self._url) as ws:
+            ws.send(self.build_json("eth_blockNumber", []))
+            msg = json.loads(ws.recv())
+        self._next_id()
+        return int(msg["result"], 16)
+
+    def get_transaction_count(self, address: ChecksumAddress, block_specifier: DefaultBlock = BlockTag.latest) -> int:
+        with connect(self._url) as ws:
+            ws.send(self.build_json("eth_getTransactionCount", [address, block_specifier]))
+            msg = json.loads(ws.recv())
+        self._next_id()
+        return int(msg["result"], 16)
+
+    def get_balance(self, contract_address: ChecksumAddress, block_specifier: DefaultBlock = BlockTag.latest) -> int:
+        with connect(self._url) as ws:
+            ws.send(self.build_json("eth_getBalance", [contract_address, block_specifier]))
+            msg = json.loads(ws.recv())
+        self._next_id()
+        return int(msg["result"], 16)
+
+    def get_gas_price(self) -> int:
+        with connect(self._url) as ws:
+            ws.send(self.build_json("eth_gasPrice", []))
+            msg = json.loads(ws.recv())
+        self._next_id()
+        return int(msg["result"], 16)
+
+    def get_block_by_number(self, block_specifier: DefaultBlock, full_object: bool = True) -> Block:
+        if isinstance(block_specifier, int):  # Converts integer values from DefaultBlock to hex for parsing
+            block_specifier = hex(block_specifier)
+        with connect(self._url) as ws:
+            ws.send(self.build_json("eth_getBlockByNumber", [block_specifier, full_object]))
+            msg = Block.from_json(ws.recv(), infer_missing=True)
+        self._next_id()
+        return msg
+
+    def get_block_by_hash(self, data: Hex64, full_object: bool = True) -> Block:
+        with connect(self._url) as ws:
+            ws.send(self.build_json("eth_getBlockByHash", [data, full_object]))
+            msg = Block.from_json(ws.recv(), infer_missing=True)
+        self._next_id()
+        return msg
+
+    def call(self, transaction: dict, block_specifier: DefaultBlock = BlockTag.latest):
+        """
+        Executes a message call immediately without creating a transaction on the blockchain, useful for tests
+        :param transaction: Full transaction call object, represented as a dict
+            :key from: (OPTIONAL) The address a transaction is sent from
+            :type: 20 Byte hex number
+
+            :key to: The address a transaction is sent to
+            :type: 20 Byte hex number
+
+            :key gas: (OPTIONAL) Integer of gas provided for transaction execution
+            :type: Hex int
+                Note: eth_call consumes 0 gas but this may sometimes be necessary for other executions
+                Note: gasPrice key is used for older blocks on the blockchain instead of the following two
+
+            :key maxFeePerGas: (OPTIONAL) baseFeePerGas (determined by the network) + maxPriorityFeePerGas
+            :type: Hex int
+
+            :key maxPriorityFeePerGas: (OPTIONAL) Incentive fee you are willing to pay to ensure transaction execution
+            :type: Hex int
+
+            :key value: (OPTIONAL) Integer of the value sent with the transaction
+            :type: Hex int
+
+            :key data: (OPTIONAL) Hash of the method signature and encoded parameters
+            :type: Hash (Ethereum contract ABI)
+
+        :param block_specifier: A specifier, either int or tag, delineating the block number to execute the transaction
+        :return: Hex value of the executed contract
+        """
+        try:
+            validate(transaction, call_object_schema)
+        except SchemaError:
+            print(f"There is an error with the schema 'call_object_schema'")
+        except ValidationError as e:
+            print(e)
+            print("---------")
+            print(e.absolute_path)
+
+            print("---------")
+            print(e.absolute_schema_path)
+            return "0x"  # Empty, maybe change this to be more informative later
+
+        with connect(self._url) as ws:
+            ws.send(self.build_json("eth_call", [transaction, block_specifier]))
+            msg = json.loads(ws.recv())
+        self._next_id()
+        return msg["result"]
 
 class EthereumRPC:
     def __init__(self, url: str) -> None:
