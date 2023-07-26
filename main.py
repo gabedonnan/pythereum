@@ -5,12 +5,12 @@ import json
 import asyncio
 import websockets
 from requests import ConnectionError
-import eth_utils
+# import eth_utils
 from eth_typing import ChecksumAddress
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json, LetterCase
 from websockets.sync.client import connect
-from typing import List
+from typing import List, Any
 
 
 class BlockTag(str, Enum):
@@ -98,6 +98,31 @@ class Block:
     uncles: List[str]
 
 
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Sync:
+    """
+    Class representing ethereum sync status
+    """
+    starting_block: str
+    current_block: str
+    highest_block: str
+
+
+def parse_results(res: str | dict) -> Any:
+    if isinstance(res, str):
+        res = json.dumps(res)
+
+    if "result" not in res:
+        # Error case as no result is found
+        if "error" in res:
+            raise ERPCRequestException(res["error"]["code"], res["error"]["message"])
+        else:
+            raise ERPCInvalidReturnException("Invalid return value from ERPC, check your request.")
+
+    return res["result"]
+
+
 class EthereumRPCWebsocket:
     def __init__(self, url: str) -> None:
         self._url = url
@@ -107,6 +132,12 @@ class EthereumRPCWebsocket:
         self._id += 1
 
     def build_json(self, method: str, params: List) -> str:
+        """
+        :param method: ethereum RPC method
+        :param params: list of parameters to use in the function call
+        :return: json string converted with json.dumps
+        This is slightly slower than raw string construction with fstrings, but more elegant
+        """
         return json.dumps({
             "jsonrpc": "2.0",
             "method": method,
@@ -114,14 +145,27 @@ class EthereumRPCWebsocket:
             "id": self._id
         })
 
-    def get_block_number(self) -> int:
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_blockNumber", []))
-            msg = json.loads(ws.recv())
+    async def pack_message(self, method: str, params: List[Any]) -> Any:
+        async with connect(self._url) as ws:
+            ws.send(self.build_json(method, params))
+            msg = await ws.recv()
+        return parse_results(msg)
+
+    async def get_block_number(self) -> int:
+        """
+        :return: Integer number indicating the number of the most recently mined block
+        """
+        msg = self.pack_message("eth_blockNumber", [])
         self._next_id()
-        return int(msg["result"], 16)
+        return int((await msg)["result"], 16)
 
     def get_transaction_count(self, address: ChecksumAddress, block_specifier: DefaultBlock = BlockTag.latest) -> int:
+        """
+        Gets the number of transactions sent from a given EOA address
+        :param address: The address of an externally owned account
+        :param block_specifier: A selector for a block, can be a specifier such as 'latest' or an integer block number
+        :return: Integer number of transactions
+        """
         with connect(self._url) as ws:
             ws.send(self.build_json("eth_getTransactionCount", [address, block_specifier]))
             msg = json.loads(ws.recv())
@@ -129,6 +173,12 @@ class EthereumRPCWebsocket:
         return int(msg["result"], 16)
 
     def get_balance(self, contract_address: ChecksumAddress, block_specifier: DefaultBlock = BlockTag.latest) -> int:
+        """
+        Gets the balance of the account a given address points to
+        :param contract_address: Contract address, its balance will be gotten at the block specified by quant_or_tag
+        :param block_specifier: A selector for a block, can be a specifier such as 'latest' or an integer block number
+        :return: An integer balance in Wei of a given contract
+        """
         with connect(self._url) as ws:
             ws.send(self.build_json("eth_getBalance", [contract_address, block_specifier]))
             msg = json.loads(ws.recv())
@@ -136,6 +186,10 @@ class EthereumRPCWebsocket:
         return int(msg["result"], 16)
 
     def get_gas_price(self) -> int:
+        """
+        Returns the current price per gas in Wei
+        :return: Integer number representing gas price in Wei
+        """
         with connect(self._url) as ws:
             ws.send(self.build_json("eth_gasPrice", []))
             msg = json.loads(ws.recv())
@@ -143,6 +197,12 @@ class EthereumRPCWebsocket:
         return int(msg["result"], 16)
 
     def get_block_by_number(self, block_specifier: DefaultBlock, full_object: bool = True) -> Block:
+        """
+        Returns a Block object which represents a block's state
+        :param block_specifier: A specifier, either int or tag, delineating the block number to get
+        :param full_object: Boolean specifying whether the desired return uses full transactions or transaction hashes
+        :return: A Block object representing blocks by either full transactions or transaction hashes
+        """
         if isinstance(block_specifier, int):  # Converts integer values from DefaultBlock to hex for parsing
             block_specifier = hex(block_specifier)
         with connect(self._url) as ws:
@@ -152,6 +212,12 @@ class EthereumRPCWebsocket:
         return msg
 
     def get_block_by_hash(self, data: Hex64, full_object: bool = True) -> Block:
+        """
+        Returns a Block object which represents a block's state
+        :param data: Hash of a block
+        :param full_object: Boolean specifying whether the desired return uses full transactions or transaction hashes
+        :return: A Block object representing blocks by either full transactions or transaction hashes
+        """
         with connect(self._url) as ws:
             ws.send(self.build_json("eth_getBlockByHash", [data, full_object]))
             msg = Block.from_json(ws.recv(), infer_missing=True)
@@ -326,6 +392,71 @@ class EthereumRPCWebsocket:
             return msg["result"]
         except KeyError:
             raise ERPCRequestException(msg["error"]["code"], msg["error"]["message"])
+
+    def get_protocol_version(self) -> int:
+        with connect(self._url) as ws:
+            ws.send(self.build_json("eth_protocolVersion", []))
+            msg = json.loads(ws.recv())
+        self._next_id()
+        return int(msg["result"])
+
+    def get_sync_status(self):
+        with connect(self._url) as ws:
+            ws.send(self.build_json("eth_syncing", []))
+            msg = json.loads(ws.recv())
+        self._next_id()
+        if msg["result"] == "false":
+            return False
+        else:
+            return Sync.from_dict(msg["result"])
+
+    def get_coinbase(self) -> Hex20:
+        with connect(self._url) as ws:
+            ws.send(self.build_json("eth_coinbase", []))
+            msg = json.loads(ws.recv())
+        self._next_id()
+        try:
+            return msg["result"]
+        except KeyError:
+            raise ERPCRequestException(msg["error"]["code"], msg["error"]["message"])
+
+    def get_chain_id(self) -> HexInt:
+        with connect(self._url) as ws:
+            ws.send(self.build_json("eth_chainId", []))
+            msg = json.loads(ws.recv())
+        self._next_id()
+        try:
+            return msg["result"]
+        except KeyError:
+            raise ERPCRequestException(msg["error"]["code"], msg["error"]["message"])
+
+    def is_mining(self) -> bool:
+        with connect(self._url) as ws:
+            ws.send(self.build_json("eth_chainId", []))
+            msg = json.loads(ws.recv())
+        self._next_id()
+        try:
+            return msg["result"] == "true"
+        except KeyError:
+            raise ERPCRequestException(msg["error"]["code"], msg["error"]["message"])
+
+    def get_hashrate(self) -> int:
+        with connect(self._url) as ws:
+            ws.send(self.build_json("eth_hashrate", []))
+            msg = json.loads(ws.recv())
+        self._next_id()
+        return int(msg["result"], 16)
+
+    def get_accounts(self) -> List[Hex20]:
+        with connect(self._url) as ws:
+            ws.send(self.build_json("eth_accounts", []))
+            msg = json.loads(ws.recv())
+        self._next_id()
+        try:
+            return msg["result"]
+        except KeyError:
+            raise ERPCRequestException(msg["error"]["code"], msg["error"]["message"])
+
 
 class EthereumRPC:
     def __init__(self, url: str) -> None:
