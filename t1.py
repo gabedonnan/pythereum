@@ -6,8 +6,8 @@ from eth_account.signers.local import LocalAccount
 from main import EthereumRPC, Block, EthereumRPCWebsocket
 
 ANVIL_URL = "http://127.0.0.1:8545"
-TEST_URL = "https://eth-mainnet.g.alchemy.com/v2/_gGECunVdeoDCT_WFQA_O0xjZOLqt4Ho"
-TEST_WS = "wss://eth-mainnet.g.alchemy.com/v2/_gGECunVdeoDCT_WFQA_O0xjZOLqt4Ho"
+TEST_URL = ""
+TEST_WS = ""
 erpc = EthereumRPC(TEST_URL)
 erpc_ws = EthereumRPCWebsocket(TEST_WS)
 
