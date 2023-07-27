@@ -189,7 +189,7 @@ class EthereumRPCWebsocket:
         """
         msg = await self.pack_message("eth_gasPrice", [])
         self._next_id()
-        return int(msg["result"], 16)
+        return int(msg, 16)
 
     async def get_block_by_number(self, block_specifier: DefaultBlock, full_object: bool = True) -> Block:
         """
@@ -215,7 +215,7 @@ class EthereumRPCWebsocket:
         self._next_id()
         return Block.from_dict(msg)
 
-    def call(self, transaction: dict, block_specifier: DefaultBlock = BlockTag.latest):
+    async def call(self, transaction: dict, block_specifier: DefaultBlock = BlockTag.latest):
         """
         Executes a message call immediately without creating a transaction on the blockchain, useful for tests
         :param transaction: Full transaction call object, represented as a dict
@@ -258,26 +258,16 @@ class EthereumRPCWebsocket:
             print(e.absolute_schema_path)
             return "0x"  # Empty, maybe change this to be more informative later
 
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_call", [transaction, block_specifier]))
-            msg = json.loads(ws.recv())
+        msg = await self.pack_message("eth_call", [transaction, block_specifier])
         self._next_id()
-        try:
-            return msg["result"]
-        except KeyError:
-            raise ERPCRequestException(msg["error"]["code"], msg["error"]["message"])
+        return msg
 
-    def get_transaction_receipt(self, tx_hash: HexString):
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_getTransactionReceipt", [tx_hash]))
-            msg = json.loads(ws.recv())
+    async def get_transaction_receipt(self, tx_hash: HexString):
+        msg = await self.pack_message("eth_getTransactionReceipt", [tx_hash])
         self._next_id()
-        try:
-            return msg["result"]
-        except KeyError:
-            raise ERPCRequestException(msg["error"]["code"], msg["error"]["message"])
+        return msg
 
-    def send_raw_transaction(self, raw_transaction: RawTransaction):
+    async def send_raw_transaction(self, raw_transaction: RawTransaction):
         """
         Returns the receipt of a transaction by transaction hash
         :param raw_transaction: The hash of a transaction
@@ -333,16 +323,11 @@ class EthereumRPCWebsocket:
             :key status: Either 0x1 for success or 0x0 for failure
             :type: Hex Int
         """
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_sendRawTransaction", [raw_transaction]))
-            msg = json.loads(ws.recv())
+        msg = await self.pack_message("eth_sendRawTransaction", [raw_transaction])
         self._next_id()
-        try:
-            return msg["result"]
-        except KeyError:
-            raise ERPCRequestException(msg["error"]["code"], msg["error"]["message"])
+        return msg
 
-    def send_transaction(self, transaction: dict):
+    async def send_transaction(self, transaction: dict):
         """
         Creates a new message call transaction or contract creation
         :param transaction: Built transaction object, formed as a dict with the following keys
@@ -375,78 +360,47 @@ class EthereumRPCWebsocket:
         :return: Transaction hash (or zero hash if the transaction is not yet available)
         :type: 32 Byte Hex
         """
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_sendTransaction", [transaction]))
-            msg = json.loads(ws.recv())
+        msg = await self.pack_message("eth_sendTransaction", [transaction])
         self._next_id()
-        try:
-            return msg["result"]
-        except KeyError:
-            raise ERPCRequestException(msg["error"]["code"], msg["error"]["message"])
+        return msg
 
-    def get_protocol_version(self) -> int:
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_protocolVersion", []))
-            msg = json.loads(ws.recv())
+    async def get_protocol_version(self) -> int:
+        msg = await self.pack_message("eth_protocolVersion", [])
         self._next_id()
-        return int(msg["result"])
+        return int(msg)
 
-    def get_sync_status(self):
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_syncing", []))
-            msg = json.loads(ws.recv())
+    async def get_sync_status(self) -> bool | Sync:
+        msg = await self.pack_message("eth_syncing", [])
         self._next_id()
-        if msg["result"] == "false":
+        if msg == "false":
             return False
         else:
-            return Sync.from_dict(msg["result"])
+            return Sync.from_dict(msg)
 
-    def get_coinbase(self) -> Hex20:
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_coinbase", []))
-            msg = json.loads(ws.recv())
+    async def get_coinbase(self) -> Hex20:
+        msg = await self.pack_message("eth_coinbase", [])
         self._next_id()
-        try:
-            return msg["result"]
-        except KeyError:
-            raise ERPCRequestException(msg["error"]["code"], msg["error"]["message"])
+        return msg
 
-    def get_chain_id(self) -> HexInt:
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_chainId", []))
-            msg = json.loads(ws.recv())
+    async def get_chain_id(self) -> HexInt:
+        msg = await self.pack_message("eth_chainId", [])
         self._next_id()
-        try:
-            return msg["result"]
-        except KeyError:
-            raise ERPCRequestException(msg["error"]["code"], msg["error"]["message"])
+        return msg
 
-    def is_mining(self) -> bool:
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_chainId", []))
-            msg = json.loads(ws.recv())
+    async def is_mining(self) -> bool:
+        msg = await self.pack_message("eth_mining", [])
         self._next_id()
-        try:
-            return msg["result"] == "true"
-        except KeyError:
-            raise ERPCRequestException(msg["error"]["code"], msg["error"]["message"])
+        return msg
 
-    def get_hashrate(self) -> int:
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_hashrate", []))
-            msg = json.loads(ws.recv())
+    async def get_hashrate(self) -> int:
+        msg = await self.pack_message("eth_hashrate", [])
         self._next_id()
-        return int(msg["result"], 16)
+        return int(msg, 16)
 
-    def get_accounts(self) -> List[Hex20]:
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_accounts", []))
-            msg = json.loads(ws.recv())
+    async def get_accounts(self) -> List[Hex20]:
+        msg = await self.pack_message("eth_accounts", [])
         self._next_id()
-        try:
-            return msg["result"]
-        except KeyError:
-            raise ERPCRequestException(msg["error"]["code"], msg["error"]["message"])
+        return msg
 
 
 class EthereumRPC:
