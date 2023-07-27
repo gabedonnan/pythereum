@@ -44,6 +44,7 @@ class ERPCInvalidReturnException(Exception):
         self.message = message
         super().__init__(self.message)
 
+
 DefaultBlock = int | BlockTag
 
 Hex64 = str  # 64 bit hex string
@@ -93,9 +94,9 @@ class Block:
     state_root: str
     timestamp: str
     total_difficulty: str
-    transactions: List[str]
+    transactions: list[str]
     transactions_root: str
-    uncles: List[str]
+    uncles: list[str]
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -131,7 +132,7 @@ class EthereumRPCWebsocket:
     def _next_id(self) -> None:
         self._id += 1
 
-    def build_json(self, method: str, params: List) -> str:
+    def build_json(self, method: str, params: list) -> str:
         """
         :param method: ethereum RPC method
         :param params: list of parameters to use in the function call
@@ -145,8 +146,7 @@ class EthereumRPCWebsocket:
             "id": self._id
         })
 
-    async def pack_message(self, method: str, params: List[Any]) -> Any:
-        # Currently only asynchronous as preparation for batching, has no real effect now
+    async def send_message(self, method: str, params: list[Any]) -> Any:
         async with websockets.connect(self._url) as ws:
             await ws.send(self.build_json(method, params))
             msg = await ws.recv()
@@ -156,7 +156,7 @@ class EthereumRPCWebsocket:
         """
         :return: Integer number indicating the number of the most recently mined block
         """
-        msg = await self.pack_message("eth_blockNumber", [])
+        msg = await self.send_message("eth_blockNumber", [])
         self._next_id()
         return int(msg, 16)
 
@@ -167,7 +167,7 @@ class EthereumRPCWebsocket:
         :param block_specifier: A selector for a block, can be a specifier such as 'latest' or an integer block number
         :return: Integer number of transactions
         """
-        msg = await self.pack_message("eth_getTransactionCount", [address, block_specifier])
+        msg = await self.send_message("eth_getTransactionCount", [address, block_specifier])
         self._next_id()
         return int(msg, 16)
 
@@ -178,7 +178,7 @@ class EthereumRPCWebsocket:
         :param block_specifier: A selector for a block, can be a specifier such as 'latest' or an integer block number
         :return: An integer balance in Wei of a given contract
         """
-        msg = await self.pack_message("eth_getBalance", [contract_address, block_specifier])
+        msg = await self.send_message("eth_getBalance", [contract_address, block_specifier])
         self._next_id()
         return int(msg, 16)
 
@@ -187,7 +187,7 @@ class EthereumRPCWebsocket:
         Returns the current price per gas in Wei
         :return: Integer number representing gas price in Wei
         """
-        msg = await self.pack_message("eth_gasPrice", [])
+        msg = await self.send_message("eth_gasPrice", [])
         self._next_id()
         return int(msg, 16)
 
@@ -200,7 +200,7 @@ class EthereumRPCWebsocket:
         """
         if isinstance(block_specifier, int):  # Converts integer values from DefaultBlock to hex for parsing
             block_specifier = hex(block_specifier)
-        msg = await self.pack_message("eth_getBlockByNumber", [block_specifier, full_object])
+        msg = await self.send_message("eth_getBlockByNumber", [block_specifier, full_object])
         self._next_id()
         return Block.from_dict(msg)
 
@@ -211,7 +211,7 @@ class EthereumRPCWebsocket:
         :param full_object: Boolean specifying whether the desired return uses full transactions or transaction hashes
         :return: A Block object representing blocks by either full transactions or transaction hashes
         """
-        msg = await self.pack_message("eth_getBlockByHash", [data, full_object])
+        msg = await self.send_message("eth_getBlockByHash", [data, full_object])
         self._next_id()
         return Block.from_dict(msg)
 
@@ -245,25 +245,13 @@ class EthereumRPCWebsocket:
         :param block_specifier: A specifier, either int or tag, delineating the block number to execute the transaction
         :return: Hex value of the executed contract
         """
-        try:
-            validate(transaction, call_object_schema)
-        except SchemaError:
-            print(f"There is an error with the schema 'call_object_schema'")
-        except ValidationError as e:
-            print(e)
-            print("---------")
-            print(e.absolute_path)
-
-            print("---------")
-            print(e.absolute_schema_path)
-            return "0x"  # Empty, maybe change this to be more informative later
-
-        msg = await self.pack_message("eth_call", [transaction, block_specifier])
+        validate(transaction, call_object_schema)
+        msg = await self.send_message("eth_call", [transaction, block_specifier])
         self._next_id()
         return msg
 
     async def get_transaction_receipt(self, tx_hash: HexString):
-        msg = await self.pack_message("eth_getTransactionReceipt", [tx_hash])
+        msg = await self.send_message("eth_getTransactionReceipt", [tx_hash])
         self._next_id()
         return msg
 
@@ -323,7 +311,7 @@ class EthereumRPCWebsocket:
             :key status: Either 0x1 for success or 0x0 for failure
             :type: Hex Int
         """
-        msg = await self.pack_message("eth_sendRawTransaction", [raw_transaction])
+        msg = await self.send_message("eth_sendRawTransaction", [raw_transaction])
         self._next_id()
         return msg
 
@@ -360,17 +348,17 @@ class EthereumRPCWebsocket:
         :return: Transaction hash (or zero hash if the transaction is not yet available)
         :type: 32 Byte Hex
         """
-        msg = await self.pack_message("eth_sendTransaction", [transaction])
+        msg = await self.send_message("eth_sendTransaction", [transaction])
         self._next_id()
         return msg
 
     async def get_protocol_version(self) -> int:
-        msg = await self.pack_message("eth_protocolVersion", [])
+        msg = await self.send_message("eth_protocolVersion", [])
         self._next_id()
         return int(msg)
 
     async def get_sync_status(self) -> bool | Sync:
-        msg = await self.pack_message("eth_syncing", [])
+        msg = await self.send_message("eth_syncing", [])
         self._next_id()
         if msg == "false":
             return False
@@ -378,27 +366,27 @@ class EthereumRPCWebsocket:
             return Sync.from_dict(msg)
 
     async def get_coinbase(self) -> Hex20:
-        msg = await self.pack_message("eth_coinbase", [])
+        msg = await self.send_message("eth_coinbase", [])
         self._next_id()
         return msg
 
     async def get_chain_id(self) -> HexInt:
-        msg = await self.pack_message("eth_chainId", [])
+        msg = await self.send_message("eth_chainId", [])
         self._next_id()
         return msg
 
     async def is_mining(self) -> bool:
-        msg = await self.pack_message("eth_mining", [])
+        msg = await self.send_message("eth_mining", [])
         self._next_id()
         return msg
 
     async def get_hashrate(self) -> int:
-        msg = await self.pack_message("eth_hashrate", [])
+        msg = await self.send_message("eth_hashrate", [])
         self._next_id()
         return int(msg, 16)
 
     async def get_accounts(self) -> List[Hex20]:
-        msg = await self.pack_message("eth_accounts", [])
+        msg = await self.send_message("eth_accounts", [])
         self._next_id()
         return msg
 

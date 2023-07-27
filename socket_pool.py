@@ -1,6 +1,7 @@
 import asyncio
 import websockets
 
+
 class WebsocketPool:
     def __init__(self, url: str, pool_size: int = 20):
         self._url = url
