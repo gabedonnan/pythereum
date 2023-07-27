@@ -111,7 +111,7 @@ class Sync:
 
 def parse_results(res: str | dict) -> Any:
     if isinstance(res, str):
-        res = json.dumps(res)
+        res = json.loads(res)
 
     if "result" not in res:
         # Error case as no result is found
@@ -146,8 +146,9 @@ class EthereumRPCWebsocket:
         })
 
     async def pack_message(self, method: str, params: List[Any]) -> Any:
-        async with connect(self._url) as ws:
-            ws.send(self.build_json(method, params))
+        # Currently only asynchronous as preparation for batching, has no real effect now
+        async with websockets.connect(self._url) as ws:
+            await ws.send(self.build_json(method, params))
             msg = await ws.recv()
         return parse_results(msg)
 
@@ -155,48 +156,42 @@ class EthereumRPCWebsocket:
         """
         :return: Integer number indicating the number of the most recently mined block
         """
-        msg = self.pack_message("eth_blockNumber", [])
+        msg = await self.pack_message("eth_blockNumber", [])
         self._next_id()
-        return int((await msg)["result"], 16)
+        return int(msg, 16)
 
-    def get_transaction_count(self, address: ChecksumAddress, block_specifier: DefaultBlock = BlockTag.latest) -> int:
+    async def get_transaction_count(self, address: ChecksumAddress, block_specifier: DefaultBlock = BlockTag.latest) -> int:
         """
         Gets the number of transactions sent from a given EOA address
         :param address: The address of an externally owned account
         :param block_specifier: A selector for a block, can be a specifier such as 'latest' or an integer block number
         :return: Integer number of transactions
         """
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_getTransactionCount", [address, block_specifier]))
-            msg = json.loads(ws.recv())
+        msg = await self.pack_message("eth_getTransactionCount", [address, block_specifier])
         self._next_id()
-        return int(msg["result"], 16)
+        return int(msg, 16)
 
-    def get_balance(self, contract_address: ChecksumAddress, block_specifier: DefaultBlock = BlockTag.latest) -> int:
+    async def get_balance(self, contract_address: ChecksumAddress, block_specifier: DefaultBlock = BlockTag.latest) -> int:
         """
         Gets the balance of the account a given address points to
         :param contract_address: Contract address, its balance will be gotten at the block specified by quant_or_tag
         :param block_specifier: A selector for a block, can be a specifier such as 'latest' or an integer block number
         :return: An integer balance in Wei of a given contract
         """
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_getBalance", [contract_address, block_specifier]))
-            msg = json.loads(ws.recv())
+        msg = await self.pack_message("eth_getBalance", [contract_address, block_specifier])
         self._next_id()
-        return int(msg["result"], 16)
+        return int(msg, 16)
 
-    def get_gas_price(self) -> int:
+    async def get_gas_price(self) -> int:
         """
         Returns the current price per gas in Wei
         :return: Integer number representing gas price in Wei
         """
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_gasPrice", []))
-            msg = json.loads(ws.recv())
+        msg = await self.pack_message("eth_gasPrice", [])
         self._next_id()
         return int(msg["result"], 16)
 
-    def get_block_by_number(self, block_specifier: DefaultBlock, full_object: bool = True) -> Block:
+    async def get_block_by_number(self, block_specifier: DefaultBlock, full_object: bool = True) -> Block:
         """
         Returns a Block object which represents a block's state
         :param block_specifier: A specifier, either int or tag, delineating the block number to get
@@ -205,24 +200,20 @@ class EthereumRPCWebsocket:
         """
         if isinstance(block_specifier, int):  # Converts integer values from DefaultBlock to hex for parsing
             block_specifier = hex(block_specifier)
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_getBlockByNumber", [block_specifier, full_object]))
-            msg = Block.from_json(ws.recv(), infer_missing=True)
+        msg = await self.pack_message("eth_getBlockByNumber", [block_specifier, full_object])
         self._next_id()
-        return msg
+        return Block.from_dict(msg)
 
-    def get_block_by_hash(self, data: Hex64, full_object: bool = True) -> Block:
+    async def get_block_by_hash(self, data: Hex64, full_object: bool = False) -> Block:
         """
         Returns a Block object which represents a block's state
         :param data: Hash of a block
         :param full_object: Boolean specifying whether the desired return uses full transactions or transaction hashes
         :return: A Block object representing blocks by either full transactions or transaction hashes
         """
-        with connect(self._url) as ws:
-            ws.send(self.build_json("eth_getBlockByHash", [data, full_object]))
-            msg = Block.from_json(ws.recv(), infer_missing=True)
+        msg = await self.pack_message("eth_getBlockByHash", [data, full_object])
         self._next_id()
-        return msg
+        return Block.from_dict(msg)
 
     def call(self, transaction: dict, block_specifier: DefaultBlock = BlockTag.latest):
         """
