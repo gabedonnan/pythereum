@@ -27,10 +27,11 @@ A lightweight alternative to Web3.py in development
   - [ ] `eth_getTransactionCountByNumber`
   - [ ] `eth_getUncleCountByBlockHash`
   - [ ] `eth_getUncleCountByBlockNumber`
-  - etc.
+  - etc., aiming to complete all methods listed [here.](https://ethereum.org/en/developers/docs/apis/json-rpc/)
 
 
 - [ ] Add websocket pool
+- [ ] Implement batch procedure calls
 - [ ] Enhance tests
 
 ```python
@@ -41,7 +42,7 @@ from eth_rpc import EthRPC
 TEST_URL = "http://127.0.0.1:8545"
 erpc = EthRPC(TEST_URL)
 
-async def test_transaction_count(self):
+async def test_transaction_count():
     # Prints the transaction count for a given address
     r = await erpc.get_transaction_count("0xabcdefghijklmnopqrstuvwxyz1234567890")
     print(r)
