@@ -1,6 +1,8 @@
 # eth_rpc
 A lightweight alternative to Web3.py in development
 
+### Documentation of progress below (wil add more as I go!)
+
 - [x] Implement websocket instead of HTTP
 - [x] Implement more methods
   - [x] `eth_call`
