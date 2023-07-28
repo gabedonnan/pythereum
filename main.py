@@ -123,7 +123,6 @@ def parse_results(res: str | dict) -> Any:
 
 class EthRPC:
     def __init__(self, url: str, pool_size: int = 5) -> None:
-        # self._url = url
         self._id = 0
         self._pool = WebsocketPool(url, pool_size)
 
