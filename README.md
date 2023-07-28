@@ -43,7 +43,7 @@ TEST_URL = "http://127.0.0.1:8545"
 erpc = EthRPC(TEST_URL)
 
 async def test_transaction_count():
-    # Prints the transaction count for a given address
+    # Gets the number of transactions sent from a given EOA address
     r = await erpc.get_transaction_count("0xabcdefghijklmnopqrstuvwxyz1234567890")
     print(r)
 

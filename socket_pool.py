@@ -12,7 +12,7 @@ class WebsocketPool:
         self._id = 0
         self._max_pool_size = pool_size
         self._sockets_used = 0
-        self._sockets = asyncio.Queue()
+        self._sockets = asyncio.Queue(maxsize=pool_size)
         self._connected = False
 
     async def start(self):
@@ -30,13 +30,19 @@ class WebsocketPool:
         self._sockets_used = 0
         self._connected = True
 
-    async def get_socket(self):
-        socket = await self._sockets.get()
+    async def get_sockets(self, batch_size: int = 1) -> list[websockets.legacy.client.WebSocketClientProtocol]:
+        # Ensures the batch size returned does not exceed the limit
+        batch_size = min(self._max_pool_size - self._sockets_used, batch_size)
+        if not self._connected:
+            # Ensures that get_socket can be called without needing to explicitly call start() beforehand
+            await self.start()
+        sockets = [self._sockets.get_nowait() for _ in range(batch_size)]
         self._sockets_used += 1
         try:
-            yield socket
+            yield sockets
         finally:
-            self._sockets.put_nowait(socket)
+            for socket in sockets:
+                self._sockets.put_nowait(socket)
             self._sockets_used -= 1
 
     async def quit(self):
