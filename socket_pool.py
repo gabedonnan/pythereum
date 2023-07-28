@@ -23,16 +23,15 @@ class WebsocketPool:
         """
         if self._connected:
             await self.quit()
-            self._connected = False
         # Creates a number of sockets equal to the maximum pool size
-        connections = await asyncio.gather(websockets.connect(self._url) for _ in range(self._max_pool_size))
-        for connection in connections:
-            await self._sockets.put(connection)
+        # connections = await asyncio.gather(websockets.connect(self._url) for _ in range(self._max_pool_size))
+        for _ in range(self._max_pool_size):
+            await self._sockets.put(await websockets.connect(self._url))
         self._sockets_used = 0
         self._connected = True
 
     @asynccontextmanager
-    async def get_sockets(self, batch_size: int = 1) -> list[websockets.legacy.client.WebSocketClientProtocol]:
+    async def get_sockets(self, batch_size: int = 1) -> list:
         """
         :param batch_size: The number of sockets to retrieve from the Pool
         This will not always be respected, instead it will be capped off by the remaining number of sockets in the pool
@@ -56,7 +55,8 @@ class WebsocketPool:
 
     async def quit(self) -> None:
         while not self._sockets.empty():
-            self._sockets.get_nowait()
+            sock = self._sockets.get_nowait()
+            await sock.close()
             self._sockets.task_done()
         self._sockets_used = 0
         self._connected = False

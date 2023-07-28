@@ -8,7 +8,7 @@ from dataclasses_json import dataclass_json, LetterCase
 from eth_typing import ChecksumAddress
 from jsonschema import validate
 from typing import List, Any
-
+from socket_pool import WebsocketPool
 
 class BlockTag(str, Enum):
     """ Data type encapsulating all possible non-integer values for a DefaultBlock parameter
@@ -122,9 +122,10 @@ def parse_results(res: str | dict) -> Any:
 
 
 class EthRPC:
-    def __init__(self, url: str) -> None:
-        self._url = url
+    def __init__(self, url: str, pool_size: int = 5) -> None:
+        # self._url = url
         self._id = 0
+        self._pool = WebsocketPool(url, pool_size)
 
     def _next_id(self) -> None:
         self._id += 1
@@ -144,9 +145,9 @@ class EthRPC:
         })
 
     async def send_message(self, method: str, params: list[Any]) -> Any:
-        async with websockets.connect(self._url) as ws:
-            await ws.send(self.build_json(method, params))
-            msg = await ws.recv()
+        async with self._pool.get_sockets() as ws:
+            await ws[0].send(self.build_json(method, params))
+            msg = await ws[0].recv()
         return parse_results(msg)
 
     async def get_block_number(self) -> int:
