@@ -16,7 +16,7 @@ class WebsocketPool:
         self._sockets = asyncio.Queue(maxsize=pool_size)
         self._connected = False
 
-    async def start(self):
+    async def start(self) -> None:
         """
         Initialises the correct number of connections
         Restarts the websocket pool if run while already connected
@@ -34,7 +34,10 @@ class WebsocketPool:
     @asynccontextmanager
     async def get_sockets(self, batch_size: int = 1) -> list[websockets.legacy.client.WebSocketClientProtocol]:
         """
-        :param batch_size: The number of sockets to retrieve from
+        :param batch_size: The number of sockets to retrieve from the Pool
+        This will not always be respected, instead it will be capped off by the remaining number of sockets in the pool
+        :return: Returns a list of websockets to use
+        The websockets will be returned to the main pool upon exiting the with statement in which this should be called
         """
         # Ensures the batch size returned does not exceed the limit
         batch_size = min(self._max_pool_size - self._sockets_used, batch_size)
@@ -47,8 +50,13 @@ class WebsocketPool:
             yield sockets
         finally:
             for socket in sockets:
+                self._sockets.task_done()
                 self._sockets.put_nowait(socket)
             self._sockets_used -= batch_size
 
-    async def quit(self):
-        ...
+    async def quit(self) -> None:
+        while not self._sockets.empty():
+            self._sockets.get_nowait()
+            self._sockets.task_done()
+        self._sockets_used = 0
+        self._connected = False
