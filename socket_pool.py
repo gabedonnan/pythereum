@@ -1,5 +1,6 @@
 import asyncio
 import websockets
+from contextlib import asynccontextmanager
 
 
 class WebsocketPool:
@@ -30,20 +31,24 @@ class WebsocketPool:
         self._sockets_used = 0
         self._connected = True
 
+    @asynccontextmanager
     async def get_sockets(self, batch_size: int = 1) -> list[websockets.legacy.client.WebSocketClientProtocol]:
+        """
+        :param batch_size: The number of sockets to retrieve from
+        """
         # Ensures the batch size returned does not exceed the limit
         batch_size = min(self._max_pool_size - self._sockets_used, batch_size)
         if not self._connected:
             # Ensures that get_socket can be called without needing to explicitly call start() beforehand
             await self.start()
         sockets = [self._sockets.get_nowait() for _ in range(batch_size)]
-        self._sockets_used += 1
+        self._sockets_used += batch_size
         try:
             yield sockets
         finally:
             for socket in sockets:
                 self._sockets.put_nowait(socket)
-            self._sockets_used -= 1
+            self._sockets_used -= batch_size
 
     async def quit(self):
         ...
