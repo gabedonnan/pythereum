@@ -1,3 +1,4 @@
+import asyncio
 import json
 from dataclasses import dataclass
 from enum import Enum
@@ -142,6 +143,10 @@ class EthRPC:
             "params": params,
             "id": self._id
         })
+
+    async def start_pool(self) -> None:
+        """Exposes the ability to start the ERPC's socket pool before the first method call"""
+        await self._pool.start()
 
     async def send_message(self, method: str, params: list[Any]) -> Any:
         async with self._pool.get_sockets() as ws:

@@ -31,7 +31,7 @@ class WebsocketPool:
         self._connected = True
 
     @asynccontextmanager
-    async def get_sockets(self, batch_size: int = 1) -> list:
+    async def get_sockets(self, batch_size: int = 1) -> list[websockets.WebSocketClientProtocol]:
         """
         :param batch_size: The number of sockets to retrieve from the Pool
         This will not always be respected, instead it will be capped off by the remaining number of sockets in the pool
@@ -44,8 +44,8 @@ class WebsocketPool:
             # Ensures that get_socket can be called without needing to explicitly call start() beforehand
             await self.start()
         sockets = [self._sockets.get_nowait() for _ in range(batch_size)]
-        self._sockets_used += batch_size
         try:
+            self._sockets_used += batch_size
             yield sockets
         finally:
             for socket in sockets:
