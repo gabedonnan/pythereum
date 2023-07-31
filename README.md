@@ -30,7 +30,9 @@ A lightweight alternative to Web3.py in development
   - etc., aiming to complete all methods listed [here.](https://ethereum.org/en/developers/docs/apis/json-rpc/)
 
 
-- [ ] Add websocket pool
+- [x] Add websocket pool
+  - [x] Basic pooling functionality added
+  - [ ] Optimisation and improving pooling
 - [ ] Implement batch procedure calls
 - [ ] Enhance tests
 
@@ -40,7 +42,9 @@ import asyncio
 from eth_rpc import EthRPC
 
 TEST_URL = "http://127.0.0.1:8545"
-erpc = EthRPC(TEST_URL)
+erpc = EthRPC(TEST_URL, pool_size=10)
+# Optional step to start your thread pool before your first function call
+asyncio.run(erpc.start_pool())
 
 async def test_transaction_count():
     # Gets the number of transactions sent from a given EOA address
