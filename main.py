@@ -72,6 +72,14 @@ call_object_schema = {  # A schema for validating call objects
         }
 
 
+def hex20_decoder():
+    ...
+
+
+def hex32_decoder():
+    ...
+
+
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Block:
