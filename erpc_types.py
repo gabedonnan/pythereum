@@ -1,6 +1,8 @@
 class Hex:
     def __init__(self, hex_string: str):
+        # Removes the '0x' prefix of an input hex string if it is present
         self.string = hex_string[2:] if hex_string.startswith(("0x", "0X")) else hex_string
+        # Converts the hexstring to an integer, then to binary and removes the '0b' prefix
         self.binary = bin(int(self.string, 16))[2:]
         self.base = len(self.string)
 

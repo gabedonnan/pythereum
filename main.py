@@ -10,6 +10,7 @@ from eth_typing import ChecksumAddress
 from jsonschema import validate
 from typing import List, Any
 from socket_pool import WebsocketPool
+from erpc_types import Hex
 
 class BlockTag(str, Enum):
     """ Data type encapsulating all possible non-integer values for a DefaultBlock parameter
@@ -72,12 +73,8 @@ call_object_schema = {  # A schema for validating call objects
         }
 
 
-def hex20_decoder():
-    ...
-
-
-def hex32_decoder():
-    ...
+def hex_decoder(hex_string: str):
+    return Hex(hex_string)
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
