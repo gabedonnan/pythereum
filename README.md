@@ -35,6 +35,8 @@ A lightweight alternative to Web3.py in development
   - [ ] Optimisation and improving pooling
 - [ ] Implement batch procedure calls
 - [ ] Enhance tests
+- [x] Add custom typing
+  - [ ] Expand custom typing functionality
 
 ```python
 # Example usage
