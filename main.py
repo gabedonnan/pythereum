@@ -1,10 +1,10 @@
 import asyncio
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 import websockets
-from dataclasses_json import dataclass_json, LetterCase
+from dataclasses_json import dataclass_json, LetterCase, config
 # import eth_utils
 from eth_typing import ChecksumAddress
 from jsonschema import validate
@@ -108,6 +108,26 @@ class Sync:
     highest_block: str
 
 
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Receipt:
+    transaction_hash: str  # 32 Byte hash of transaction
+    transaction_index: int  # Integer of the transactions index position in the block
+    block_hash: str  # 32 Byte hash of the block in which the transaction was contained
+    block_number: int  # Block number of transaction
+    from_address: str = field(metadata=config(field_name="from"))  # 20 Byte sender address
+    to_address: str = field(metadata=config(field_name="to"))  # 20 Byte receiver address, can be null
+    cumulative_gas_used: int  # Total amount of gas used when this transaction was executed on the block
+    effective_gas_price: int  # The sum of the base fee and tip paid per unit gas
+    gas_used: int  # The amount of gas used by this specific transaction alone
+    contract_address: str  # The 20 Byte contract address created
+    logs: list[str]  # List of log objects, which this transaction generated
+    logs_bloom: str  # 256 Byte bloom for light clients to quickly retrieve related logs
+    type: int  # Integer representation of transaction type, 0x0 for legacy, 0x1 for list, 0x2 for dynamic fees
+    status: int  # Optional: 1 (success) or 0 (failure)
+    root: str  # Optional: 32 Bytes of post-transaction stateroot
+
+
 def parse_results(res: str | dict) -> Any:
     if isinstance(res, str):
         res = json.loads(res)
@@ -148,10 +168,10 @@ class EthRPC:
         """Exposes the ability to start the ERPC's socket pool before the first method call"""
         await self._pool.start()
 
-    async def send_message(self, method: str, params: list[Any]) -> Any:
+    async def send_message(self, method: str, params: list[Any], timeout: int = 10) -> Any:
         async with self._pool.get_sockets() as ws:
             await ws[0].send(self.build_json(method, params))
-            msg = await ws[0].recv()
+            msg = await asyncio.wait_for(ws[0].recv(), timeout=timeout)
         return parse_results(msg)
 
     async def get_block_number(self) -> int:
@@ -204,7 +224,7 @@ class EthRPC:
             block_specifier = hex(block_specifier)
         msg = await self.send_message("eth_getBlockByNumber", [block_specifier, full_object])
         self._next_id()
-        return Block.from_dict(msg)
+        return Block.from_dict(msg, infer_missing=True)
 
     async def get_block_by_hash(self, data: Hex64, full_object: bool = False) -> Block:
         """
@@ -215,7 +235,7 @@ class EthRPC:
         """
         msg = await self.send_message("eth_getBlockByHash", [data, full_object])
         self._next_id()
-        return Block.from_dict(msg)
+        return Block.from_dict(msg, infer_missing=True)
 
     async def call(self, transaction: dict, block_specifier: DefaultBlock = BlockTag.latest):
         """
@@ -252,10 +272,10 @@ class EthRPC:
         self._next_id()
         return msg
 
-    async def get_transaction_receipt(self, tx_hash: HexString):
+    async def get_transaction_receipt(self, tx_hash: HexString) -> Receipt:
         msg = await self.send_message("eth_getTransactionReceipt", [tx_hash])
         self._next_id()
-        return msg
+        return Receipt.from_dict(msg, infer_missing=True)
 
     async def send_raw_transaction(self, raw_transaction: RawTransaction):
         """

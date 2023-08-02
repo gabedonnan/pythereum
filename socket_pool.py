@@ -26,7 +26,7 @@ class WebsocketPool:
         # Creates a number of sockets equal to the maximum pool size
         # connections = await asyncio.gather(websockets.connect(self._url) for _ in range(self._max_pool_size))
         for _ in range(self._max_pool_size):
-            await self._sockets.put(await websockets.connect(self._url))
+            await self._sockets.put(await websockets.connect(self._url, ping_interval=5))
         self._sockets_used = 0
         self._connected = True
 
@@ -54,6 +54,9 @@ class WebsocketPool:
             self._sockets_used -= batch_size
 
     async def quit(self) -> None:
+        """
+        Pulls all sockets from the object queue, closes them and resets variables
+        """
         while not self._sockets.empty():
             sock = self._sockets.get_nowait()
             await sock.close()
