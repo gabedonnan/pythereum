@@ -1,16 +1,21 @@
 import asyncio
 import json
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 
 import websockets
 from dataclasses_json import dataclass_json, LetterCase, config
-# import eth_utils
+from erpc_exceptions import (
+    ERPCRequestException, ERPCDecoderException,
+    ERPCEncoderException, ERPCInvalidReturnException
+)
 from eth_typing import ChecksumAddress
 from jsonschema import validate
 from typing import List, Any
 from socket_pool import WebsocketPool
 from erpc_types import Hex
+
 
 class BlockTag(str, Enum):
     """ Data type encapsulating all possible non-integer values for a DefaultBlock parameter
@@ -21,27 +26,6 @@ class BlockTag(str, Enum):
     pending = "pending"  # Pending state/transactions
     safe = "safe"  # Latest safe head block
     finalized = "finalized"  # Latest finalized block
-
-
-class ERPCRequestException(Exception):
-    """
-    Raised when an error is returned from the Ethereum RPC
-    """
-
-    def __init__(self, code: int, message: str = "Generic ERPC Error"):
-        self.code = code
-        self.message = message
-        super().__init__(f"Error {code}: " + self.message)
-
-
-class ERPCInvalidReturnException(Exception):
-    """
-    Raised when the Ethereum RPC returns a value which is incorrectly formatted
-    """
-
-    def __init__(self, message: str):
-        self.message = message
-        super().__init__(self.message)
 
 
 DefaultBlock = int | BlockTag
@@ -74,7 +58,19 @@ call_object_schema = {  # A schema for validating call objects
 
 
 def hex_decoder(hex_string: str):
-    return Hex(hex_string)
+    if re.match(r"^(0[xX])?[A-Fa-f0-9]+$", hex_string):
+        return Hex(hex_string)
+    else:
+        raise ERPCDecoderException(f"{type(hex_string)} \"{hex_string}\" is an invalid input to decoder \"hex_decoder\"")
+
+
+def hex_encoder(hex_obj: Hex):
+    """
+    Takes in a hex object and returns its hex string representation
+    """
+    if not isinstance(hex_obj, Hex):
+        raise ERPCEncoderException(f"{type(hex_obj)} {hex_obj} is an invalid input to encoder \"hex_encoder\"")
+    return f"0x{hex_obj.hex_string}"
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -120,7 +116,7 @@ class Receipt:
     transaction_index: int  # Integer of the transactions index position in the block
     block_hash: str  # 32 Byte hash of the block in which the transaction was contained
     block_number: int  # Block number of transaction
-    from_address: str = field(metadata=config(field_name="from"))  # 20 Byte sender address
+    from_address: str = field(metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder))  # 20 Byte sender address
     to_address: str = field(metadata=config(field_name="to"))  # 20 Byte receiver address, can be null
     cumulative_gas_used: int  # Total amount of gas used when this transaction was executed on the block
     effective_gas_price: int  # The sum of the base fee and tip paid per unit gas
