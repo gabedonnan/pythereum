@@ -57,14 +57,14 @@ call_object_schema = {  # A schema for validating call objects
         }
 
 
-def hex_decoder(hex_string: str):
+def hex_decoder(hex_string: str) -> Hex:
     if re.match(r"^(0[xX])?[A-Fa-f0-9]+$", hex_string):
         return Hex(hex_string)
     else:
         raise ERPCDecoderException(f"{type(hex_string)} \"{hex_string}\" is an invalid input to decoder \"hex_decoder\"")
 
 
-def hex_encoder(hex_obj: Hex):
+def hex_encoder(hex_obj: Hex) -> str:
     """
     Takes in a hex object and returns its hex string representation
     """
@@ -112,21 +112,21 @@ class Sync:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Receipt:
-    transaction_hash: str  # 32 Byte hash of transaction
+    transaction_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))  # 32 Byte hash of transaction
     transaction_index: int  # Integer of the transactions index position in the block
-    block_hash: str  # 32 Byte hash of the block in which the transaction was contained
+    block_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))  # 32 Byte hash of the block in which the transaction was contained
     block_number: int  # Block number of transaction
-    from_address: str = field(metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder))  # 20 Byte sender address
-    to_address: str = field(metadata=config(field_name="to"))  # 20 Byte receiver address, can be null
+    from_address: Hex = field(metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder))  # 20 Byte sender address
+    to_address: Hex = field(metadata=config(field_name="to"))  # 20 Byte receiver address, can be null
     cumulative_gas_used: int  # Total amount of gas used when this transaction was executed on the block
     effective_gas_price: int  # The sum of the base fee and tip paid per unit gas
     gas_used: int  # The amount of gas used by this specific transaction alone
-    contract_address: str  # The 20 Byte contract address created
+    contract_address: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))  # The 20 Byte contract address created
     logs: list[str]  # List of log objects, which this transaction generated
-    logs_bloom: str  # 256 Byte bloom for light clients to quickly retrieve related logs
+    logs_bloom: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))  # 256 Byte bloom for light clients to quickly retrieve related logs
     type: int  # Integer representation of transaction type, 0x0 for legacy, 0x1 for list, 0x2 for dynamic fees
     status: int  # Optional: 1 (success) or 0 (failure)
-    root: str  # Optional: 32 Bytes of post-transaction stateroot
+    root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))  # Optional: 32 Bytes of post-transaction stateroot
 
 
 def parse_results(res: str | dict) -> Any:
