@@ -58,6 +58,20 @@ asyncio.run(test_transaction_count())
 
 # Getting started
 
-Install foundry
+### Install foundry
 
-... TODO ...
+Instructions available at [this link.](https://book.getfoundry.sh/getting-started/installation)
+
+### Run anvil
+
+Anvil is a blockchain testing application.
+
+The following command will run an instance of anvil representing 
+the blockchain's status at block number ```EXAMPLE_BLOCK_NUM``` via url
+```EXAMPLE_RPC_URL```.
+
+This is helpful for ensuring consistency in tests.
+
+```bash
+anvil rpc-url EXAMPLE_RPC_URL@EXAMPLE_BLOCK_NUM
+```
