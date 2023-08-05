@@ -58,13 +58,15 @@ asyncio.run(test_transaction_count())
 
 # Getting started
 
+## Testing your programs
+
 ### Install foundry
 
 Instructions available at [this link.](https://book.getfoundry.sh/getting-started/installation)
 
 ### Run anvil
 
-Anvil is a blockchain testing application.
+Anvil is a blockchain testing application included with foundry.
 
 The following command will run an instance of anvil representing 
 the blockchain's status at block number ```EXAMPLE_BLOCK_NUM``` via url
