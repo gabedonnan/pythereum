@@ -4,10 +4,14 @@ from time import time
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 
+# I store the links I use for testing in my .env file under the name "TEST_WS"
+from dotenv import dotenv_values
+config = dotenv_values(".env")  # Pulls variables from .env into a dictionary
+
 from main import Block, EthRPC
 
 ANVIL_URL = "http://127.0.0.1:8545"
-erpc_ws = EthRPC(TEST_WS, 8)
+erpc_ws = EthRPC(config["TEST_WS"], 8)
 asyncio.run(erpc_ws.start_pool())
 
 
@@ -16,7 +20,7 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
         await erpc_ws.start_pool()
 
     async def test_block_num(self):
-        # await erpc_ws.start_pool()
+        await erpc_ws.start_pool()
         t0 = time()
         r1 = asyncio.create_task(erpc_ws.get_block_number())
         r2 = asyncio.create_task(erpc_ws.get_transaction_count("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"))

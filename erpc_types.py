@@ -24,7 +24,7 @@ class Hex:
     def __index__(self):
         return self.__int__()
 
-    def __eq__(self, other: 'Hex' | int | str) -> bool:
+    def __eq__(self, other) -> bool:
         if isinstance(other, Hex):
             # Strongly checks equality in case only one of the class values have been adjusted
             return self.hex_string == other.hex_string and self.binary == other.binary and self.base == other.base
