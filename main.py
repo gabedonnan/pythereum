@@ -57,6 +57,19 @@ call_object_schema = {  # A schema for validating call objects
         }
 
 
+def hex_int_decoder(hex_string: str) -> int:
+    if re.match(r"^(0[xX])?[A-Fa-f0-9]+$", hex_string):
+        return int(hex_string, 16)
+    else:
+        raise ERPCDecoderException(f"{type(hex_string)} \"{hex_string}\" is an invalid input to decoder \"hex_int_decoder\"")
+
+
+def hex_int_encoder(int_val: int) -> str:
+    if not isinstance(int_val, int):
+        raise ERPCEncoderException(f"{type(int_val)} {int_val} is an invalid input to encoder \"hex_int_encoder\"")
+    return hex(int_val)
+
+
 def hex_decoder(hex_string: str) -> Hex:
     if re.match(r"^(0[xX])?[A-Fa-f0-9]+$", hex_string):
         return Hex(hex_string)
@@ -76,9 +89,12 @@ def hex_encoder(hex_obj: Hex) -> str:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Block:
-    difficulty: str
-    extra_data: str
-    gas_limit: str
+    # Integer of the difficulty for the block
+    difficulty: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    # The extra data field of the block
+    extra_data: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    # The maximum gas allowed on this block
+    gas_limit: int
     gas_used: str
     hash: str
     logs_bloom: str

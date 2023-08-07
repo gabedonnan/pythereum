@@ -12,7 +12,7 @@ from main import Block, EthRPC
 
 ANVIL_URL = "http://127.0.0.1:8545"
 erpc_ws = EthRPC(config["TEST_WS"], 8)
-asyncio.run(erpc_ws.start_pool())
+# asyncio.run(erpc_ws.start_pool())
 
 
 class MyTestCase(unittest.IsolatedAsyncioTestCase):
