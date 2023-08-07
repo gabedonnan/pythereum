@@ -90,16 +90,16 @@ def hex_encoder(hex_obj: Hex) -> str:
 @dataclass
 class Block:
     # Integer of the difficulty for the block
-    difficulty: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    difficulty: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # The extra data field of the block
     extra_data: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # The maximum gas allowed on this block
-    gas_limit: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    gas_limit: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # The total gas used by all transactions in this block
-    gas_used: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    gas_used: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # 32 Byte hash of a block, null if block is pending
     hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
@@ -117,7 +117,7 @@ class Block:
     nonce: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # The block number. Null when the block is pending
-    number: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    number: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # 32 Byte hash of the parent of the block
     parent_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
@@ -129,7 +129,7 @@ class Block:
     sha3_uncles: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # Integer size of the block in bytes
-    size: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    size: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # 32 Byte root of the final state trie of the block
     state_root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
@@ -138,7 +138,7 @@ class Block:
     timestamp: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # Integer of the total difficulty of the chain until this block
-    total_difficulty: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    total_difficulty: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # List of all transaction objects or 32 Byte transaction hashes for the block
     transactions: list[str]
