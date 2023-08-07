@@ -1,13 +1,32 @@
-class BinString:
+class Binary:
     """
-    Data type representing a binary number
+    Data type representing a base2 binary number.
     Implements more intuitive and easily checkable functionality than Python's native string representation
+
+    self.binary : Contains a string representation of a binary number
+
+    self.integer_value : Contains a base10 integer representation of the stored binary number
+
+    self.raw_binary : Contains a string representation of a binary number without 0b prefix
     """
+
     def __init__(self, bin_string: str | int):
         if isinstance(bin_string, int):
+            is_negative = bin_string < 0
             bin_string = bin(bin_string)
-        self.binary = bin_string[2:] if bin_string.startswith(("0b", "0B")) else bin_string
-        self.integer_value = int(bin_string, 2)
+        else:
+            is_negative = bin_string.startswith("-")
+
+        bin_string = bin_string[1:] if is_negative else bin_string
+        sign = '-' if is_negative else ''
+
+        self.binary = f"{sign}{bin_string}" if bin_string.startswith(("0b", "0B")) else f"{sign}0b{bin_string}"
+        self.raw_binary = f"{sign}{bin_string[2:]}" if bin_string.startswith(("0b", "0B")) else f"{sign}{bin_string}"
+
+        self.integer_value = int(self.binary, 2)
+
+    def to_hex(self) -> 'Hex':
+        return Hex(self.integer_value)
 
     def __int__(self) -> int:
         return self.integer_value
@@ -22,35 +41,60 @@ class BinString:
         return len(self.binary)
 
     def __repr__(self) -> str:
-        return f"BinString(binary={self.binary})"
+        return f"Binary(binary={self.binary}, integer_value={self.integer_value})"
 
     def __index__(self):
         return self.__int__()
 
-    def __add__(self, other) -> 'BinString':
-        if isinstance(other, BinString):
-            return BinString(bin(self.integer_value + other.integer_value))
+    def __eq__(self, other):
+        if isinstance(other, Binary):
+            return self.binary == other.binary and self.integer_value == other.integer_value
+        else:
+            return False
+
+    def __add__(self, other) -> 'Binary':
+        if isinstance(other, Binary):
+            return Binary(bin(self.integer_value + other.integer_value))
         elif isinstance(other, int):
-            return BinString(bin(self.integer_value + other))
+            return Binary(bin(self.integer_value + other))
         elif isinstance(other, Hex):
             # You shouldn't really be adding BinString objects directly to Hex but this ensures the program won't break
-            return BinString(bin(self.integer_value + other.integer_value))
+            return Binary(bin(self.integer_value + other.integer_value))
         elif isinstance(other, str):
-            return BinString(bin(self.integer_value + int(other, 2)))
+            return Binary(bin(self.integer_value + int(other, 2)))
 
 
 class Hex:
+    """
+    Data type representing a base16 hexadecimal number.
+    More intuitive and rigorous than using strings for hexadecimal numbers.
+
+    self.hex_string : string representing the contained hexadecimal number
+
+    self.integer_value : integer representing the base10 form of the stored hexadecimal number
+
+    self.raw_hex : string representing contained hexadecimal number without 0x prefix
+    """
+
     def __init__(self, hex_string: str | int):
         if isinstance(hex_string, int):
+            is_negative = hex_string < 0
             hex_string = hex(hex_string)
+        else:
+            is_negative = hex_string.startswith("-")
+
+        hex_string = hex_string[1:] if is_negative else hex_string
+        sign = "-" if is_negative else ""
         # Removes the '0x' prefix of an input hex string if it is present
-        self.hex_string: str = hex_string[2:] if hex_string.startswith(("0x", "0X")) else hex_string
-        self.integer_value: int = int(hex_string, 16)
-        self.binary: BinString = BinString(bin(self.integer_value))
-        self.base: int = len(self.hex_string)
+        self.hex_string = f"{sign}{hex_string}" if hex_string.startswith(("0x", "0X")) else f"{sign}0x{hex_string}"
+        self.raw_hex = f"{sign}{hex_string[2:]}" if hex_string.startswith(("0x", "0X")) else f"{sign}{hex_string}"
+        self.integer_value = int(self.hex_string, 16)
+
+    def to_binary(self) -> Binary:
+        return Binary(self.integer_value)
 
     def __len__(self):
-        return self.base
+        return len(self.hex_string)
 
     def __str__(self):
         return self.hex_string
@@ -59,7 +103,7 @@ class Hex:
         return self.integer_value
 
     def __repr__(self):
-        return f"Hex(base={self.base}, string={self.hex_string})"
+        return f"Hex(hex_string={self.hex_string}, integer_value={self.integer_value})"
 
     def __bytes__(self):
         return bytes(self.hex_string, "utf-8")
@@ -69,8 +113,7 @@ class Hex:
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Hex):
-            # Strongly checks equality in case only one of the class values have been adjusted
-            return self.hex_string == other.hex_string and self.binary == other.binary and self.base == other.base
+            return self.hex_string == other.hex_string and self.integer_value == other.integer_value
         else:
             return False
 
@@ -79,7 +122,7 @@ class Hex:
             return Hex(hex(self.integer_value + other.integer_value))
         elif isinstance(other, int):
             return Hex(hex(self.integer_value + other))
-        elif isinstance(other, BinString):
+        elif isinstance(other, Binary):
             # You shouldn't really be adding BinString objects directly to Hex but this ensures the program won't break
             return Hex(hex(self.integer_value + other.integer_value))
         elif isinstance(other, str):
