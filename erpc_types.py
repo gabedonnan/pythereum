@@ -46,11 +46,65 @@ class Binary:
     def __index__(self):
         return self.__int__()
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         if isinstance(other, Binary):
             return self.binary == other.binary and self.integer_value == other.integer_value
         else:
             return False
+
+    def __ne__(self, other) -> bool:
+        if isinstance(other, Binary):
+            return self.integer_value != other.integer_value or self.binary.lower() != other.binary.lower()
+        else:
+            return True
+
+    def __ge__(self, other) -> bool:
+        if isinstance(other, Hex):
+            return self.integer_value >= other.integer_value
+        elif isinstance(other, Binary):
+            return self.integer_value >= other.integer_value
+        elif isinstance(other, int):
+            return self.integer_value >= other
+        elif isinstance(other, str):
+            return self.integer_value >= int(other, 16)
+        else:
+            raise TypeError(f"'>=' not supported between instances of 'Binary' and '{type(other)}'")
+
+    def __le__(self, other) -> bool:
+        if isinstance(other, Hex):
+            return self.integer_value <= other.integer_value
+        elif isinstance(other, Binary):
+            return self.integer_value <= other.integer_value
+        elif isinstance(other, int):
+            return self.integer_value <= other
+        elif isinstance(other, str):
+            return self.integer_value <= int(other, 16)
+        else:
+            raise TypeError(f"'<=' not supported between instances of 'Binary' and '{type(other)}'")
+
+    def __gt__(self, other) -> bool:
+        if isinstance(other, Hex):
+            return self.integer_value > other.integer_value
+        elif isinstance(other, Binary):
+            return self.integer_value > other.integer_value
+        elif isinstance(other, int):
+            return self.integer_value > other
+        elif isinstance(other, str):
+            return self.integer_value > int(other, 16)
+        else:
+            raise TypeError(f"'>' not supported between instances of 'Binary' and '{type(other)}'")
+
+    def __lt__(self, other):
+        if isinstance(other, Hex):
+            return self.integer_value < other.integer_value
+        elif isinstance(other, Binary):
+            return self.integer_value < other.integer_value
+        elif isinstance(other, int):
+            return self.integer_value < other
+        elif isinstance(other, str):
+            return self.integer_value < int(other, 16)
+        else:
+            raise TypeError(f"'<' not supported between instances of 'Binary' and '{type(other)}'")
 
     def __add__(self, other) -> 'Binary':
         if isinstance(other, Binary):
@@ -113,9 +167,63 @@ class Hex:
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Hex):
-            return self.hex_string == other.hex_string and self.integer_value == other.integer_value
+            return self.hex_string.lower() == other.hex_string.lower() and self.integer_value == other.integer_value
         else:
             return False
+
+    def __ne__(self, other) -> bool:
+        if isinstance(other, Hex):
+            return self.integer_value != other.integer_value or self.hex_string.lower() != other.hex_string.lower()
+        else:
+            return True
+
+    def __ge__(self, other) -> bool:
+        if isinstance(other, Hex):
+            return self.integer_value >= other.integer_value
+        elif isinstance(other, Binary):
+            return self.integer_value >= other.integer_value
+        elif isinstance(other, int):
+            return self.integer_value >= other
+        elif isinstance(other, str):
+            return self.integer_value >= int(other, 16)
+        else:
+            raise TypeError(f"'>=' not supported between instances of 'Hex' and '{type(other)}'")
+
+    def __le__(self, other) -> bool:
+        if isinstance(other, Hex):
+            return self.integer_value <= other.integer_value
+        elif isinstance(other, Binary):
+            return self.integer_value <= other.integer_value
+        elif isinstance(other, int):
+            return self.integer_value <= other
+        elif isinstance(other, str):
+            return self.integer_value <= int(other, 16)
+        else:
+            raise TypeError(f"'<=' not supported between instances of 'Hex' and '{type(other)}'")
+
+    def __gt__(self, other) -> bool:
+        if isinstance(other, Hex):
+            return self.integer_value > other.integer_value
+        elif isinstance(other, Binary):
+            return self.integer_value > other.integer_value
+        elif isinstance(other, int):
+            return self.integer_value > other
+        elif isinstance(other, str):
+            return self.integer_value > int(other, 16)
+        else:
+            raise TypeError(f"'>' not supported between instances of 'Hex' and '{type(other)}'")
+
+    def __lt__(self, other):
+        if isinstance(other, Hex):
+            return self.integer_value < other.integer_value
+        elif isinstance(other, Binary):
+            return self.integer_value < other.integer_value
+        elif isinstance(other, int):
+            return self.integer_value < other
+        elif isinstance(other, str):
+            return self.integer_value < int(other, 16)
+        else:
+            raise TypeError(f"'<' not supported between instances of 'Hex' and '{type(other)}'")
 
     def __add__(self, other) -> 'Hex':
         if isinstance(other, Hex):
