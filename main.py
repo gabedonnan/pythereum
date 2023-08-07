@@ -90,27 +90,63 @@ def hex_encoder(hex_obj: Hex) -> str:
 @dataclass
 class Block:
     # Integer of the difficulty for the block
-    difficulty: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    difficulty: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
     # The extra data field of the block
     extra_data: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
     # The maximum gas allowed on this block
-    gas_limit: int
-    gas_used: str
-    hash: str
-    logs_bloom: str
-    miner: str
-    mix_hash: str
-    nonce: str
-    number: str
-    parent_hash: str
-    receipts_root: str
-    sha3_uncles: str
-    size: str
-    state_root: str
-    timestamp: str
-    total_difficulty: str
+    gas_limit: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # The total gas used by all transactions in this block
+    gas_used: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # 32 Byte hash of a block, null if block is pending
+    hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # 256 Bytes bloom filter for the logs of the block. Null if the block is pending
+    logs_bloom: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # 20 Byte address of the beneficiary of mining rewards
+    miner: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    #
+    mix_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # 8 Byte hash of the generated proof of work. Null when the block is pending
+    nonce: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # The block number. Null when the block is pending
+    number: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # 32 Byte hash of the parent of the block
+    parent_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # 32 Byte root of the receipts trie of the block
+    receipts_root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # 32 Byte SHA3 of the uncles of the data in the block
+    sha3_uncles: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # Integer size of the block in bytes
+    size: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # 32 Byte root of the final state trie of the block
+    state_root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # The unix timestamp for when the block was collated
+    timestamp: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # Integer of the total difficulty of the chain until this block
+    total_difficulty: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # List of all transaction objects or 32 Byte transaction hashes for the block
     transactions: list[str]
-    transactions_root: str
+
+    # 32 Byte root of the transaction trie of the block
+    transactions_root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # List of uncle hashes
     uncles: list[str]
 
 

@@ -36,6 +36,8 @@ A lightweight alternative to Web3.py in development
 - [ ] Implement batch procedure calls
 - [ ] Enhance tests
 - [x] Add custom typing
+  - [x] Add Hex type
+  - [x] Add Binary type
   - [ ] Expand custom typing functionality
 
 ```python
