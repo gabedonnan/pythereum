@@ -86,6 +86,14 @@ def hex_encoder(hex_obj: Hex) -> str:
     return f"0x{hex_obj.hex_string}"
 
 
+def hex_list_decoder(hex_string_list: list[str]):
+    return [hex_decoder(hex_string) for hex_string in hex_string_list]
+
+
+def hex_list_encoder(hex_obj_list: list[Hex]):
+    return [hex_encoder(hex_obj) for hex_obj in hex_obj_list]
+
+
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Block:
@@ -141,13 +149,13 @@ class Block:
     total_difficulty: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # List of all transaction objects or 32 Byte transaction hashes for the block
-    transactions: list[str]
+    transactions: list[Hex] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
 
     # 32 Byte root of the transaction trie of the block
     transactions_root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # List of uncle hashes
-    uncles: list[str]
+    uncles: list[Hex] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -156,29 +164,58 @@ class Sync:
     """
     Class representing ethereum sync status
     """
-    starting_block: str
-    current_block: str
-    highest_block: str
+    starting_block: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    current_block: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    highest_block: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Receipt:
-    transaction_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))  # 32 Byte hash of transaction
-    transaction_index: int  # Integer of the transactions index position in the block
-    block_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))  # 32 Byte hash of the block in which the transaction was contained
-    block_number: int  # Block number of transaction
-    from_address: Hex = field(metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder))  # 20 Byte sender address
-    to_address: Hex = field(metadata=config(field_name="to"))  # 20 Byte receiver address, can be null
-    cumulative_gas_used: int  # Total amount of gas used when this transaction was executed on the block
-    effective_gas_price: int  # The sum of the base fee and tip paid per unit gas
-    gas_used: int  # The amount of gas used by this specific transaction alone
-    contract_address: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))  # The 20 Byte contract address created
-    logs: list[str]  # List of log objects, which this transaction generated
-    logs_bloom: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))  # 256 Byte bloom for light clients to quickly retrieve related logs
-    type: int  # Integer representation of transaction type, 0x0 for legacy, 0x1 for list, 0x2 for dynamic fees
-    status: int  # Optional: 1 (success) or 0 (failure)
-    root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))  # Optional: 32 Bytes of post-transaction stateroot
+    # 32 Byte hash of transaction
+    transaction_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # Integer of the transactions index position in the block
+    transaction_index: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+
+    # 32 Byte hash of the block in which the transaction was contained
+    block_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # Block number of transaction
+    block_number: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+
+    # 20 Byte sender address
+    from_address: Hex = field(metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder))
+
+    # 20 Byte receiver address, can be null
+    to_address: Hex = field(metadata=config(field_name="to", decoder=hex_decoder, encoder=hex_encoder))
+
+    # Total amount of gas used when this transaction was executed on the block
+    cumulative_gas_used: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+
+    # The sum of the base fee and tip paid per unit gas
+    effective_gas_price: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+
+    # The amount of gas used by this specific transaction alone
+    gas_used: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+
+    # The 20 Byte contract address created
+    contract_address: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # List of log objects, which this transaction generated
+    logs: list[Hex] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
+
+    # 256 Byte bloom for light clients to quickly retrieve related logs
+    logs_bloom: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+    # Integer representation of transaction type, 0x0 for legacy, 0x1 for list, 0x2 for dynamic fees
+    type: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+
+    # Optional: 1 (success) or 0 (failure)
+    status: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+
+    # Optional: 32 Bytes of post-transaction stateroot
+    root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
 
 def parse_results(res: str | dict) -> Any:
@@ -226,6 +263,9 @@ class EthRPC:
             await ws[0].send(self.build_json(method, params))
             msg = await asyncio.wait_for(ws[0].recv(), timeout=timeout)
         return parse_results(msg)
+
+    async def subscribe(self, params: list[str]):
+        ...
 
     async def get_block_number(self) -> int:
         """

@@ -41,7 +41,7 @@ class Binary:
         return len(self.binary)
 
     def __repr__(self) -> str:
-        return f"Binary(binary={self.binary}, integer_value={self.integer_value})"
+        return f"Binary(binary={self.binary})"
 
     def __index__(self):
         return self.__int__()
@@ -157,7 +157,7 @@ class Hex:
         return self.integer_value
 
     def __repr__(self):
-        return f"Hex(hex_string={self.hex_string}, integer_value={self.integer_value})"
+        return f"Hex(hex_string={self.hex_string})"
 
     def __bytes__(self):
         return bytes(self.hex_string, "utf-8")
