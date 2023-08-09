@@ -43,7 +43,7 @@ class WebsocketPool:
         if not self._connected:
             # Ensures that get_socket can be called without needing to explicitly call start() beforehand
             await self.start()
-        sockets = [self._sockets.get_nowait() for _ in range(batch_size)]
+        sockets = [await self._sockets.get() for _ in range(batch_size)]
         try:
             self._sockets_used += batch_size
             yield sockets
