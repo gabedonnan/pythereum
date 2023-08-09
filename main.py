@@ -7,11 +7,12 @@ import websockets
 from erpc_exceptions import (
     ERPCRequestException, ERPCInvalidReturnException
 )
+from erpc_types import Hex
 from eth_typing import ChecksumAddress
 from jsonschema import validate
 from typing import List, Any
 from socket_pool import WebsocketPool
-from erpc_dataclasses import Block, Sync, Receipt
+from erpc_dataclasses import Block, Sync, Receipt, Log
 
 
 class BlockTag(str, Enum):
@@ -30,6 +31,23 @@ class SubscriptionEnum(Enum):
     logs = "logs"
     new_pending_transactions = "newPendingTransactions"
     syncing = "syncing"
+
+
+def parse_results(res: str | dict) -> Any:
+    """
+    Validates and parses the results of an RPC
+    """
+    if isinstance(res, str):
+        res = json.loads(res)
+
+    if "result" not in res:
+        # Error case as no result is found
+        if "error" in res:
+            raise ERPCRequestException(res["error"]["code"], res["error"]["message"])
+        else:
+            raise ERPCInvalidReturnException("Invalid return value from ERPC, check your request.")
+
+    return res["result"]
 
 
 class Subscription:
@@ -51,23 +69,29 @@ class Subscription:
             SubscriptionEnum.syncing: self.syncing_decoder
                                 }[self.subscription_type]
 
-    async def recv(self):
-        res = await asyncio.wait_for(self.socket.recv(), timeout=10)
+    async def recv(self) -> Block | Log | Hex | Sync:
+        while True:
+            res = parse_results(await self.socket.recv())
+            yield self.decode_function(res)
 
     async def close_connection(self):
         ...
 
-    async def new_heads_decoder(self):
-        ...
+    @staticmethod
+    def new_heads_decoder(data: Any) -> Block:
+        return Block.from_dict(data, infer_missing=True)
 
-    async def logs_decoder(self):
-        ...
+    @staticmethod
+    def logs_decoder(data: Any) -> Log:
+        return Log.from_dict(data, infer_missing=True)
 
-    async def new_pending_transactions_decoder(self):
-        ...
+    @staticmethod
+    def new_pending_transactions_decoder(data: Any) -> Hex:
+        return Hex(data)
 
-    async def syncing_decoder(self):
-        ...
+    @staticmethod
+    def syncing_decoder(data: Any) -> Sync:
+        return Sync(data)
 
 
 DefaultBlock = int | BlockTag
@@ -99,18 +123,7 @@ call_object_schema = {  # A schema for validating call objects
         }
 
 
-def parse_results(res: str | dict) -> Any:
-    if isinstance(res, str):
-        res = json.loads(res)
 
-    if "result" not in res:
-        # Error case as no result is found
-        if "error" in res:
-            raise ERPCRequestException(res["error"]["code"], res["error"]["message"])
-        else:
-            raise ERPCInvalidReturnException("Invalid return value from ERPC, check your request.")
-
-    return res["result"]
 
 
 class EthRPC:
@@ -152,7 +165,7 @@ class EthRPC:
                 subscription_id = await self.get_subscription(method)
                 sub = Subscription(
                     subscription_id=subscription_id,
-                    socket=ws,
+                    socket=ws[0],
                     subscription_type=method
                 )
                 yield sub
@@ -161,7 +174,7 @@ class EthRPC:
                 await sub.close_connection()
 
     async def get_subscription(self, method: SubscriptionEnum) -> str:
-        msg = await self.send_message("eth_subscribe", [method])
+        msg = await self.send_message("eth_subscribe", [method.value])
         self._next_id()
         return msg
 

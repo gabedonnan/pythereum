@@ -167,3 +167,16 @@ class Receipt:
 
     # Optional: 32 Bytes of post-transaction stateroot
     root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Log:
+    address: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    block_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    block_number: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    data: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    log_index: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    topics: list[Hex] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
+    transaction_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    transaction_index: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
