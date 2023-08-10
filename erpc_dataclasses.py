@@ -1,5 +1,5 @@
 import re
-
+from typing import Optional
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json, LetterCase, config
 from erpc_types import Hex
@@ -21,9 +21,11 @@ def hex_int_encoder(int_val: int) -> str:
     return hex(int_val)
 
 
-def hex_decoder(hex_string: str) -> Hex:
+def hex_decoder(hex_string: str) -> Hex | None:
     if re.match(r"^(0[xX])?[A-Fa-f0-9]+$", hex_string):
         return Hex(hex_string)
+    elif hex_string == "0x":
+        return None
     else:
         raise ERPCDecoderException(f"{type(hex_string)} \"{hex_string}\" is an invalid input to decoder \"hex_decoder\"")
 
@@ -97,16 +99,16 @@ class Block:
     timestamp: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # Integer of the total difficulty of the chain until this block
-    total_difficulty: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    total_difficulty: Optional[int] = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # List of all transaction objects or 32 Byte transaction hashes for the block
-    transactions: list[Hex] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
+    transactions: Optional[list[Hex]] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
 
     # 32 Byte root of the transaction trie of the block
     transactions_root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # List of uncle hashes
-    uncles: list[Hex] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
+    uncles: Optional[list[Hex]] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)

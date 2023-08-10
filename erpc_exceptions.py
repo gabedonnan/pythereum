@@ -37,3 +37,13 @@ class ERPCEncoderException(Exception):
     def __init__(self, message: str):
         self.message = message
         super().__init__(self.message)
+
+
+class ERPCSubscriptionException(Exception):
+    """
+    Raised when a subscription request is rejected by a host or for other generic subscription errors
+    """
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)

@@ -5,7 +5,7 @@ from enum import Enum
 
 import websockets
 from erpc_exceptions import (
-    ERPCRequestException, ERPCInvalidReturnException
+    ERPCRequestException, ERPCInvalidReturnException, ERPCSubscriptionException
 )
 from erpc_types import Hex
 from eth_typing import ChecksumAddress
@@ -171,6 +171,7 @@ class EthRPC:
     @asynccontextmanager
     async def subscribe(self, method: SubscriptionEnum):
         async with self._pool.get_socket() as ws:
+            subscription_id = ""
             try:
                 subscription_id = await self.get_subscription(method, ws)
                 sub = Subscription(
@@ -180,6 +181,8 @@ class EthRPC:
                 )
                 yield sub
             finally:
+                if subscription_id == "":
+                    raise ERPCSubscriptionException(f"Subscription of type {method.value} rejected by destination.")
                 await self.unsubscribe(subscription_id)
                 await sub.close_connection()
 
