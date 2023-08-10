@@ -91,7 +91,7 @@ class Subscription:
 
     @staticmethod
     def syncing_decoder(data: Any) -> Sync:
-        return Sync(data)
+        return Sync.from_dict(data)
 
 
 DefaultBlock = int | BlockTag
@@ -121,9 +121,6 @@ call_object_schema = {  # A schema for validating call objects
             },
             "required": ["to"]
         }
-
-
-
 
 
 class EthRPC:
@@ -163,7 +160,6 @@ class EthRPC:
         async with self._pool.get_socket() as ws:
             try:
                 subscription_id = await self.get_subscription(method)
-                print(subscription_id)
                 sub = Subscription(
                     subscription_id=subscription_id,
                     socket=ws,
