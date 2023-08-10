@@ -153,19 +153,20 @@ class EthRPC:
         await self._pool.start()
 
     async def send_message(self, method: str, params: list[Any], timeout: int = 10) -> Any:
-        async with self._pool.get_sockets() as ws:
-            await ws[0].send(self.build_json(method, params))
-            msg = await asyncio.wait_for(ws[0].recv(), timeout=timeout)
+        async with self._pool.get_socket() as ws:
+            await ws.send(self.build_json(method, params))
+            msg = await asyncio.wait_for(ws.recv(), timeout=timeout)
         return parse_results(msg)
 
     @asynccontextmanager
     async def subscribe(self, method: SubscriptionEnum):
-        async with self._pool.get_sockets() as ws:
+        async with self._pool.get_socket() as ws:
             try:
                 subscription_id = await self.get_subscription(method)
+                print(subscription_id)
                 sub = Subscription(
                     subscription_id=subscription_id,
-                    socket=ws[0],
+                    socket=ws,
                     subscription_type=method
                 )
                 yield sub

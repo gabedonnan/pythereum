@@ -31,27 +31,23 @@ class WebsocketPool:
         self._connected = True
 
     @asynccontextmanager
-    async def get_sockets(self, batch_size: int = 1) -> list[websockets.WebSocketClientProtocol]:
+    async def get_socket(self) -> websockets.WebSocketClientProtocol:
         """
-        :param batch_size: The number of sockets to retrieve from the Pool
-        This will not always be respected, instead it will be capped off by the remaining number of sockets in the pool
         :return: Returns a list of websockets to use
         The websockets will be returned to the main pool upon exiting the with statement in which this should be called
         """
         # Ensures the batch size returned does not exceed the limit
-        batch_size = min(self._max_pool_size - self._sockets_used, batch_size)
         if not self._connected:
             # Ensures that get_socket can be called without needing to explicitly call start() beforehand
             await self.start()
-        sockets = [await self._sockets.get() for _ in range(batch_size)]
+        socket = await self._sockets.get()
         try:
-            self._sockets_used += batch_size
-            yield sockets
+            self._sockets_used += 1
+            yield socket
         finally:
-            for socket in sockets:
-                self._sockets.task_done()
-                self._sockets.put_nowait(socket)
-            self._sockets_used -= batch_size
+            self._sockets.task_done()
+            self._sockets.put_nowait(socket)
+            self._sockets_used -= 1
 
     async def quit(self) -> None:
         """
