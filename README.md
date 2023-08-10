@@ -1,5 +1,13 @@
 # eth_rpc
-A lightweight alternative to Web3.py in development
+### A lightweight Ethereum RPC library for Python in development
+
+Features include:
+- Ability to initiate RPC calls on a wide variety of ethereum functions
+  - More functions are added whenever possible to this list
+- Custom data types for easy manipulation of RPC results
+- Eth_subscribe functionality
+- Websocket pooling for high performance calls
+- Future support for RPC batching
 
 ### Documentation of progress below (wil add more as I go!)
 
@@ -21,6 +29,7 @@ A lightweight alternative to Web3.py in development
   - [x] `eth_mining`
   - [x] `eth_hashrate`
   - [x] `eth_accounts`
+  - [x] `eth_subscribe`
 - Methods to implement
   - [ ] `eth_getStorageAt`
   - [ ] `eth_getTransactionCountByHash`
@@ -58,6 +67,22 @@ async def test_transaction_count():
 asyncio.run(test_transaction_count())
 ```
 
+```python
+# Example subscription
+
+async def test_subscription(subscription_type: SubscriptionEnum):
+    """
+    Creates a subscription to receive data about all new heads
+    Prints each new subscription result as it is received
+    """
+    async with erpc_ws.subscribe(subscription_type) as sc:
+        # The following will iterate as each item is gotten by sc.recv()
+        async for item in sc.recv():
+            # 'item' is formatted into the appropriate form for its subscription type
+            # this is done by the sc.recv() automatically
+            print(item)
+```
+
 # Getting started
 
 ## Testing your programs
@@ -79,3 +104,8 @@ This is helpful for ensuring consistency in tests.
 ```bash
 anvil rpc-url EXAMPLE_RPC_URL@EXAMPLE_BLOCK_NUM
 ```
+
+### Acknowledgements
+
+Special thanks to [@totlsota](https://github.com/totlsota) as a more experienced blockchain developer than I, for giving me pointers when I needed them and
+generally assisting in the development of this project.
