@@ -33,12 +33,15 @@ class SubscriptionEnum(Enum):
     syncing = "syncing"
 
 
-def parse_results(res: str | dict) -> Any:
+def parse_results(res: str | dict, is_subscription: bool = False) -> Any:
     """
     Validates and parses the results of an RPC
     """
     if isinstance(res, str):
         res = json.loads(res)
+
+    if is_subscription:
+        res = res["params"]
 
     if "result" not in res:
         # Error case as no result is found
@@ -71,7 +74,8 @@ class Subscription:
 
     async def recv(self) -> Block | Log | Hex | Sync:
         while True:
-            res = parse_results(await self.socket.recv())
+            res = await self.socket.recv()
+            res = parse_results(res, is_subscription=True)
             yield self.decode_function(res)
 
     async def close_connection(self):
@@ -149,17 +153,26 @@ class EthRPC:
         """Exposes the ability to start the ERPC's socket pool before the first method call"""
         await self._pool.start()
 
-    async def send_message(self, method: str, params: list[Any], timeout: int = 10) -> Any:
-        async with self._pool.get_socket() as ws:
-            await ws.send(self.build_json(method, params))
-            msg = await asyncio.wait_for(ws.recv(), timeout=timeout)
+    async def send_message(
+            self,
+            method: str,
+            params: list[Any],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> Any:
+        if websocket is None:
+            async with self._pool.get_socket() as ws:
+                await ws.send(self.build_json(method, params))
+                msg = await ws.recv()
+        else:
+            await websocket.send(self.build_json(method, params))
+            msg = await websocket.recv()
         return parse_results(msg)
 
     @asynccontextmanager
     async def subscribe(self, method: SubscriptionEnum):
         async with self._pool.get_socket() as ws:
             try:
-                subscription_id = await self.get_subscription(method)
+                subscription_id = await self.get_subscription(method, ws)
                 sub = Subscription(
                     subscription_id=subscription_id,
                     socket=ws,
@@ -170,8 +183,12 @@ class EthRPC:
                 await self.unsubscribe(subscription_id)
                 await sub.close_connection()
 
-    async def get_subscription(self, method: SubscriptionEnum) -> str:
-        msg = await self.send_message("eth_subscribe", [method.value])
+    async def get_subscription(
+            self,
+            method: SubscriptionEnum,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> str:
+        msg = await self.send_message("eth_subscribe", [method.value], websocket)
         self._next_id()
         return msg
 
