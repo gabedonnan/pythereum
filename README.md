@@ -81,6 +81,8 @@ async def test_subscription(subscription_type: SubscriptionEnum):
             # 'item' is formatted into the appropriate form for its subscription type
             # this is done by the sc.recv() automatically
             print(item)
+
+asyncio.run(test_subscription(SubscriptionEnum.new_heads))
 ```
 
 # Getting started
