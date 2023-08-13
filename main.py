@@ -26,7 +26,7 @@ class BlockTag(str, Enum):
     finalized = "finalized"  # Latest finalized block
 
 
-class SubscriptionEnum(Enum):
+class SubscriptionTypes(Enum):
     new_heads = "newHeads"
     logs = "logs"
     new_pending_transactions = "newPendingTransactions"
@@ -58,7 +58,7 @@ class Subscription:
             self,
             subscription_id: str,
             socket: websockets.WebSocketClientProtocol,
-            subscription_type: SubscriptionEnum = SubscriptionEnum.new_heads
+            subscription_type: SubscriptionTypes = SubscriptionTypes.new_heads
     ):
         self.subscription_id = subscription_id
         self.socket = socket
@@ -66,10 +66,10 @@ class Subscription:
 
         # Selects the appropriate function to interpret the output of self.recv
         self.decode_function = {
-            SubscriptionEnum.new_heads: self.new_heads_decoder,
-            SubscriptionEnum.logs: self.logs_decoder,
-            SubscriptionEnum.new_pending_transactions: self.new_pending_transactions_decoder,
-            SubscriptionEnum.syncing: self.syncing_decoder
+            SubscriptionTypes.new_heads: self.new_heads_decoder,
+            SubscriptionTypes.logs: self.logs_decoder,
+            SubscriptionTypes.new_pending_transactions: self.new_pending_transactions_decoder,
+            SubscriptionTypes.syncing: self.syncing_decoder
                                 }[self.subscription_type]
 
     async def recv(self) -> Block | Log | Hex | Sync:
@@ -153,6 +153,9 @@ class EthRPC:
         """Exposes the ability to start the ERPC's socket pool before the first method call"""
         await self._pool.start()
 
+    async def close(self) -> None:
+        await self._pool.quit()
+
     async def send_message(
             self,
             method: str,
@@ -169,7 +172,7 @@ class EthRPC:
         return parse_results(msg)
 
     @asynccontextmanager
-    async def subscribe(self, method: SubscriptionEnum):
+    async def subscribe(self, method: SubscriptionTypes):
         async with self._pool.get_socket() as ws:
             subscription_id = ""
             try:
@@ -188,7 +191,7 @@ class EthRPC:
 
     async def get_subscription(
             self,
-            method: SubscriptionEnum,
+            method: SubscriptionTypes,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> str:
         msg = await self.send_message("eth_subscribe", [method.value], websocket)
