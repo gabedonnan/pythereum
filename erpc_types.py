@@ -28,6 +28,9 @@ class Binary:
     def to_hex(self) -> 'Hex':
         return Hex(self.integer_value)
 
+    def to_json(self) -> str:
+        return self.binary
+
     def __int__(self) -> int:
         return self.integer_value
 
@@ -146,6 +149,9 @@ class Hex:
 
     def to_binary(self) -> Binary:
         return Binary(self.integer_value)
+
+    def to_json(self) -> str:  # Possibly needs fixing
+        return self.hex_string
 
     def __len__(self):
         return len(self.hex_string)

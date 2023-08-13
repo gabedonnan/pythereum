@@ -90,7 +90,7 @@ class Block:
     sha3_uncles: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # Integer size of the block in bytes
-    size: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    size: Optional[int] = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # 32 Byte root of the final state trie of the block
     state_root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
@@ -102,7 +102,7 @@ class Block:
     total_difficulty: Optional[int] = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # List of all transaction objects or 32 Byte transaction hashes for the block
-    transactions: Optional[list[Hex]] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
+    transactions: list[Hex] | None | list[Transaction] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
 
     # 32 Byte root of the transaction trie of the block
     transactions_root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
