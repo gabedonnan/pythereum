@@ -186,7 +186,7 @@ class EthRPC:
             finally:
                 if subscription_id == "":
                     raise ERPCSubscriptionException(f"Subscription of type {method.value} rejected by destination.")
-                await self.unsubscribe(subscription_id)
+                await self.unsubscribe(subscription_id, ws)
                 await sub.close_connection()
 
     async def get_subscription(
@@ -198,8 +198,12 @@ class EthRPC:
         self._next_id()
         return msg
 
-    async def unsubscribe(self, subscription_id: str):
-        msg = await self.send_message("eth_unsubscribe", [subscription_id])
+    async def unsubscribe(
+            self, 
+            subscription_id: str,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ):
+        msg = await self.send_message("eth_unsubscribe", [subscription_id], websocket)
         self._next_id()
         return msg
 
