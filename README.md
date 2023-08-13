@@ -75,7 +75,7 @@ async def test_subscription(subscription_type: SubscriptionEnum):
     Creates a subscription to receive data about all new heads
     Prints each new subscription result as it is received
     """
-    async with erpc_ws.subscribe(subscription_type) as sc:
+    async with erpc.subscribe(subscription_type) as sc:
         # The following will iterate as each item is gotten by sc.recv()
         async for item in sc.recv():
             # 'item' is formatted into the appropriate form for its subscription type
