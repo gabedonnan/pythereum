@@ -22,6 +22,8 @@ def hex_int_encoder(int_val: int) -> str:
 
 
 def hex_decoder(hex_string: str) -> Hex | None:
+    if isinstance(hex_string, dict):
+        print(hex_string)
     if re.match(r"^(0[xX])?[A-Fa-f0-9]+$", hex_string):
         return Hex(hex_string)
     elif hex_string == "0x":
@@ -45,6 +47,20 @@ def hex_list_decoder(hex_string_list: list[str]):
 
 def hex_list_encoder(hex_obj_list: list[Hex]):
     return [hex_encoder(hex_obj) for hex_obj in hex_obj_list]
+
+
+def transaction_decoder(transaction_hex: dict | str) -> 'Transaction' | Hex:
+    if isinstance(transaction_hex, dict):
+        return Transaction.from_dict(transaction_hex)
+    else:
+        return hex_decoder(transaction_hex)
+
+
+def transaction_encoder(transaction_obj: Hex | 'Transaction') -> str | dict:
+    if isinstance(transaction_obj, Transaction):
+        return transaction_obj.to_dict()
+    else:
+        return hex_encoder(transaction_obj)
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -90,7 +106,7 @@ class Block:
     sha3_uncles: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # Integer size of the block in bytes
-    size: Optional[int] = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    size: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # 32 Byte root of the final state trie of the block
     state_root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
@@ -99,16 +115,16 @@ class Block:
     timestamp: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # Integer of the total difficulty of the chain until this block
-    total_difficulty: Optional[int] = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    total_difficulty: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # List of all transaction objects or 32 Byte transaction hashes for the block
-    transactions: list[Hex] | None | list[Transaction] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
+    transactions: list[Hex] | None = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))  # | list[Transaction] ADD THIHS
 
     # 32 Byte root of the transaction trie of the block
     transactions_root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # List of uncle hashes
-    uncles: Optional[list[Hex]] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
+    uncles: list[Hex] | None = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -182,3 +198,17 @@ class Log:
     topics: list[Hex] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
     transaction_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
     transaction_index: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Transaction:
+    address: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    topics: list[Hex] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
+    data: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    block_number: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    transaction_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    transaction_index: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    block_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    log_index: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    removed: bool
