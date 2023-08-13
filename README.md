@@ -70,7 +70,7 @@ asyncio.run(test_transaction_count())
 ```python
 # Example subscription
 
-async def test_subscription(subscription_type: SubscriptionEnum):
+async def test_subscription(subscription_type: SubscriptionTypes):
     """
     Creates a subscription to receive data about all new heads
     Prints each new subscription result as it is received
@@ -82,7 +82,7 @@ async def test_subscription(subscription_type: SubscriptionEnum):
             # this is done by the sc.recv() automatically
             print(item)
 
-asyncio.run(test_subscription(SubscriptionEnum.new_heads))
+asyncio.run(test_subscription(SubscriptionTypes.new_heads))
 ```
 
 # Getting started
