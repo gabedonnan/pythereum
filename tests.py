@@ -8,7 +8,7 @@ from eth_account.signers.local import LocalAccount
 from dotenv import dotenv_values
 config = dotenv_values(".env")  # Pulls variables from .env into a dictionary
 
-from main import Block, EthRPC, SubscriptionTypes
+from main import Block, EthRPC, SubscriptionType
 
 ANVIL_URL = "ws://127.0.0.1:8545"
 # asyncio.run(erpc_ws.start_pool())
@@ -24,7 +24,7 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
         await self.erpc_ws.close()
 
     async def test_subscription(self):
-        async with self.erpc_ws.subscribe(SubscriptionTypes.new_heads) as sc:
+        async with self.erpc_ws.subscribe(SubscriptionType.new_heads) as sc:
             async for item in sc.recv():
                 print(item)
 
