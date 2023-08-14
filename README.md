@@ -55,10 +55,10 @@ import asyncio
 from eth_rpc import EthRPC
 
 TEST_URL = "http://127.0.0.1:8545"
-erpc = EthRPC(TEST_URL, pool_size=10)
+erpc = EthRPC(TEST_URL, pool_size=2)
 
 async def test_transaction_count():
-    # Optional step to start your thread pool before your first function call
+    # Optional step to start your thread pool before your RPC call
     await erpc.start_pool()
     # Gets the number of transactions sent from a given EOA address
     r = await erpc.get_transaction_count("0xabcdefghijklmnopqrstuvwxyz1234567890")
@@ -70,7 +70,7 @@ asyncio.run(test_transaction_count())
 ```python
 # Example subscription
 
-async def test_subscription(subscription_type: SubscriptionTypes):
+async def test_subscription(subscription_type: SubscriptionType):
     """
     Creates a subscription to receive data about all new heads
     Prints each new subscription result as it is received
@@ -82,7 +82,7 @@ async def test_subscription(subscription_type: SubscriptionTypes):
             # this is done by the sc.recv() automatically
             print(item)
 
-asyncio.run(test_subscription(SubscriptionTypes.new_heads))
+asyncio.run(test_subscription(SubscriptionType.new_heads))
 ```
 
 # Getting started
