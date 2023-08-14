@@ -8,48 +8,57 @@ from erpc_exceptions import (
 )
 
 
-def hex_int_decoder(hex_string: str) -> int:
-    if re.match(r"^(0[xX])?[A-Fa-f0-9]+$", hex_string):
+def hex_int_decoder(hex_string: str | None) -> int | None:
+    if hex_string is None:
+        return None
+    elif re.match(r"^(0[xX])?[A-Fa-f0-9]+$", hex_string):
         return int(hex_string, 16)
     else:
         raise ERPCDecoderException(f"{type(hex_string)} \"{hex_string}\" is an invalid input to decoder \"hex_int_decoder\"")
 
 
-def hex_int_encoder(int_val: int) -> str:
-    if not isinstance(int_val, int):
+def hex_int_encoder(int_val: int | None) -> str | None:
+    if int_val is None:
+        return None
+    elif not isinstance(int_val, int):
         raise ERPCEncoderException(f"{type(int_val)} {int_val} is an invalid input to encoder \"hex_int_encoder\"")
     return hex(int_val)
 
 
-def hex_decoder(hex_string: str) -> Hex | None:
-    try:
-        if re.match(r"^(0[xX])?[A-Fa-f0-9]+$", hex_string):
-            return Hex(hex_string)
-        elif hex_string == "0x":
-            return None
-        else:
-            raise ERPCDecoderException(f"{type(hex_string)} \"{hex_string}\" is an invalid input to decoder \"hex_decoder\"")
-    except TypeError:
-        print(hex_string)
-        raise ERPCDecoderException(
-            f"{type(hex_string)} \"{hex_string}\" is an invalid input to decoder \"hex_decoder\"")
+def hex_decoder(hex_string: str | None) -> Hex | None:
+    if hex_string is None:
+        return None
+    elif re.match(r"^(0[xX])?[A-Fa-f0-9]+$", hex_string):
+        return Hex(hex_string)
+    elif hex_string == "0x":
+        return None
+    else:
+        raise ERPCDecoderException(f"{type(hex_string)} \"{hex_string}\" is an invalid input to decoder \"hex_decoder\"")
 
 
-def hex_encoder(hex_obj: Hex) -> str:
+def hex_encoder(hex_obj: Hex | None) -> str | None:
     """
     Takes in a hex object and returns its hex string representation
     """
-    if not isinstance(hex_obj, Hex):
+    if hex_obj is None:
+        return None
+    elif not isinstance(hex_obj, Hex):
         raise ERPCEncoderException(f"{type(hex_obj)} {hex_obj} is an invalid input to encoder \"hex_encoder\"")
     return f"0x{hex_obj.hex_string}"
 
 
-def hex_list_decoder(hex_string_list: list[str]):
-    return [hex_decoder(hex_string) for hex_string in hex_string_list]
+def hex_list_decoder(hex_string_list: list[str] | None) -> list[Hex] | None:
+    if hex_string_list is not None:
+        return [hex_decoder(hex_string) for hex_string in hex_string_list]
+    else:
+        return None
 
 
-def hex_list_encoder(hex_obj_list: list[Hex]):
-    return [hex_encoder(hex_obj) for hex_obj in hex_obj_list]
+def hex_list_encoder(hex_obj_list: list[Hex]) -> list[str] | None:
+    if hex_obj_list is not None:
+        return [hex_encoder(hex_obj) for hex_obj in hex_obj_list]
+    else:
+        return None
 
 
 def transaction_decoder(transaction_hex: dict | str) -> 'Transaction | Hex':
@@ -66,51 +75,74 @@ def transaction_encoder(transaction_obj: 'Hex | Transaction') -> str | dict:
         return hex_encoder(transaction_obj)
 
 
-def transaction_list_decoder(tr_list: list[dict | str]) -> list['Transaction | Hex']:
-    return [transaction_decoder(transaction) for transaction in tr_list]
+def transaction_list_decoder(tr_list: list[dict | str] | None) -> list['Transaction | Hex'] | None:
+    if tr_list is not None:
+        return [transaction_decoder(transaction) for transaction in tr_list]
+    else:
+        return None
 
 
-def transaction_list_encoder(tr_list: list['Transaction| Hex']) -> list[dict | str]:
-    return [transaction_encoder(transaction) for transaction in tr_list]
+def transaction_list_encoder(tr_list: list['Transaction| Hex'] | None) -> list[dict | str] | None:
+    if tr_list is not None:
+        return [transaction_encoder(transaction) for transaction in tr_list]
+    else:
+        return None
 
 
 def access_decoder(access_dict: dict | None) -> 'Access | None':
     if access_dict is not None:
         return Access.from_dict(access_dict, infer_missing=True)
+    else:
+        return None
 
 
-def access_encoder(access_obj: 'Access') -> dict | None:
-    return access_obj.to_dict()
+def access_encoder(access_obj: 'Access | None') -> dict | None:
+    if access_obj is not None:
+        return access_obj.to_dict()
+    else:
+        return None
 
 
 def access_list_decoder(access_list: list[dict] | None) -> list['Access'] | None:
     if access_list is not None:
         return [access_decoder(acc) for acc in access_list]
+    else:
+        return None
 
 
 def access_list_encoder(access_obj_list: list['Access'] | None) -> list[dict] | None:
     if access_obj_list is not None:
         return [access_encoder(acc) for acc in access_obj_list]
+    else:
+        return None
 
 
 def log_decoder(log_dict: dict | None) -> 'Log | None':
     if log_dict is not None:
         return Log.from_dict(log_dict)
+    else:
+        return None
 
 
 def log_encoder(log_obj: 'Log | None') -> dict | None:
     if log_obj is not None:
         return log_obj.to_dict()
+    else:
+        return None
 
 
 def log_list_decoder(log_list: list[dict] | None) -> list['Log'] | None:
     if log_list is not None:
         return [log_decoder(lg) for lg in log_list]
+    else:
+        return None
 
 
 def log_list_encoder(log_obj_list: list['Log'] | None) -> list[dict] | None:
     if log_obj_list is not None:
         return [log_encoder(lg) for lg in log_obj_list]
+    else:
+        return None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
