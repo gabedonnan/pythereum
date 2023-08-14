@@ -138,14 +138,14 @@ class EthRPC:
     def build_json(self, method: str, params: list) -> str:
         """
         :param method: ethereum RPC method
-        :param params: list of parameters to use in the function call
+        :param params: list of parameters to use in the function call, cast to string so Hex data may be used
         :return: json string converted with json.dumps
         This is slightly slower than raw string construction with fstrings, but more elegant
         """
         return json.dumps({
             "jsonrpc": "2.0",
             "method": method,
-            "params": [param.hex_string if isinstance(param, Hex) else param for param in params],
+            "params": [str(param) for param in params],
             "id": self._id
         })
 

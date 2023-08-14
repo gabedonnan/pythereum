@@ -2,12 +2,14 @@ import asyncio
 
 from main import EthRPC, SubscriptionType
 from dotenv import dotenv_values
+
 config = dotenv_values("../.env")  # Pulls variables from .env into a dictionary
+
 
 async def listen_blocks(url):
     # Create EthRPC object with pool size of 2 (arbitrarily chosen, as it does not matter here)
     erpc = EthRPC(url, 2)
-    
+
     # Start the socket pool, may take a while due to connection forming
     await erpc.start_pool()
 
@@ -24,6 +26,7 @@ async def listen_blocks(url):
                 r = await erpc.get_transaction_receipt(tx.hash)
                 print(r)
     await erpc.close()
+
 
 if __name__ == '__main__':
     asyncio.run(listen_blocks(config["TEST_WS"]))

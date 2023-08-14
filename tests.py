@@ -26,7 +26,7 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
     async def test_subscription(self):
         async with self.erpc_ws.subscribe(SubscriptionType.new_heads) as sc:
             async for item in sc.recv():
-                print(item)
+                print(item.to_json())
 
     async def test_block_num(self):
         erpc_ws = self.erpc_ws
