@@ -26,7 +26,7 @@ class BlockTag(str, Enum):
     finalized = "finalized"  # Latest finalized block
 
 
-class SubscriptionTypes(Enum):
+class SubscriptionType(str, Enum):
     new_heads = "newHeads"
     logs = "logs"
     new_pending_transactions = "newPendingTransactions"
@@ -58,7 +58,7 @@ class Subscription:
             self,
             subscription_id: str,
             socket: websockets.WebSocketClientProtocol,
-            subscription_type: SubscriptionTypes = SubscriptionTypes.new_heads
+            subscription_type: SubscriptionType = SubscriptionType.new_heads
     ):
         self.subscription_id = subscription_id
         self.socket = socket
@@ -66,10 +66,10 @@ class Subscription:
 
         # Selects the appropriate function to interpret the output of self.recv
         self.decode_function = {
-            SubscriptionTypes.new_heads: self.new_heads_decoder,
-            SubscriptionTypes.logs: self.logs_decoder,
-            SubscriptionTypes.new_pending_transactions: self.new_pending_transactions_decoder,
-            SubscriptionTypes.syncing: self.syncing_decoder
+            SubscriptionType.new_heads: self.new_heads_decoder,
+            SubscriptionType.logs: self.logs_decoder,
+            SubscriptionType.new_pending_transactions: self.new_pending_transactions_decoder,
+            SubscriptionType.syncing: self.syncing_decoder
                                 }[self.subscription_type]
 
     async def recv(self) -> Block | Log | Hex | Sync:
@@ -145,7 +145,7 @@ class EthRPC:
         return json.dumps({
             "jsonrpc": "2.0",
             "method": method,
-            "params": params,
+            "params": [param.hex_string if isinstance(param, Hex) else param for param in params],
             "id": self._id
         })
 
@@ -172,7 +172,7 @@ class EthRPC:
         return parse_results(msg)
 
     @asynccontextmanager
-    async def subscribe(self, method: SubscriptionTypes):
+    async def subscribe(self, method: SubscriptionType):
         async with self._pool.get_socket() as ws:
             subscription_id = ""
             try:
@@ -191,7 +191,7 @@ class EthRPC:
 
     async def get_subscription(
             self,
-            method: SubscriptionTypes,
+            method: SubscriptionType,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> str:
         msg = await self.send_message("eth_subscribe", [method.value], websocket)
@@ -200,7 +200,7 @@ class EthRPC:
 
     async def unsubscribe(
             self, 
-            subscription_id: str,
+            subscription_id: str | Hex,
             websocket: websockets.WebSocketClientProtocol | None = None
     ):
         msg = await self.send_message("eth_unsubscribe", [subscription_id], websocket)
@@ -215,7 +215,7 @@ class EthRPC:
         self._next_id()
         return int(msg, 16)
 
-    async def get_transaction_count(self, address: ChecksumAddress, block_specifier: DefaultBlock = BlockTag.latest) -> int:
+    async def get_transaction_count(self, address: str | Hex, block_specifier: DefaultBlock = BlockTag.latest) -> int:
         """
         Gets the number of transactions sent from a given EOA address
         :param address: The address of an externally owned account
@@ -226,7 +226,7 @@ class EthRPC:
         self._next_id()
         return int(msg, 16)
 
-    async def get_balance(self, contract_address: ChecksumAddress, block_specifier: DefaultBlock = BlockTag.latest) -> int:
+    async def get_balance(self, contract_address: str | Hex, block_specifier: DefaultBlock = BlockTag.latest) -> int:
         """
         Gets the balance of the account a given address points to
         :param contract_address: Contract address, its balance will be gotten at the block specified by quant_or_tag
@@ -246,7 +246,7 @@ class EthRPC:
         self._next_id()
         return int(msg, 16)
 
-    async def get_block_by_number(self, block_specifier: DefaultBlock, full_object: bool = True) -> Block:
+    async def get_block_by_number(self, block_specifier: DefaultBlock, full_object: bool = False) -> Block:
         """
         Returns a Block object which represents a block's state
         :param block_specifier: A specifier, either int or tag, delineating the block number to get
@@ -259,7 +259,7 @@ class EthRPC:
         self._next_id()
         return Block.from_dict(msg, infer_missing=True)
 
-    async def get_block_by_hash(self, data: Hex64, full_object: bool = False) -> Block:
+    async def get_block_by_hash(self, data: str | Hex, full_object: bool = False) -> Block:
         """
         Returns a Block object which represents a block's state
         :param data: Hash of a block
@@ -305,12 +305,12 @@ class EthRPC:
         self._next_id()
         return msg
 
-    async def get_transaction_receipt(self, tx_hash: HexString) -> Receipt:
+    async def get_transaction_receipt(self, tx_hash: str | Hex) -> Receipt:
         msg = await self.send_message("eth_getTransactionReceipt", [tx_hash])
         self._next_id()
         return Receipt.from_dict(msg, infer_missing=True)
 
-    async def send_raw_transaction(self, raw_transaction: RawTransaction):
+    async def send_raw_transaction(self, raw_transaction: str | Hex):
         """
         Returns the receipt of a transaction by transaction hash
         :param raw_transaction: The hash of a transaction
@@ -420,7 +420,7 @@ class EthRPC:
         else:
             return Sync.from_dict(msg)
 
-    async def get_coinbase(self) -> Hex20:
+    async def get_coinbase(self) -> str | Hex:
         msg = await self.send_message("eth_coinbase", [])
         self._next_id()
         return msg
@@ -440,7 +440,7 @@ class EthRPC:
         self._next_id()
         return int(msg, 16)
 
-    async def get_accounts(self) -> List[Hex20]:
+    async def get_accounts(self) -> List[str | Hex]:
         msg = await self.send_message("eth_accounts", [])
         self._next_id()
         return msg
