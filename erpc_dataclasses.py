@@ -22,14 +22,17 @@ def hex_int_encoder(int_val: int) -> str:
 
 
 def hex_decoder(hex_string: str) -> Hex | None:
-    if isinstance(hex_string, dict):
+    try:
+        if re.match(r"^(0[xX])?[A-Fa-f0-9]+$", hex_string):
+            return Hex(hex_string)
+        elif hex_string == "0x":
+            return None
+        else:
+            raise ERPCDecoderException(f"{type(hex_string)} \"{hex_string}\" is an invalid input to decoder \"hex_decoder\"")
+    except TypeError:
         print(hex_string)
-    if re.match(r"^(0[xX])?[A-Fa-f0-9]+$", hex_string):
-        return Hex(hex_string)
-    elif hex_string == "0x":
-        return None
-    else:
-        raise ERPCDecoderException(f"{type(hex_string)} \"{hex_string}\" is an invalid input to decoder \"hex_decoder\"")
+        raise ERPCDecoderException(
+            f"{type(hex_string)} \"{hex_string}\" is an invalid input to decoder \"hex_decoder\"")
 
 
 def hex_encoder(hex_obj: Hex) -> str:
@@ -49,18 +52,65 @@ def hex_list_encoder(hex_obj_list: list[Hex]):
     return [hex_encoder(hex_obj) for hex_obj in hex_obj_list]
 
 
-def transaction_decoder(transaction_hex: dict | str) -> 'Transaction' | Hex:
+def transaction_decoder(transaction_hex: dict | str) -> 'Transaction | Hex':
     if isinstance(transaction_hex, dict):
-        return Transaction.from_dict(transaction_hex)
+        return Transaction.from_dict(transaction_hex, infer_missing=True)
     else:
         return hex_decoder(transaction_hex)
 
 
-def transaction_encoder(transaction_obj: Hex | 'Transaction') -> str | dict:
+def transaction_encoder(transaction_obj: 'Hex | Transaction') -> str | dict:
     if isinstance(transaction_obj, Transaction):
         return transaction_obj.to_dict()
     else:
         return hex_encoder(transaction_obj)
+
+
+def transaction_list_decoder(tr_list: list[dict | str]) -> list['Transaction | Hex']:
+    return [transaction_decoder(transaction) for transaction in tr_list]
+
+
+def transaction_list_encoder(tr_list: list['Transaction| Hex']) -> list[dict | str]:
+    return [transaction_encoder(transaction) for transaction in tr_list]
+
+
+def access_decoder(access_dict: dict | None) -> 'Access | None':
+    if access_dict is not None:
+        return Access.from_dict(access_dict, infer_missing=True)
+
+
+def access_encoder(access_obj: 'Access') -> dict | None:
+    return access_obj.to_dict()
+
+
+def access_list_decoder(access_list: list[dict] | None) -> list['Access'] | None:
+    if access_list is not None:
+        return [access_decoder(acc) for acc in access_list]
+
+
+def access_list_encoder(access_obj_list: list['Access'] | None) -> list[dict] | None:
+    if access_obj_list is not None:
+        return [access_encoder(acc) for acc in access_obj_list]
+
+
+def log_decoder(log_dict: dict | None) -> 'Log | None':
+    if log_dict is not None:
+        return Log.from_dict(log_dict)
+
+
+def log_encoder(log_obj: 'Log | None') -> dict | None:
+    if log_obj is not None:
+        return log_obj.to_dict()
+
+
+def log_list_decoder(log_list: list[dict] | None) -> list['Log'] | None:
+    if log_list is not None:
+        return [log_decoder(lg) for lg in log_list]
+
+
+def log_list_encoder(log_obj_list: list['Log'] | None) -> list[dict] | None:
+    if log_obj_list is not None:
+        return [log_encoder(lg) for lg in log_obj_list]
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -118,7 +168,9 @@ class Block:
     total_difficulty: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # List of all transaction objects or 32 Byte transaction hashes for the block
-    transactions: list[Hex] | None = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))  # | list[Transaction] ADD THIHS
+    transactions: list['Transaction | Hex'] | None = field(
+        metadata=config(decoder=transaction_list_decoder, encoder=transaction_list_encoder)
+    )
 
     # 32 Byte root of the transaction trie of the block
     transactions_root: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
@@ -169,10 +221,10 @@ class Receipt:
     gas_used: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # The 20 Byte contract address created
-    contract_address: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    contract_address: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # List of log objects, which this transaction generated
-    logs: list[Hex] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
+    logs: list['Log'] | None = field(metadata=config(decoder=log_list_decoder, encoder=log_list_encoder))
 
     # 256 Byte bloom for light clients to quickly retrieve related logs
     logs_bloom: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
@@ -198,17 +250,38 @@ class Log:
     topics: list[Hex] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
     transaction_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
     transaction_index: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    removed: bool
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Transaction:
-    address: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
-    topics: list[Hex] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
-    data: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
-    block_number: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
-    transaction_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
-    transaction_index: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
     block_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
-    log_index: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
-    removed: bool
+    block_number: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    from_address: Hex = field(metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder))
+    gas: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    gas_price: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    max_fee_per_gas: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    max_priority_fee_per_gas: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    input: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    nonce: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    to_address: Hex = field(metadata=config(field_name="to", decoder=hex_decoder, encoder=hex_encoder))
+    transaction_index: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    value: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    type: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    access_list: list['Access'] | None = field(metadata=config(decoder=access_list_decoder, encoder=access_list_encoder))
+    chain_id: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    v: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    r: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    s: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Access:
+    """
+    Information on access lists available at https://eips.ethereum.org/EIPS/eip-2930
+    """
+    address: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    storage_keys: list[Hex] = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
