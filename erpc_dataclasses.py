@@ -173,7 +173,7 @@ class Block:
     mix_hash: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # 8 Byte hash of the generated proof of work. Null when the block is pending
-    nonce: Hex = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    nonce: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # The block number. Null when the block is pending
     number: int = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))

@@ -26,10 +26,11 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
     async def test_subscription(self):
         async with self.erpc_ws.subscribe(SubscriptionType.new_heads) as sc:
             async for item in sc.recv():
-                print(item.to_json())
+                print(item)
 
     async def test_block_num(self):
         erpc_ws = self.erpc_ws
+        await erpc_ws.start_pool()
         t0 = time()
         r1 = asyncio.create_task(erpc_ws.get_block_number())
         r2 = asyncio.create_task(erpc_ws.get_transaction_count("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"))
