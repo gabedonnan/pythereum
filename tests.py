@@ -32,19 +32,14 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
         erpc_ws = self.erpc_ws
         await erpc_ws.start_pool()
         t0 = time()
-        r1 = asyncio.create_task(erpc_ws.get_block_number())
-        r2 = asyncio.create_task(erpc_ws.get_transaction_count("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"))
-        r3 = asyncio.create_task(erpc_ws.get_balance("0xA69babEF1cA67A37Ffaf7a485DfFF3382056e78C"))
-        r4 = asyncio.create_task(erpc_ws.get_gas_price())
-        r5 = asyncio.create_task(erpc_ws.get_block_by_hash("0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae", False))
-        r6 = asyncio.create_task(erpc_ws.get_block_by_number(17578346, False))
+        async with asyncio.TaskGroup() as tg:
+            r1 = tg.create_task(erpc_ws.get_block_number())
+            r2 = tg.create_task(erpc_ws.get_transaction_count("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"))
+            r3 = tg.create_task(erpc_ws.get_balance("0xA69babEF1cA67A37Ffaf7a485DfFF3382056e78C"))
+            r4 = tg.create_task(erpc_ws.get_gas_price())
+            r5 = tg.create_task(erpc_ws.get_block_by_hash("0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae", False))
+            r6 = tg.create_task(erpc_ws.get_block_by_number(17578346, False))
 
-        print(await r1)
-        print(await r2)
-        print(await r3)
-        print(await r4)
-        print(await r5)
-        print(await r6)
         print(time() - t0)
 
     async def test_transaction_count(self):
