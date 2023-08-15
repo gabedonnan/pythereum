@@ -17,7 +17,7 @@ ANVIL_URL = "ws://127.0.0.1:8545"
 class MyTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self) -> None:
-        self.erpc_ws = EthRPC(config["TEST_WS"], 5)
+        self.erpc_ws = EthRPC(config["TEST_WS"], 6)
         await self.erpc_ws.start_pool()
 
     async def asyncTearDown(self) -> None:
@@ -47,7 +47,7 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(r, int)
 
     async def test_wallet_balance(self):
-        self.assertIsInstance(await self.erpc_ws.get_balance("0xA69babEF1cA67A37Ffaf7a485DfFF3382056e78C"), int)
+        self.assertIsInstance(await self.erpc_ws.get_balance(["0xA69babEF1cA67A37Ffaf7a485DfFF3382056e78C", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"]), list[int])
 
     async def test_gas_price(self):
         self.assertIsInstance(await self.erpc_ws.get_gas_price(), int)
