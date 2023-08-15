@@ -38,7 +38,6 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
             r4 = tg.create_task(erpc_ws.get_gas_price())
             r5 = tg.create_task(erpc_ws.get_block_by_hash("0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae", False))
             r6 = tg.create_task(erpc_ws.get_block_by_number(17578346, False))
-
         print(time() - t0)
 
     async def test_transaction_count(self):
