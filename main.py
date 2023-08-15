@@ -24,6 +24,9 @@ class BlockTag(str, Enum):
     finalized = "finalized"  # Latest finalized block
 
 
+DefaultBlock = int | BlockTag
+
+
 class SubscriptionType(str, Enum):
     new_heads = "newHeads"
     logs = "logs"
@@ -91,9 +94,6 @@ class Subscription:
     @staticmethod
     def syncing_decoder(data: Any) -> Sync:
         return Sync.from_dict(data)
-
-
-DefaultBlock = int | BlockTag
 
 
 class EthRPC:
