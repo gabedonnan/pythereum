@@ -64,11 +64,14 @@ async def test_transaction_count():
     r = await erpc.get_transaction_count("0xabcdefghijklmnopqrstuvwxyz1234567890")
     print(r)
 
-asyncio.run(test_transaction_count())
+if __name__ == "__main__":
+    asyncio.run(test_transaction_count())
 ```
 
 ```python
 # Example subscription
+import asyncio
+from eth_rpc import EthRPC, SubscriptionType
 
 async def test_subscription(subscription_type: SubscriptionType):
     """
@@ -82,7 +85,8 @@ async def test_subscription(subscription_type: SubscriptionType):
             # this is done by the sc.recv() automatically
             print(item)
 
-asyncio.run(test_subscription(SubscriptionType.new_heads))
+if __name__ == "__main__":
+    asyncio.run(test_subscription(SubscriptionType.new_heads))
 ```
 
 # Getting started
