@@ -65,7 +65,7 @@ async def test_transaction_count():
     print(r)
 
 if __name__ == "__main__":
-  asyncio.run(test_transaction_count())
+    asyncio.run(test_transaction_count())
 ```
 
 ```python
@@ -86,7 +86,7 @@ async def test_subscription(subscription_type: SubscriptionType):
             print(item)
 
 if __name__ == "__main__":
-  asyncio.run(test_subscription(SubscriptionType.new_heads))
+    asyncio.run(test_subscription(SubscriptionType.new_heads))
 ```
 
 # Getting started
