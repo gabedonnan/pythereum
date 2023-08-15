@@ -2,7 +2,6 @@ import unittest
 import asyncio
 from time import time
 from eth_account import Account
-from eth_account.signers.local import LocalAccount
 
 # I store the links I use for testing in my .env file under the name "TEST_WS"
 from dotenv import dotenv_values

@@ -8,7 +8,6 @@ from erpc_exceptions import (
     ERPCRequestException, ERPCInvalidReturnException, ERPCSubscriptionException
 )
 from erpc_types import Hex
-from eth_typing import ChecksumAddress
 from jsonschema import validate
 from typing import List, Any
 from socket_pool import WebsocketPool
@@ -96,16 +95,6 @@ class Subscription:
 
 
 DefaultBlock = int | BlockTag
-
-Hex64 = str  # 64 bit hex string
-
-Hex20 = str  # 20 bit hex string
-
-HexString = str
-
-RawTransaction = str
-
-HexInt = str  # Hexadecimal representation of an integer number
 
 call_object_schema = {  # A schema for validating call objects
             "type": "object",
@@ -472,9 +461,9 @@ class EthRPC:
     async def get_chain_id(
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> HexInt:
+    ) -> int:
         msg = await self.send_message("eth_chainId", [], websocket)
-        return msg
+        return int(msg, 16)
 
     async def is_mining(
             self,
