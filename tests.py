@@ -7,7 +7,7 @@ from eth_account import Account
 from dotenv import dotenv_values
 config = dotenv_values(".env")  # Pulls variables from .env into a dictionary
 
-from main import Block, EthRPC, SubscriptionType
+from main import Block, EthRPC, SubscriptionType, BlockTag
 
 ANVIL_URL = "ws://127.0.0.1:8545"
 # asyncio.run(erpc_ws.start_pool())
@@ -46,7 +46,9 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(r, int)
 
     async def test_wallet_balance(self):
-        self.assertIsInstance(await self.erpc_ws.get_balance(["0xA69babEF1cA67A37Ffaf7a485DfFF3382056e78C", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"]), list[int])
+        print(await self.erpc_ws.get_balance(
+            ["0xA69babEF1cA67A37Ffaf7a485DfFF3382056e78C", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"],
+            [BlockTag.latest, BlockTag.latest]))
 
     async def test_gas_price(self):
         self.assertIsInstance(await self.erpc_ws.get_gas_price(), int)

@@ -41,6 +41,9 @@ def parse_results(res: str | dict, is_subscription: bool = False) -> Any:
     if isinstance(res, str):
         res = json.loads(res)
 
+    if isinstance(res, list):
+        return [parse_results(item) for item in res]
+
     if is_subscription:
         res = res["params"]
 
@@ -71,7 +74,7 @@ class Subscription:
             SubscriptionType.logs: self.logs_decoder,
             SubscriptionType.new_pending_transactions: self.new_pending_transactions_decoder,
             SubscriptionType.syncing: self.syncing_decoder
-                                }[self.subscription_type]
+        }[self.subscription_type]
 
     async def recv(self) -> Block | Log | Hex | Sync:
         while True:
@@ -104,7 +107,7 @@ class EthRPC:
     def _next_id(self) -> None:
         self._id += 1
 
-    def build_json(self, method: str, params: list, increment: bool = True) -> str:
+    def build_json(self, method: str, params: list[Any], increment: bool = True) -> str:
         """
         :param method: ethereum RPC method
         :param params: list of parameters to use in the function call, cast to string so Hex data may be used
@@ -122,6 +125,29 @@ class EthRPC:
             self._next_id()
         return res
 
+    def build_batch_json(self, method: str, param_list: list[list[Any]], increment: bool = True):
+        res = []
+        for params in param_list:
+            res.append({
+                "jsonrpc": "2.0",
+                "method": method,
+                "params": [param.hex_string if isinstance(param, Hex) else param for param in params],
+                "id": self._id
+            })
+            if increment:
+                self._next_id()
+        return json.dumps(res)
+
+    @staticmethod
+    def batch_format(*param_list: list[Any]):
+        """
+        Automatically formats parameters for sending via build_batch_json
+        """
+        if all(isinstance(item, list) for item in param_list):
+            return [item for item in zip(*param_list)]
+        else:
+            return param_list
+
     async def start_pool(self) -> None:
         """Exposes the ability to start the ERPC's socket pool before the first method call"""
         await self._pool.start()
@@ -135,12 +161,14 @@ class EthRPC:
             params: list[Any],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> Any:
+        json_builder = self.build_batch_json if any(isinstance(param, tuple) for param in params) else self.build_json
+
         if websocket is None:
             async with self._pool.get_socket() as ws:
-                await ws.send(self.build_json(method, params))
+                await ws.send(json_builder(method, params))
                 msg = await ws.recv()
         else:
-            await websocket.send(self.build_json(method, params))
+            await websocket.send(json_builder(method, params))
             msg = await websocket.recv()
         return parse_results(msg)
 
@@ -170,7 +198,7 @@ class EthRPC:
         return msg
 
     async def unsubscribe(
-            self, 
+            self,
             subscription_id: str | Hex,
             websocket: websockets.WebSocketClientProtocol | None = None
     ):
@@ -205,10 +233,10 @@ class EthRPC:
 
     async def get_balance(
             self,
-            contract_address: str | Hex,
-            block_specifier: DefaultBlock = BlockTag.latest,
+            contract_address: str | Hex | list[str] | list[Hex],
+            block_specifier: DefaultBlock | list[DefaultBlock] = BlockTag.latest,
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> int:
+    ) -> int | list[int]:
         """
         Gets the balance of the account a given address points to
         :param contract_address: Contract address, its balance will be gotten at the block specified by quant_or_tag
@@ -216,8 +244,9 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: An integer balance in Wei of a given contract
         """
-        msg = await self.send_message("eth_getBalance", [contract_address, block_specifier], websocket)
-        return int(msg, 16)
+        params = self.batch_format(contract_address, block_specifier)
+        msg = await self.send_message("eth_getBalance", params, websocket)
+        return int(msg, 16) if isinstance(msg, int) else [int(result, 16) for result in msg]
 
     async def get_gas_price(
             self,
