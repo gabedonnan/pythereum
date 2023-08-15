@@ -145,7 +145,7 @@ class EthRPC:
         return json.dumps({
             "jsonrpc": "2.0",
             "method": method,
-            "params": [str(param) for param in params],
+            "params": [param.hex_string if isinstance(param, Hex) else param for param in params],
             "id": self._id
         })
 
