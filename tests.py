@@ -43,21 +43,21 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
         print(time() - t0)
 
     async def test_transaction_count(self):
-        r = await erpc_ws.get_transaction_count("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+        r = await self.erpc_ws.get_transaction_count("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
         self.assertIsInstance(r, int)
 
     async def test_wallet_balance(self):
-        self.assertIsInstance(await erpc_ws.get_balance("0xA69babEF1cA67A37Ffaf7a485DfFF3382056e78C"), int)
+        self.assertIsInstance(await self.erpc_ws.get_balance("0xA69babEF1cA67A37Ffaf7a485DfFF3382056e78C"), int)
 
     async def test_gas_price(self):
-        self.assertIsInstance(await erpc_ws.get_gas_price(), int)
+        self.assertIsInstance(await self.erpc_ws.get_gas_price(), int)
 
     async def test_get_block_by_hash(self):
-        r = await erpc_ws.get_block_by_hash("0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae", False)
+        r = await self.erpc_ws.get_block_by_hash("0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae", False)
         print(r)
 
     async def test_get_block_by_number(self):
-        r = await erpc_ws.get_block_by_number(17578346, False)
+        r = await self.erpc_ws.get_block_by_number(17578346, False)
         print(r)
 
     async def test_eth_call(self):
@@ -66,7 +66,7 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
               "value": hex(1),
               "gas": hex(38983301337),
               "type": hex(1)}
-        print(await erpc_ws.call(tx))
+        print(await self.erpc_ws.call(tx))
 
     def test_send_transaction(self):
         tx = {"from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -74,7 +74,7 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
               "value": hex(1),
               "gas": hex(30000000),
               "type": hex(1)}
-        print(erpc_ws.send_transaction(tx))
+        print(self.erpc_ws.send_transaction(tx))
 
     async def test_get_transaction_receipt(self):
         tx = {"from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -82,11 +82,11 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
               "value": hex(1),
               "gas": hex(30000000),
               "type": hex(1)}
-        x = await erpc_ws.send_transaction(tx)
-        print(erpc_ws.get_transaction_receipt(x))
+        x = await self.erpc_ws.send_transaction(tx)
+        print(self.erpc_ws.get_transaction_receipt(x))
 
     async def test_send_raw_transaction(self):
-        nonce = await erpc_ws.get_transaction_count("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+        nonce = await self.erpc_ws.get_transaction_count("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 
         tx = {"from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
               "to": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -100,9 +100,9 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
               "chainId": "0x1"}
         acc = Account.from_key("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
         raw_transaction = acc.signTransaction(tx)
-        transaction = await erpc_ws.send_raw_transaction(raw_transaction.rawTransaction.hex())
+        transaction = await self.erpc_ws.send_raw_transaction(raw_transaction.rawTransaction.hex())
         print(transaction)
-        print(erpc_ws.get_transaction_receipt(transaction))
+        print(self.erpc_ws.get_transaction_receipt(transaction))
 
 if __name__ == '__main__':
     unittest.main()

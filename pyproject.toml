@@ -6,7 +6,7 @@ authors = ["gabedonnan <47415809+gabedonnan@users.noreply.github.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.11,<3.13"
 requests = "^2.31.0"
 websockets = "^11.0.3"
 jsonschema = "^4.19.0"
