@@ -8,7 +8,6 @@ from erpc_exceptions import (
     ERPCRequestException, ERPCInvalidReturnException, ERPCSubscriptionException
 )
 from erpc_types import Hex
-from jsonschema import validate
 from typing import List, Any
 from socket_pool import WebsocketPool
 from erpc_dataclasses import Block, Sync, Receipt, Log
@@ -95,22 +94,6 @@ class Subscription:
 
 
 DefaultBlock = int | BlockTag
-
-call_object_schema = {  # A schema for validating call objects
-            "type": "object",
-            "properties": {
-                "from": {"type": "string"},  # Hex20
-                "to": {"type": "string"},  # Hex20
-                "gas": {"type": "string"},  # int
-                "gasPrice": {"type": "string"},  # int
-                "value": {"type": "string"},  # int
-                "data": {"type": "string"},  # hash
-                "chainId": {"type": "string"},  # hex num
-                "maxFeePerGas": {"type": "string"},
-                "maxPriorityFeePerGas": {"type": "string"}
-            },
-            "required": ["to"]
-        }
 
 
 class EthRPC:
@@ -317,7 +300,6 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: Hex value of the executed contract
         """
-        validate(transaction, call_object_schema)
         msg = await self.send_message("eth_call", [transaction, block_specifier], websocket)
         return msg
 
