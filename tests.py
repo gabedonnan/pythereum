@@ -16,7 +16,7 @@ ANVIL_URL = "ws://127.0.0.1:8545"
 class MyTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self) -> None:
-        self.erpc_ws = EthRPC(ANVIL_URL, 12)
+        self.erpc_ws = EthRPC(ANVIL_URL, 20)
         await self.erpc_ws.start_pool()
 
     async def asyncTearDown(self) -> None:
@@ -75,14 +75,32 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
             ))
         print(time() - t0)
 
-    async def test_stress_batch(self):
+    async def test_batch_get_block_by_number(self):
         erpc = self.erpc_ws
         for i in range(20):
             x = (asyncio.create_task(erpc.get_block_by_number(
                 [i for i in range(6020, 6030)],
                 full_object=[False for _ in range(10)]
-            )) for __ in range(10000))
+            )) for __ in range(120))
             await asyncio.gather(*x)
+
+    async def test_batch_get_balance(self):
+        erpc = self.erpc_ws
+        for i in range(20):
+            x = (asyncio.create_task(erpc.get_balance(
+                ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" for _ in range(10)],
+                [BlockTag.latest for __ in range(10)]
+            )) for __ in range(120))
+            print(await asyncio.gather(*x))
+
+    async def test_batch_get_transaction_count(self):
+        erpc = self.erpc_ws
+        for i in range(20):
+            x = (asyncio.create_task(erpc.get_transaction_count(
+                ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" for _ in range(10)],
+                [BlockTag.latest for __ in range(10)]
+            )) for __ in range(120))
+            print(await asyncio.gather(*x))
 
     async def test_transaction_count(self):
         r = await self.erpc_ws.get_transaction_count("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
