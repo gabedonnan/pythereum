@@ -45,6 +45,7 @@ def parse_results(res: str | dict, is_subscription: bool = False) -> Any:
         return [parse_results(item) for item in res]
 
     if is_subscription:
+        # Subscription results are returned in a different format to normal calls
         res = res["params"]
 
     if "result" not in res:
@@ -58,6 +59,10 @@ def parse_results(res: str | dict, is_subscription: bool = False) -> Any:
 
 
 class Subscription:
+    """
+    A representation of a subscription to receive information from an ethereum endpoint
+    Information is automatically decoded into an appropriate format upon being retrieved from the endpoint
+    """
     def __init__(
             self,
             subscription_id: str,
@@ -66,7 +71,6 @@ class Subscription:
     ):
         self.subscription_id = subscription_id
         self.socket = socket
-        self.subscription_type = subscription_type
 
         # Selects the appropriate function to interpret the output of self.recv
         self.decode_function = {
@@ -74,9 +78,12 @@ class Subscription:
             SubscriptionType.logs: self.logs_decoder,
             SubscriptionType.new_pending_transactions: self.new_pending_transactions_decoder,
             SubscriptionType.syncing: self.syncing_decoder
-        }[self.subscription_type]
+        }[subscription_type]
 
     async def recv(self) -> Block | Log | Hex | Sync:
+        """
+        infinite async generator function which will yield new information retrieved from a websocket
+        """
         while True:
             res = await self.socket.recv()
             res = parse_results(res, is_subscription=True)
@@ -143,6 +150,12 @@ class EthRPC:
         return res
 
     def build_batch_json(self, method: str, param_list: list[list[Any]], increment: bool = True) -> str:
+        """
+        :param method: The ethereum JSON RPC method to be called
+        :param param_list: A list of iterables of parameters to be appropriately formatted
+        :param increment: If checked, this will increment the call id from this endpoint, on by default
+        :return: Returns a stringified list of JSON objects
+        """
         res = []
         for params in param_list:
             res.append({
@@ -169,7 +182,10 @@ class EthRPC:
         """Exposes the ability to start the ERPC's socket pool before the first method call"""
         await self._pool.start()
 
-    async def close(self) -> None:
+    async def close_pool(self) -> None:
+        """
+        Closes the socket pool, this is important to not leave hanging open connections
+        """
         await self._pool.quit()
 
     async def send_message(
@@ -178,19 +194,38 @@ class EthRPC:
             params: list[Any],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> Any:
+        """
+        :param method: The ethereum JSON RPC procedure to be called
+        :param params: A list of parameters to be passed for the RPC
+        :param websocket: An optional external websocket for calls to this function
+
+        Sends a message representing a call to a given method to this object's url
+        """
         params = self.batch_format(*params)
+        # json_builder is determined by whether a call is determined to be a batch or singular
         json_builder = self.build_batch_json if any(isinstance(param, tuple) for param in params) else self.build_json
         if websocket is None:
+            # Gets a new websocket if one is not supplied to the function
             async with self._pool.get_socket() as ws:
                 await ws.send(json_builder(method, params))
                 msg = await ws.recv()
         else:
+            # Sends a message with a given websocket
             await websocket.send(json_builder(method, params))
             msg = await websocket.recv()
         return parse_results(msg)
 
     @asynccontextmanager
-    async def subscribe(self, method: SubscriptionType):
+    async def subscribe(self, method: SubscriptionType) -> Subscription:
+        """
+        :param method: The subscription's type, determined by a preset enum of possible types
+        This function is decorated with an async context manager such that it can be used in an async with statement
+
+        A subscription object is returned generated with a unique subscription id
+        The subscription has a .recv() method to get the latest data returned by the ethereum endpoint
+        for the given subscription.
+        In the future a custom version of this function may be made to support custom subscription types.
+        """
         async with self._pool.get_socket() as ws:
             subscription_id = ""
             try:
@@ -211,6 +246,9 @@ class EthRPC:
             method: SubscriptionType,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> str:
+        """
+        Supporting function for self.subscribe, opening a subscription for the provided websocket
+        """
         msg = await self.send_message("eth_subscribe", [method.value], websocket)
         return msg
 
@@ -219,6 +257,11 @@ class EthRPC:
             subscription_id: str | Hex,
             websocket: websockets.WebSocketClientProtocol | None = None
     ):
+        """
+        :param subscription_id: String subscription id returned by eth_subscribe
+        :param websocket: An optional external websocket for calls to this function
+        :return: The return of this function is not meant to be caught, though it does exist
+        """
         msg = await self.send_message("eth_unsubscribe", [subscription_id], websocket)
         return msg
 
@@ -361,6 +404,9 @@ class EthRPC:
             tx_hash: str | Hex | list[str] | list[Hex],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> Receipt | list[Receipt]:
+        """
+        Gets the receipt of a transaction given its hash, the definition of a receipt can be seen in erpc_dataclasses.py
+        """
         msg = await self.send_message("eth_getTransactionReceipt", [tx_hash], websocket)
         return Receipt.from_dict(msg, infer_missing=True) if isinstance(msg, dict) else [
             Receipt.from_dict(result, infer_missing=True) for result in msg
