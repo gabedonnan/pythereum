@@ -108,12 +108,12 @@ class EthRPC:
         self._id += 1
 
     @staticmethod
-    def block_formatter(block_specifier: BlockTag | list[BlockTag] | tuple[BlockTag]) -> BlockTag | list[BlockTag]:
+    def block_formatter(block_specifier: DefaultBlock | list[DefaultBlock] | tuple[DefaultBlock]) -> DefaultBlock | list[DefaultBlock]:
         """
-        Automatically converts a BlockTag object to a format which can be sent via RPC
-        BlockTag = int | Block | str
+        Automatically converts a DefaultBlock object to a format which can be sent via RPC
+        DefaultBlock = int | BlockTsh | str
         integers are converted into their hex representation
-        Blocks are untouched as they are automatically converted into the appropriate strings later
+        BlockTags are untouched as they are automatically converted into the appropriate strings later
         raw strings cannot be managed by this function and are ignored,
         it is expected that a provided string is either hex or the string representation of a block specifier
         """
