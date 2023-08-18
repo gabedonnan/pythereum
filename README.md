@@ -7,12 +7,12 @@ Features include:
 - Custom data types for easy manipulation of RPC results
 - Eth_subscribe functionality
 - Websocket pooling for high performance calls
-- Future support for RPC batching
+- Support for RPC batching, allowing multiple calls to the same function at once
 
 ### Documentation of progress below (wil add more as I go!)
 
 - [x] Implement websocket instead of HTTP
-- [x] Implemented methods
+- Implemented methods
   - [x] `eth_blockNumber`
   - [x] `eth_getTransactionCount`
   - [x] `eth_getBalance`
@@ -40,14 +40,14 @@ Features include:
 
 
 - [x] Add websocket pool
-  - [x] Basic pooling functionality added
-  - [ ] Optimisation and improving pooling
-- [ ] Implement batch procedure calls
+- [x] Implement batch procedure calls
 - [ ] Enhance tests
 - [x] Add custom typing
   - [x] Add Hex type
-  - [x] Add Binary type
-  - [ ] Expand custom typing functionality
+
+### Example usage
+
+#### Basic single function call
 
 ```python
 # Example usage
@@ -63,10 +63,14 @@ async def test_transaction_count():
     # Gets the number of transactions sent from a given EOA address
     r = await erpc.get_transaction_count("0xabcdefghijklmnopqrstuvwxyz1234567890")
     print(r)
+    # Ensures no hanging connections are left
+    await erpc.close_pool()
 
 if __name__ == "__main__":
     asyncio.run(test_transaction_count())
 ```
+
+#### Example subscription
 
 ```python
 # Example subscription
@@ -88,6 +92,8 @@ async def test_subscription(subscription_type: SubscriptionType):
 if __name__ == "__main__":
     asyncio.run(test_subscription(SubscriptionType.new_heads))
 ```
+
+More examples available in the demo folder
 
 # Getting started
 
