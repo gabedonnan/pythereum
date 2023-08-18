@@ -1,4 +1,4 @@
-import asyncio
+from asyncio import Queue
 import websockets
 from contextlib import asynccontextmanager
 
@@ -8,12 +8,12 @@ class WebsocketPool:
     Builds a pool of reusable websockets from which to pull
     Greatly improves speed over having to handshake a new connection for each request
     """
-    def __init__(self, url: str, pool_size: int = 20):
+    def __init__(self, url: str, pool_size: int = 6):
         self._url = url
         self._id = 0
         self._max_pool_size = pool_size
         self._sockets_used = 0
-        self._sockets = asyncio.Queue(maxsize=pool_size)
+        self._sockets = Queue(maxsize=pool_size)
         self._connected = False
 
     async def start(self) -> None:
@@ -24,7 +24,6 @@ class WebsocketPool:
         if self._connected:
             await self.quit()
         # Creates a number of sockets equal to the maximum pool size
-        # connections = await asyncio.gather(websockets.connect(self._url) for _ in range(self._max_pool_size))
         for _ in range(self._max_pool_size):
             ws = await websockets.connect(self._url)
             await self._sockets.put(ws)
