@@ -24,7 +24,7 @@ class BlockTag(str, Enum):
     finalized = "finalized"  # Latest finalized block
 
 
-DefaultBlock = int | BlockTag
+DefaultBlock = int | BlockTag | str
 
 
 class SubscriptionType(str, Enum):
@@ -107,6 +107,23 @@ class EthRPC:
     def _next_id(self) -> None:
         self._id += 1
 
+    @staticmethod
+    def block_formatter(block_specifier: BlockTag | list[BlockTag] | tuple[BlockTag]) -> BlockTag | list[BlockTag]:
+        """
+        Automatically converts a BlockTag object to a format which can be sent via RPC
+        BlockTag = int | Block | str
+        integers are converted into their hex representation
+        Blocks are untouched as they are automatically converted into the appropriate strings later
+        raw strings cannot be managed by this function and are ignored,
+        it is expected that a provided string is either hex or the string representation of a block specifier
+        """
+        if isinstance(block_specifier, int):  # Converts integer values from DefaultBlock to hex for parsing
+            block_specifier = hex(block_specifier)
+        elif isinstance(block_specifier, list) or isinstance(block_specifier, tuple):
+            # Converts integers in an iterable to hex and ignores others such as Block or str data types
+            block_specifier = [hex(item) if isinstance(item, int) else item for item in block_specifier]
+        return block_specifier
+
     def build_json(self, method: str, params: list[Any], increment: bool = True) -> str:
         """
         :param method: ethereum RPC method
@@ -163,7 +180,6 @@ class EthRPC:
     ) -> Any:
         params = self.batch_format(*params)
         json_builder = self.build_batch_json if any(isinstance(param, tuple) for param in params) else self.build_json
-
         if websocket is None:
             async with self._pool.get_socket() as ws:
                 await ws.send(json_builder(method, params))
@@ -230,6 +246,7 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: Integer number of transactions
         """
+        block_specifier = self.block_formatter(block_specifier)
         msg = await self.send_message("eth_getTransactionCount", [address, block_specifier], websocket)
         return int(msg, 16) if isinstance(msg, str) else [int(result, 16) for result in msg]
 
@@ -246,6 +263,7 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: An integer balance in Wei of a given contract
         """
+        block_specifier = self.block_formatter(block_specifier)
         msg = await self.send_message("eth_getBalance", [contract_address, block_specifier], websocket)
         return int(msg, 16) if isinstance(msg, str) else [int(result, 16) for result in msg]
 
@@ -274,8 +292,7 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: A Block object representing blocks by either full transactions or transaction hashes
         """
-        if isinstance(block_specifier, int):  # Converts integer values from DefaultBlock to hex for parsing
-            block_specifier = hex(block_specifier)
+        block_specifier = self.block_formatter(block_specifier)
         msg = await self.send_message("eth_getBlockByNumber", [block_specifier, full_object], websocket)
         return Block.from_dict(msg, infer_missing=True) if isinstance(msg, dict) else [
             Block.from_dict(result, infer_missing=True) for result in msg
@@ -335,6 +352,7 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: Hex value of the executed contract
         """
+        block_specifier = self.block_formatter(block_specifier)
         msg = await self.send_message("eth_call", [transaction, block_specifier], websocket)
         return msg
 

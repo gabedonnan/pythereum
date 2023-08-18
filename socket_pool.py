@@ -31,7 +31,6 @@ class WebsocketPool:
         self._sockets_used = 0
         self._connected = True
 
-
     @asynccontextmanager
     async def get_socket(self) -> websockets.WebSocketClientProtocol:
         """
