@@ -7,6 +7,10 @@ config = dotenv_values("../.env")  # Pulls variables from .env into a dictionary
 
 
 async def listen_blocks(url):
+    """
+    Function to create a new_heads subscription, use the hash from each header received to get full block info.
+    That full block info is then used to get all transaction receipts from that given block.
+    """
     # Create EthRPC object with pool size of 2 (arbitrarily chosen, as it does not matter here)
     erpc = EthRPC(url, 2)
 
