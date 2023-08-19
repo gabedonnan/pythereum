@@ -94,7 +94,20 @@ More examples available in the [demo](https://github.com/gabedonnan/eth_rpc/tree
 
 # Getting started
 
+## Poetry
+
+This project and its dependencies are managed by python poetry,
+which will automatically manage the versions of each library / python version
+upon which this project depends.
+
+Install poetry with the instructions [here.](https://python-poetry.org/docs/)
+
 ## Testing your programs
+
+Testing a program built with this library can be done with actual ethereum
+nodes, though they may rate limit you or cost eth to run.
+As such using testing programs such as Anvil from the Foundry suite of products
+allows for faster and more productive testing.
 
 ### Install foundry
 
