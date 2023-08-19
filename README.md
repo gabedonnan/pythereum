@@ -1,18 +1,16 @@
 # eth_rpc
-### A lightweight Ethereum RPC library for Python in development
+### A lightweight Ethereum RPC library for Python
 
 Features include:
-- Ability to initiate RPC calls on a wide variety of ethereum functions
+- Ability to initiate remote procedure calls on a wide variety of ethereum functions
   - More functions are added whenever possible to this list
-- Custom data types for easy manipulation of RPC results
-- Eth_subscribe functionality
+- Typed function outputs for easy manipulation of results
+- "eth_subscribe" functionality
 - Websocket pooling for high performance calls
 - Support for RPC batching, allowing multiple calls to the same function at once
 
-### Documentation of progress below (wil add more as I go!)
+### Implemented methods
 
-- [x] Implement websocket instead of HTTP
-- Implemented methods
   - [x] `eth_blockNumber`
   - [x] `eth_getTransactionCount`
   - [x] `eth_getBalance`
@@ -30,7 +28,8 @@ Features include:
   - [x] `eth_hashrate`
   - [x] `eth_accounts`
   - [x] `eth_subscribe`
-- Methods to implement
+
+Methods to implement
   - [ ] `eth_getStorageAt`
   - [ ] `eth_getTransactionCountByHash`
   - [ ] `eth_getTransactionCountByNumber`
@@ -39,11 +38,6 @@ Features include:
   - etc., aiming to complete all methods listed [here.](https://ethereum.org/en/developers/docs/apis/json-rpc/)
 
 
-- [x] Add websocket pool
-- [x] Implement batch procedure calls
-- [ ] Enhance tests
-- [x] Add custom typing
-  - [x] Add Hex type
 
 ### Example usage
 
@@ -52,7 +46,7 @@ Features include:
 ```python
 # Example usage
 import asyncio
-from eth_rpc import EthRPC
+from eth_rpc.rpc import EthRPC
 
 TEST_URL = "http://127.0.0.1:8545"
 erpc = EthRPC(TEST_URL, pool_size=2)
@@ -75,7 +69,10 @@ if __name__ == "__main__":
 ```python
 # Example subscription
 import asyncio
-from eth_rpc import EthRPC, SubscriptionType
+from eth_rpc.rpc import EthRPC, SubscriptionType
+
+TEST_URL = "http://127.0.0.1:8545"
+erpc = EthRPC(TEST_URL, pool_size=2)
 
 async def test_subscription(subscription_type: SubscriptionType):
     """
@@ -93,7 +90,7 @@ if __name__ == "__main__":
     asyncio.run(test_subscription(SubscriptionType.new_heads))
 ```
 
-More examples available in the demo folder
+More examples available in the [demo](https://github.com/gabedonnan/eth_rpc/tree/main/demo) folder.
 
 # Getting started
 
