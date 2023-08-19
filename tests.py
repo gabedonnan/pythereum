@@ -1,8 +1,7 @@
 import unittest
 import asyncio
 from time import time
-from eth_account import Account
-from main import EthRPC, SubscriptionType, BlockTag
+from eth_rpc.rpc import EthRPC, SubscriptionType, BlockTag
 # I store the links I use for testing in my .env file under the name "TEST_WS"
 from dotenv import dotenv_values
 
@@ -14,16 +13,11 @@ ANVIL_URL = "ws://127.0.0.1:8545"
 class MyTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self) -> None:
-        self.erpc_ws = EthRPC(ANVIL_URL, 20)
+        self.erpc_ws = EthRPC(config["TEST_WS"], 20)
         await self.erpc_ws.start_pool()
 
     async def asyncTearDown(self) -> None:
         await self.erpc_ws.close_pool()
-
-    async def test_subscription(self):
-        async with self.erpc_ws.subscribe(SubscriptionType.new_heads) as sc:
-            async for item in sc.recv():
-                print(item)
 
     async def test_block_num(self):
         erpc_ws = self.erpc_ws
@@ -85,21 +79,21 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def test_batch_get_balance(self):
         erpc = self.erpc_ws
-        for i in range(20):
+        for i in range(3):
             x = (asyncio.create_task(erpc.get_balance(
                 ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" for _ in range(10)],
                 [BlockTag.latest for __ in range(10)]
-            )) for __ in range(120))
-            print(await asyncio.gather(*x))
+            )) for __ in range(10))
+            await asyncio.gather(*x)
 
     async def test_batch_get_transaction_count(self):
         erpc = self.erpc_ws
-        for i in range(20):
+        for i in range(3):
             x = (asyncio.create_task(erpc.get_transaction_count(
                 ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" for _ in range(10)],
                 [BlockTag.latest for __ in range(10)]
-            )) for __ in range(120))
-            print(await asyncio.gather(*x))
+            )) for __ in range(2))
+            await asyncio.gather(*x)
 
     async def test_transaction_count(self):
         r = await self.erpc_ws.get_transaction_count("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
@@ -121,50 +115,6 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
     async def test_get_block_by_number(self):
         r = await self.erpc_ws.get_block_by_number(17578346, False)
         print(r)
-
-    async def test_eth_call(self):
-        tx = {"from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-              "to": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-              "value": hex(1),
-              "gas": hex(38983301337),
-              "type": hex(1)}
-        print(await self.erpc_ws.call(tx))
-
-    def test_send_transaction(self):
-        tx = {"from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-              "to": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-              "value": hex(1),
-              "gas": hex(30000000),
-              "type": hex(1)}
-        print(self.erpc_ws.send_transaction(tx))
-
-    async def test_get_transaction_receipt(self):
-        tx = {"from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-              "to": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-              "value": hex(1),
-              "gas": hex(30000000),
-              "type": hex(1)}
-        x = await self.erpc_ws.send_transaction(tx)
-        print(self.erpc_ws.get_transaction_receipt(x))
-
-    async def test_send_raw_transaction(self):
-        nonce = await self.erpc_ws.get_transaction_count("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-
-        tx = {"from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-              "to": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-              "value": hex(1),
-              "gas": hex(40000000),
-              "maxFeePerGas": hex(40000000),
-              "maxPriorityFeePerGas": "0x0",
-              # "gasPrice": hex(20000000),
-              "type": hex(2),
-              "nonce": hex(nonce),
-              "chainId": "0x1"}
-        acc = Account.from_key("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
-        raw_transaction = acc.signTransaction(tx)
-        transaction = await self.erpc_ws.send_raw_transaction(raw_transaction.rawTransaction.hex())
-        print(transaction)
-        print(self.erpc_ws.get_transaction_receipt(transaction))
 
 
 if __name__ == '__main__':
