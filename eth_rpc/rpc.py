@@ -9,7 +9,7 @@ from eth_rpc.exceptions import (
 from eth_rpc.common import Hex
 from typing import List, Any
 from eth_rpc.socket_pool import WebsocketPool
-from eth_rpc.dclasses import Block, Sync, Receipt, Log
+from eth_rpc.dclasses import Block, Sync, Receipt, Log, Transaction
 
 
 class BlockTag(str, Enum):
@@ -356,8 +356,6 @@ class EthRPC:
         """
         block_specifier = self.block_formatter(block_specifier)
         msg = await self.send_message("eth_getBlockByNumber", [block_specifier, full_object], websocket)
-        if msg is None:
-            return msg
         match msg:
             case None:
                 return msg
@@ -437,8 +435,6 @@ class EthRPC:
         Gets the receipt of a transaction given its hash, the definition of a receipt can be seen in dclasses.py
         """
         msg = await self.send_message("eth_getTransactionReceipt", [tx_hash], websocket)
-        if msg is None:
-            return msg
         match msg:
             case None:
                 return msg
@@ -707,4 +703,26 @@ class EthRPC:
         """
         block_specifier = self.block_formatter(block_specifier)
         msg = await self.send_message("eth_estimateGas", [transaction, block_specifier], websocket)
-        return msg
+        match msg:
+            case None:
+                return msg
+            case str():
+                return int(msg, 16)
+            case _:
+                return [int(result, 16) if result is not None else None for result in msg]
+
+    async def get_transaction_by_hash(
+            self,
+            data: str | Hex | list[str] | list[Hex],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> Transaction | list[Transaction]:
+        msg = await self.send_message("eth_getTransactionByHash", [data], websocket)
+        match msg:
+            case None:
+                return msg
+            case dict():
+                return Transaction.from_dict(msg, infer_missing=True)
+            case _:
+                return [Transaction.from_dict(result, infer_missing=True) for result in msg]
+
+
