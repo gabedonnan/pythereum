@@ -561,7 +561,7 @@ class EthRPC:
             case None:
                 return msg
             case _:
-                return int(msg)
+                return int(msg, 16)
 
     async def get_sync_status(
             self,
@@ -571,8 +571,8 @@ class EthRPC:
         match msg:
             case None:
                 return msg
-            case "false":
-                return False
+            case bool():
+                return msg
             case _:
                 return Sync.from_dict(msg, infer_missing=True)
 
@@ -617,4 +617,94 @@ class EthRPC:
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> List[str | Hex]:
         msg = await self.send_message("eth_accounts", [], websocket)
+        return msg
+
+    async def get_transaction_count_by_hash(
+            self,
+            data: str | Hex | list[str] | list[Hex],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> int | list[int]:
+        msg = await self.send_message("eth_getBlockTransactionCountByHash", [data], websocket)
+        match msg:
+            case None:
+                return msg
+            case str():
+                return int(msg, 16)
+            case _:
+                return [int(result, 16) for result in msg]
+
+    async def get_transaction_count_by_number(
+            self,
+            block_specifier: DefaultBlock | list[DefaultBlock],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> int | list[int]:
+        block_specifier = self.block_formatter(block_specifier)
+        msg = await self.send_message("eth_getBlockTransactionCountByNumber", [block_specifier], websocket)
+        match msg:
+            case None:
+                return msg
+            case str():
+                return int(msg, 16)
+            case _:
+                return [int(result, 16) for result in msg]
+
+    async def get_uncle_count_by_hash(
+            self,
+            data: str | Hex | list[str] | list[Hex],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> int | list[int]:
+        msg = await self.send_message("eth_getUncleCountByBlockHash", [data], websocket)
+        match msg:
+            case None:
+                return msg
+            case str():
+                return int(msg, 16)
+            case _:
+                return [int(result, 16) for result in msg]
+
+    async def get_uncle_count_by_number(
+            self,
+            block_specifier: DefaultBlock | list[DefaultBlock],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> int | list[int]:
+        block_specifier = self.block_formatter(block_specifier)
+        msg = await self.send_message("eth_getUncleCountByBlockNumber", [block_specifier], websocket)
+        match msg:
+            case None:
+                return msg
+            case str():
+                return int(msg, 16)
+            case _:
+                return [int(result, 16) for result in msg]
+
+    async def get_code(
+            self,
+            data: str | Hex | list[str] | list[Hex],
+            block_specifier: DefaultBlock | list[DefaultBlock],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> str | Hex | list[str] | list[Hex]:
+        block_specifier = self.block_formatter(block_specifier)
+        msg = await self.send_message("eth_getCode", [data, block_specifier], websocket)
+        return msg
+
+    async def sign(
+            self,
+            data: str | Hex | list[str] | list[Hex],
+            message: str | Hex | list[str] | list[Hex],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> str | Hex | list[str] | list[Hex]:
+        msg = await self.send_message("eth_sign", [data, message], websocket)
+        return msg
+
+    async def estimate_gas(
+            self,
+            transaction: dict | list[dict],
+            block_specifier: DefaultBlock | list[DefaultBlock] = BlockTag.latest,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> int | list[int]:
+        """
+        Uses the same parameters as eth_call, see above
+        """
+        block_specifier = self.block_formatter(block_specifier)
+        msg = await self.send_message("eth_estimateGas", [transaction, block_specifier], websocket)
         return msg
