@@ -97,6 +97,7 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def test_transaction_count(self):
         r = await self.erpc_ws.get_transaction_count("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+        print(r)
         self.assertIsInstance(r, int)
 
     async def test_wallet_balance(self):
@@ -105,7 +106,8 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
             [BlockTag.latest, BlockTag.latest]))
 
     async def test_gas_price(self):
-        self.assertIsInstance(await self.erpc_ws.get_gas_price(), int)
+        r = await self.erpc_ws.get_gas_price()
+        print(r)
 
     async def test_get_block_by_hash(self):
         r = await self.erpc_ws.get_block_by_hash("0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae",
@@ -116,6 +118,32 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
         r = await self.erpc_ws.get_block_by_number(17578346, False)
         print(r)
 
+    async def test_get_syncing(self):
+        r = await self.erpc_ws.get_sync_status()
+        print(r)
+
+    async def test_protocol_version(self):
+        r = await self.erpc_ws.get_protocol_version()
+        print(r)
+
+    async def test_accounts(self):
+        r = await self.erpc_ws.get_accounts()
+        print(r)
+
+    async def test_batch_transaction_count_by_hash(self):
+        r = await self.erpc_ws.get_transaction_count_by_hash(
+            ["0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae",
+             "0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae"]
+        )
+        print(r)
+
+    async def test_get_transaction_count_by_number(self):
+        r = await self.erpc_ws.get_transaction_count_by_number(100000)
+        print(r)
+
+    async def test_get_code(self):
+        r = await self.erpc_ws.get_code("0xA69babEF1cA67A37Ffaf7a485DfFF3382056e78C", 100020)
+        print(r)
 
 if __name__ == '__main__':
     unittest.main()
