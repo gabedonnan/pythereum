@@ -60,8 +60,6 @@ class Hex:
     def __ge__(self, other) -> bool:
         if isinstance(other, Hex):
             return self.integer_value >= other.integer_value
-        elif isinstance(other, Binary):
-            return self.integer_value >= other.integer_value
         elif isinstance(other, int):
             return self.integer_value >= other
         elif isinstance(other, str):
@@ -71,8 +69,6 @@ class Hex:
 
     def __le__(self, other) -> bool:
         if isinstance(other, Hex):
-            return self.integer_value <= other.integer_value
-        elif isinstance(other, Binary):
             return self.integer_value <= other.integer_value
         elif isinstance(other, int):
             return self.integer_value <= other
@@ -84,8 +80,6 @@ class Hex:
     def __gt__(self, other) -> bool:
         if isinstance(other, Hex):
             return self.integer_value > other.integer_value
-        elif isinstance(other, Binary):
-            return self.integer_value > other.integer_value
         elif isinstance(other, int):
             return self.integer_value > other
         elif isinstance(other, str):
@@ -95,8 +89,6 @@ class Hex:
 
     def __lt__(self, other):
         if isinstance(other, Hex):
-            return self.integer_value < other.integer_value
-        elif isinstance(other, Binary):
             return self.integer_value < other.integer_value
         elif isinstance(other, int):
             return self.integer_value < other
@@ -110,8 +102,5 @@ class Hex:
             return Hex(hex(self.integer_value + other.integer_value))
         elif isinstance(other, int):
             return Hex(hex(self.integer_value + other))
-        elif isinstance(other, Binary):
-            # You shouldn't really be adding BinString objects directly to Hex but this ensures the program won't break
-            return Hex(hex(self.integer_value + other.integer_value))
         elif isinstance(other, str):
             return Hex(hex(self.integer_value + int(other, 16)))
