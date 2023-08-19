@@ -300,7 +300,7 @@ class EthRPC:
             case str():
                 return int(msg, 16)
             case _:
-                return [int(result, 16) for result in msg]
+                return [int(result, 16) if result is not None else None for result in msg]
 
     async def get_balance(
             self,
@@ -323,7 +323,7 @@ class EthRPC:
             case str():
                 return int(msg, 16)
             case _:
-                return [int(result, 16) for result in msg]
+                return [int(result, 16) if result is not None else None for result in msg]
 
     async def get_gas_price(
             self,
@@ -631,7 +631,7 @@ class EthRPC:
             case str():
                 return int(msg, 16)
             case _:
-                return [int(result, 16) for result in msg]
+                return [int(result, 16) if result is not None else None for result in msg]
 
     async def get_transaction_count_by_number(
             self,
@@ -646,7 +646,7 @@ class EthRPC:
             case str():
                 return int(msg, 16)
             case _:
-                return [int(result, 16) for result in msg]
+                return [int(result, 16) if result is not None else None for result in msg]
 
     async def get_uncle_count_by_hash(
             self,
@@ -660,7 +660,7 @@ class EthRPC:
             case str():
                 return int(msg, 16)
             case _:
-                return [int(result, 16) for result in msg]
+                return [int(result, 16) if result is not None else None for result in msg]
 
     async def get_uncle_count_by_number(
             self,
@@ -675,7 +675,7 @@ class EthRPC:
             case str():
                 return int(msg, 16)
             case _:
-                return [int(result, 16) for result in msg]
+                return [int(result, 16) if result is not None else None for result in msg]
 
     async def get_code(
             self,

@@ -13,7 +13,7 @@ ANVIL_URL = "ws://127.0.0.1:8545"
 class MyTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self) -> None:
-        self.erpc_ws = EthRPC(config["TEST_WS"], 20)
+        self.erpc_ws = EthRPC(ANVIL_URL, 20)
         await self.erpc_ws.start_pool()
 
     async def asyncTearDown(self) -> None:
