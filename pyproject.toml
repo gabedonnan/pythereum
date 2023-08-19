@@ -7,10 +7,8 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
-requests = "^2.31.0"
 websockets = "^11.0.3"
 dataclasses-json = "^0.5.14"
-eth-account = "^0.9.0"
 python-dotenv = "^1.0.0"
 
 [build-system]
