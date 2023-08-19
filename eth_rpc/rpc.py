@@ -3,13 +3,13 @@ from contextlib import asynccontextmanager
 from enum import Enum
 
 import websockets
-from erpc_exceptions import (
+from eth_rpc.exceptions import (
     ERPCRequestException, ERPCInvalidReturnException, ERPCSubscriptionException
 )
-from erpc_types import Hex
+from eth_rpc.common import Hex
 from typing import List, Any
-from socket_pool import WebsocketPool
-from erpc_dataclasses import Block, Sync, Receipt, Log
+from eth_rpc.socket_pool import WebsocketPool
+from eth_rpc.dclasses import Block, Sync, Receipt, Log
 
 
 class BlockTag(str, Enum):
@@ -273,7 +273,11 @@ class EthRPC:
         :return: Integer number indicating the number of the most recently mined block
         """
         msg = await self.send_message("eth_blockNumber", [], websocket)
-        return int(msg, 16)
+        match msg:
+            case None:
+                return msg
+            case _:
+                return int(msg, 16)
 
     async def get_transaction_count(
             self,
@@ -290,7 +294,13 @@ class EthRPC:
         """
         block_specifier = self.block_formatter(block_specifier)
         msg = await self.send_message("eth_getTransactionCount", [address, block_specifier], websocket)
-        return int(msg, 16) if isinstance(msg, str) else [int(result, 16) for result in msg]
+        match msg:
+            case None:
+                return msg
+            case str():
+                return int(msg, 16)
+            case _:
+                return [int(result, 16) for result in msg]
 
     async def get_balance(
             self,
@@ -307,7 +317,13 @@ class EthRPC:
         """
         block_specifier = self.block_formatter(block_specifier)
         msg = await self.send_message("eth_getBalance", [contract_address, block_specifier], websocket)
-        return int(msg, 16) if isinstance(msg, str) else [int(result, 16) for result in msg]
+        match msg:
+            case None:
+                return msg
+            case str():
+                return int(msg, 16)
+            case _:
+                return [int(result, 16) for result in msg]
 
     async def get_gas_price(
             self,
@@ -319,14 +335,18 @@ class EthRPC:
         :return: Integer number representing gas price in Wei
         """
         msg = await self.send_message("eth_gasPrice", [], websocket)
-        return int(msg, 16)
+        match msg:
+            case None:
+                return msg
+            case _:
+                return int(msg, 16)
 
     async def get_block_by_number(
             self,
             block_specifier: DefaultBlock | list[DefaultBlock],
             full_object: bool | list[bool] = False,
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> Block | list[Block]:
+    ) -> Block | list[Block] | None:
         """
         Returns a Block object which represents a block's state
         :param block_specifier: A specifier, either int or tag, delineating the block number to get
@@ -336,9 +356,15 @@ class EthRPC:
         """
         block_specifier = self.block_formatter(block_specifier)
         msg = await self.send_message("eth_getBlockByNumber", [block_specifier, full_object], websocket)
-        return Block.from_dict(msg, infer_missing=True) if isinstance(msg, dict) else [
-            Block.from_dict(result, infer_missing=True) for result in msg
-        ]
+        if msg is None:
+            return msg
+        match msg:
+            case None:
+                return msg
+            case dict():
+                return Block.from_dict(msg, infer_missing=True)
+            case _:
+                return [Block.from_dict(result, infer_missing=True) for result in msg]
 
     async def get_block_by_hash(
             self,
@@ -354,9 +380,13 @@ class EthRPC:
         :return: A Block object representing blocks by either full transactions or transaction hashes
         """
         msg = await self.send_message("eth_getBlockByHash", [data, full_object], websocket)
-        return Block.from_dict(msg, infer_missing=True) if isinstance(msg, dict) else [
-            Block.from_dict(result, infer_missing=True) for result in msg
-        ]
+        match msg:
+            case None:
+                return msg
+            case dict():
+                return Block.from_dict(msg, infer_missing=True)
+            case _:
+                return [Block.from_dict(result, infer_missing=True) for result in msg]
 
     async def call(
             self,
@@ -404,12 +434,18 @@ class EthRPC:
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> Receipt | list[Receipt]:
         """
-        Gets the receipt of a transaction given its hash, the definition of a receipt can be seen in erpc_dataclasses.py
+        Gets the receipt of a transaction given its hash, the definition of a receipt can be seen in dclasses.py
         """
         msg = await self.send_message("eth_getTransactionReceipt", [tx_hash], websocket)
-        return Receipt.from_dict(msg, infer_missing=True) if isinstance(msg, dict) else [
-            Receipt.from_dict(result, infer_missing=True) for result in msg
-        ]
+        if msg is None:
+            return msg
+        match msg:
+            case None:
+                return msg
+            case dict():
+                return Receipt.from_dict(msg, infer_missing=True)
+            case _:
+                return [Receipt.from_dict(result, infer_missing=True) for result in msg]
 
     async def send_raw_transaction(
             self,
@@ -521,17 +557,24 @@ class EthRPC:
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
         msg = await self.send_message("eth_protocolVersion", [], websocket)
-        return int(msg)
+        match msg:
+            case None:
+                return msg
+            case _:
+                return int(msg)
 
     async def get_sync_status(
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> bool | Sync:
         msg = await self.send_message("eth_syncing", [], websocket)
-        if msg == "false":
-            return False
-        else:
-            return Sync.from_dict(msg)
+        match msg:
+            case None:
+                return msg
+            case "false":
+                return False
+            case _:
+                return Sync.from_dict(msg, infer_missing=True)
 
     async def get_coinbase(
             self,
@@ -545,7 +588,11 @@ class EthRPC:
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
         msg = await self.send_message("eth_chainId", [], websocket)
-        return int(msg, 16)
+        match msg:
+            case None:
+                return msg
+            case _:
+                return int(msg, 16)
 
     async def is_mining(
             self,
@@ -559,7 +606,11 @@ class EthRPC:
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
         msg = await self.send_message("eth_hashrate", [], websocket)
-        return int(msg, 16)
+        match msg:
+            case None:
+                return msg
+            case _:
+                return int(msg, 16)
 
     async def get_accounts(
             self,

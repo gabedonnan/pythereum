@@ -1,8 +1,8 @@
 import re
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json, LetterCase, config
-from erpc_types import Hex
-from erpc_exceptions import (
+from eth_rpc.common import Hex
+from eth_rpc.exceptions import (
     ERPCDecoderException, ERPCEncoderException
 )
 

@@ -1,6 +1,6 @@
 import asyncio
 
-from main import EthRPC, SubscriptionType
+from eth_rpc.rpc import EthRPC, SubscriptionType
 from dotenv import dotenv_values
 
 config = dotenv_values("../.env")  # Pulls variables from .env into a dictionary
@@ -25,7 +25,7 @@ async def listen_blocks(url):
                 # Gets and prints the receipts for each transaction
                 r = await erpc.get_transaction_receipt(tx.hash)
                 print(r)
-    await erpc.close()
+    await erpc.close_pool()
 
 
 if __name__ == '__main__':
