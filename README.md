@@ -46,7 +46,7 @@ Methods to implement
 ```python
 # Example usage
 import asyncio
-from eth_rpc.rpc import EthRPC
+from eth_rpc import EthRPC
 
 TEST_URL = "http://127.0.0.1:8545"
 erpc = EthRPC(TEST_URL, pool_size=2)
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 ```python
 # Example subscription
 import asyncio
-from eth_rpc.rpc import EthRPC, SubscriptionType
+from eth_rpc import EthRPC, SubscriptionType
 
 TEST_URL = "http://127.0.0.1:8545"
 erpc = EthRPC(TEST_URL, pool_size=2)
