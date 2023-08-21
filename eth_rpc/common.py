@@ -37,7 +37,7 @@ class Hex:
         return self.integer_value
 
     def __repr__(self):
-        return f"Hex(hex_string={self.hex_string})"
+        return f"Hex({self.hex_string})"
 
     def __bytes__(self):
         return bytes(self.hex_string, "utf-8")
