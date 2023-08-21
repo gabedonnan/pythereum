@@ -102,6 +102,17 @@ upon which this project depends.
 
 Install poetry with the instructions [here.](https://python-poetry.org/docs/)
 
+## Installation
+
+If you want to include this library for use in another project via Poetry
+you must simply add the following to your `pyproject.toml` file under `[tool.poetry.dependencies]`
+
+```toml
+eth_rpc = {git = "https://github.com/gabedonnan/eth_rpc.git"}
+```
+
+Currently the library is not indexed on Pypi but with time it will be available from there.
+
 ## Testing your programs
 
 Testing a program built with this library can be done with actual ethereum
