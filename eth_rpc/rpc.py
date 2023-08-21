@@ -52,7 +52,7 @@ def parse_results(res: str | dict, is_subscription: bool = False) -> Any:
         if "error" in res:
             raise ERPCRequestException(res["error"]["code"], res["error"]["message"])
         else:
-            raise ERPCInvalidReturnException("Invalid return value from ERPC, check your request.")
+            raise ERPCInvalidReturnException(f"Invalid return value from ERPC, return format: {res}")
 
     return res["result"]
 
