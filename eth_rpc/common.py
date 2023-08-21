@@ -47,7 +47,7 @@ class Hex:
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Hex):
-            return self.hex_string.lower() == other.hex_string.lower() and self.integer_value == other.integer_value
+            return self.hex_string.lower() == other.hex_string.lower()
         else:
             return False
 
