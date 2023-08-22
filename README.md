@@ -166,7 +166,7 @@ pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 
 The library is now available via pip!! (I had to change the whole project name to get it there)
 
-It can be installed with the following command:
+It can be installed with the following command, or downloaded [here.](https://pypi.org/project/pythereum/):
 
 ```commandline
 python3 -m pip install pythereum
