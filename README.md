@@ -96,6 +96,7 @@ if __name__ == "__main__":
 #### Example batch call
 
 ```python
+# Example batch call
 import asyncio
 from eth_rpc import EthRPC, BlockTag
 
@@ -104,6 +105,9 @@ erpc = EthRPC(TEST_URL, pool_size=2)
 
 async def test_batching():
     await erpc.start_pool()
+    # Batch calls can be applied to any parameterised method
+    # Each parameter must be passed in as a list 
+    # With list length k where k is the batch size
     r = await erpc.get_block_by_number(
       block_specifier=[
         i for i in range(40000, 40010)
