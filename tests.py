@@ -1,7 +1,7 @@
 import unittest
 import asyncio
 from time import time
-from eth_rpc.rpc import EthRPC, SubscriptionType, BlockTag
+from pythereum.rpc import EthRPC, SubscriptionType, BlockTag
 # I store the links I use for testing in my .env file under the name "TEST_WS"
 from dotenv import dotenv_values
 

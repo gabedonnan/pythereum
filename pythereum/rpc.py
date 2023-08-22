@@ -3,13 +3,13 @@ from contextlib import asynccontextmanager
 from enum import Enum
 
 import websockets
-from eth_rpc.exceptions import (
+from pythereum.exceptions import (
     ERPCRequestException, ERPCInvalidReturnException, ERPCSubscriptionException
 )
-from eth_rpc.common import Hex
+from pythereum.common import Hex
 from typing import List, Any
-from eth_rpc.socket_pool import WebsocketPool
-from eth_rpc.dclasses import Block, Sync, Receipt, Log, Transaction
+from pythereum.socket_pool import WebsocketPool
+from pythereum.dclasses import Block, Sync, Receipt, Log, Transaction
 
 
 class CurrencyValue(float, Enum):

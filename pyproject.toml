@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "eth-rpc"
-version = "0.1.0"
-description = "A lightweight Ethereum RPC written in python"
+name = "pythereum"
+version = "1.0.0"
+description = "A lightweight Ethereum JSON RPC library written in python"
 authors = ["gabedonnan <47415809+gabedonnan@users.noreply.github.com>"]
 readme = "README.md"
 

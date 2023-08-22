@@ -1,8 +1,8 @@
 import re
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json, LetterCase, config
-from eth_rpc.common import Hex
-from eth_rpc.exceptions import (
+from pythereum.common import Hex
+from pythereum.exceptions import (
     ERPCDecoderException, ERPCEncoderException
 )
 
