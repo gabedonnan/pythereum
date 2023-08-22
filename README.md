@@ -1,4 +1,5 @@
-# eth_rpc
+# pythereum 
+(formerly eth_rpc)
 ### A lightweight Ethereum RPC library for Python
 
 Features include:
@@ -48,24 +49,26 @@ RPC methods to implement
 #### Basic single function call
 
 ```python
-# Example usage
+# Example simple function
 import asyncio
-from eth_rpc import EthRPC
+from pythereum import EthRPC
 
 TEST_URL = "http://127.0.0.1:8545"
 erpc = EthRPC(TEST_URL, pool_size=2)
 
+
 async def test_transaction_count():
-    # Optional step to start your thread pool before your RPC call
-    await erpc.start_pool()
-    # Gets the number of transactions sent from a given EOA address
-    r = await erpc.get_transaction_count("0xabcdefghijklmnopqrstuvwxyz1234567890")
-    print(r)
-    # Ensures no hanging connections are left
-    await erpc.close_pool()
+  # Optional step to start your thread pool before your RPC call
+  await erpc.start_pool()
+  # Gets the number of transactions sent from a given EOA address
+  r = await erpc.get_transaction_count("0xabcdefghijklmnopqrstuvwxyz1234567890")
+  print(r)
+  # Ensures no hanging connections are left
+  await erpc.close_pool()
+
 
 if __name__ == "__main__":
-    asyncio.run(test_transaction_count())
+  asyncio.run(test_transaction_count())
 ```
 
 #### Example subscription
@@ -73,25 +76,27 @@ if __name__ == "__main__":
 ```python
 # Example subscription
 import asyncio
-from eth_rpc import EthRPC, SubscriptionType
+from pythereum import EthRPC, SubscriptionType
 
 TEST_URL = "http://127.0.0.1:8545"
 erpc = EthRPC(TEST_URL, pool_size=2)
 
+
 async def test_subscription(subscription_type: SubscriptionType):
-    """
-    Creates a subscription to receive data about all new heads
-    Prints each new subscription result as it is received
-    """
-    async with erpc.subscribe(subscription_type) as sc:
-        # The following will iterate as each item is gotten by sc.recv()
-        async for item in sc.recv():
-            # 'item' is formatted into the appropriate form for its subscription type
-            # this is done by the sc.recv() automatically
-            print(item)
+  """
+  Creates a subscription to receive data about all new heads
+  Prints each new subscription result as it is received
+  """
+  async with erpc.subscribe(subscription_type) as sc:
+    # The following will iterate as each item is gotten by sc.recv()
+    async for item in sc.recv():
+      # 'item' is formatted into the appropriate form for its subscription type
+      # this is done by the sc.recv() automatically
+      print(item)
+
 
 if __name__ == "__main__":
-    asyncio.run(test_subscription(SubscriptionType.new_heads))
+  asyncio.run(test_subscription(SubscriptionType.new_heads))
 ```
 
 #### Example batch call
@@ -99,35 +104,37 @@ if __name__ == "__main__":
 ```python
 # Example batch call
 import asyncio
-from eth_rpc import EthRPC, BlockTag
+from pythereum import EthRPC, BlockTag
 
 TEST_URL = "http://127.0.0.1:8545"
 erpc = EthRPC(TEST_URL, pool_size=2)
 
+
 async def test_batching():
-    await erpc.start_pool()
-    # Batch calls can be applied to any parameterised method
-    # Each parameter must be passed in as a list 
-    # With list length k where k is the batch size
-    r = await erpc.get_block_by_number(
-      block_specifier=[
-        i for i in range(40000, 40010)
-      ],
-      full_object=[
-        True for i in range(10)
-      ]
-    )
-    print(r)
-    await erpc.close_pool()
+  await erpc.start_pool()
+  # Batch calls can be applied to any parameterised method
+  # Each parameter must be passed in as a list 
+  # With list length k where k is the batch size
+  r = await erpc.get_block_by_number(
+    block_specifier=[
+      i for i in range(40000, 40010)
+    ],
+    full_object=[
+      True for i in range(10)
+    ]
+  )
+  print(r)
+  await erpc.close_pool()
+
 
 if __name__ == "__main__":
-    asyncio.run(test_batching())
+  asyncio.run(test_batching())
 ```
 
 #### Example currency conversion
 
 ```python
->>> from eth_rpc import CurrencyValue, convert_eth
+>>> from pythereum import CurrencyValue, convert_eth
 >>> convert_eth(1_000_000, convert_from=CurrencyValue.wei, covert_to=CurrencyValue.ether)
 1e-12
 >>> convert_eth(1_000, convert_from=CurrencyValue.babbage, covert_to=CurrencyValue.finney)
@@ -152,10 +159,15 @@ If you want to include this library for use in another project via Poetry
 you must simply add the following to your `pyproject.toml` file under `[tool.poetry.dependencies]`
 
 ```toml
-eth_rpc = {git = "https://github.com/gabedonnan/eth_rpc.git"}
+pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 ```
 
-Currently the library is not indexed on Pypi but with time it will be available from there.
+The library is now available via pip!! It can be installed with the following command
+
+```commandline
+python3 -m pip install pythereum
+```
+
 
 ## Testing your programs
 
