@@ -28,14 +28,17 @@ Features include:
   - [x] `eth_hashrate`
   - [x] `eth_accounts`
   - [x] `eth_subscribe`
+  - [x] `eth_getBlockTransactionCountByHash`
+  - [x] `eth_getBlocktransactionCountbyNumber`
+  - [x] `eth_getUncleCountByBlockHash`
+  - [x] `eth_getUncleCountByBlockNumber`
+  - [x] `eth_getCode`
+  - [x] `eth_estimateGas`
+  - [x] `eth_sign`
+  - [x] `eth_getTransactionByHash`
 
 Methods to implement
-  - [ ] `eth_getStorageAt`
-  - [ ] `eth_getTransactionCountByHash`
-  - [ ] `eth_getTransactionCountByNumber`
-  - [ ] `eth_getUncleCountByBlockHash`
-  - [ ] `eth_getUncleCountByBlockNumber`
-  - etc., aiming to complete all methods listed [here.](https://ethereum.org/en/developers/docs/apis/json-rpc/)
+  - Aiming to complete all methods listed [here.](https://ethereum.org/en/developers/docs/apis/json-rpc/)
 
 
 
@@ -88,6 +91,32 @@ async def test_subscription(subscription_type: SubscriptionType):
 
 if __name__ == "__main__":
     asyncio.run(test_subscription(SubscriptionType.new_heads))
+```
+
+#### Example batch call
+
+```python
+import asyncio
+from eth_rpc import EthRPC, BlockTag
+
+TEST_URL = "http://127.0.0.1:8545"
+erpc = EthRPC(TEST_URL, pool_size=2)
+
+async def test_batching():
+    await erpc.start_pool()
+    r = await erpc.get_block_by_number(
+      block_specifier=[
+        i for i in range(40000, 40010)
+      ],
+      full_object=[
+        True for i in range(10)
+      ]
+    )
+    print(r)
+    await erpc.close_pool()
+
+if __name__ == "__main__":
+    asyncio.run(test_batching())
 ```
 
 More examples available in the [demo](https://github.com/gabedonnan/eth_rpc/tree/main/demo) folder.
