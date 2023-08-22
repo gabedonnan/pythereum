@@ -8,8 +8,9 @@ Features include:
 - "eth_subscribe" functionality
 - Websocket pooling for high performance calls
 - Support for RPC batching, allowing multiple calls to the same function at once
+- Currency conversion for wei, so you don't have to rely on external libs like Web3.py
 
-### Implemented methods
+### Implemented RPC methods
 
   - [x] `eth_blockNumber`
   - [x] `eth_getTransactionCount`
@@ -37,7 +38,7 @@ Features include:
   - [x] `eth_sign`
   - [x] `eth_getTransactionByHash`
 
-Methods to implement
+RPC methods to implement
   - Aiming to complete all methods listed [here.](https://ethereum.org/en/developers/docs/apis/json-rpc/)
 
 
@@ -121,6 +122,16 @@ async def test_batching():
 
 if __name__ == "__main__":
     asyncio.run(test_batching())
+```
+
+#### Example currency conversion
+
+```python
+>>> from eth_rpc import CurrencyValue, convert_eth
+>>> convert_eth(1_000_000, convert_from=CurrencyValue.wei, covert_to=CurrencyValue.ether)
+1e-12
+>>> convert_eth(1_000, convert_from=CurrencyValue.babbage, covert_to=CurrencyValue.finney)
+1e-09
 ```
 
 More examples available in the [demo](https://github.com/gabedonnan/eth_rpc/tree/main/demo) folder.
