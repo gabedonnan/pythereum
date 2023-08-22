@@ -12,6 +12,40 @@ from eth_rpc.socket_pool import WebsocketPool
 from eth_rpc.dclasses import Block, Sync, Receipt, Log, Transaction
 
 
+class CurrencyValue(float, Enum):
+    """
+    An enumeration of all names of eth denominations and their corresponding wei values
+    """
+    wei = 1.0
+    kwei = 1e3
+    babbage = 1e3
+    femtoether = 1e3
+    mwei = 1e6
+    lovelace = 1e6
+    picoether = 1e6
+    gwei = 1e9
+    shannon = 1e9
+    nanoether = 1e9
+    nano = 1e9
+    szabo = 1e12
+    microether = 1e12
+    micro = 1e12
+    finney = 1e15
+    milliether = 1e15
+    milli = 1e15
+    ether = 1e18
+    eth = 1e18
+    kether = 1e21
+    grand = 1e21
+    mether = 1e24
+    gether = 1e27
+    tether = 1e30
+
+
+def convert_eth(quantity: float, convert_from: CurrencyValue, covert_to: CurrencyValue) -> float:
+    return (convert_from.value * quantity) / covert_to.value
+
+
 class BlockTag(str, Enum):
     """ Data type encapsulating all possible non-integer values for a DefaultBlock parameter
     API Documentation at: https://ethereum.org/en/developers/docs/apis/json-rpc/#default-block
