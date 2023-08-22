@@ -53,7 +53,7 @@ RPC methods to implement
 import asyncio
 from pythereum import EthRPC
 
-TEST_URL = "http://127.0.0.1:8545"
+TEST_URL = "ws://127.0.0.1:8545"
 erpc = EthRPC(TEST_URL, pool_size=2)
 
 
@@ -78,7 +78,7 @@ if __name__ == "__main__":
 import asyncio
 from pythereum import EthRPC, SubscriptionType
 
-TEST_URL = "http://127.0.0.1:8545"
+TEST_URL = "ws://127.0.0.1:8545"
 erpc = EthRPC(TEST_URL, pool_size=2)
 
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
 import asyncio
 from pythereum import EthRPC, BlockTag
 
-TEST_URL = "http://127.0.0.1:8545"
+TEST_URL = "ws://127.0.0.1:8545"
 erpc = EthRPC(TEST_URL, pool_size=2)
 
 
@@ -155,6 +155,8 @@ Install poetry with the instructions [here.](https://python-poetry.org/docs/)
 
 ## Installation
 
+The library currently requires python versions `>=3.11,<3.13`.
+
 If you want to include this library for use in another project via Poetry
 you must simply add the following to your `pyproject.toml` file under `[tool.poetry.dependencies]`
 
@@ -162,7 +164,9 @@ you must simply add the following to your `pyproject.toml` file under `[tool.poe
 pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 ```
 
-The library is now available via pip!! It can be installed with the following command
+The library is now available via pip!! (I had to change the whole project name to get it there)
+
+It can be installed with the following command:
 
 ```commandline
 python3 -m pip install pythereum
