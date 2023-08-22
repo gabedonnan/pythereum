@@ -141,7 +141,7 @@ if __name__ == "__main__":
 1e-09
 ```
 
-More examples available in the [demo](https://github.com/gabedonnan/eth_rpc/tree/main/demo) folder.
+More examples available in the [demo](https://github.com/gabedonnan/pythereum/tree/main/demo) folder.
 
 # Getting started
 
