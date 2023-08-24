@@ -155,6 +155,7 @@ Install poetry with the instructions [here.](https://python-poetry.org/docs/)
 
 ## Installation
 
+### Poetry Installation
 The library currently requires python versions `>=3.11,<3.13`.
 
 If you want to include this library for use in another project via Poetry
@@ -163,6 +164,16 @@ you must simply add the following to your `pyproject.toml` file under `[tool.poe
 ```toml
 pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 ```
+
+or 
+
+```toml
+pythereum = "^1.0.0"
+```
+
+If you would like to install the library via pypi instead of via this git repository
+
+### Pip / PyPi installation
 
 The library is now available via pip!! (I had to change the whole project name to get it there)
 
