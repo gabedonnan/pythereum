@@ -177,7 +177,7 @@ If you would like to install the library via pypi instead of via this git reposi
 
 The library is now available via pip!! (I had to change the whole project name to get it there)
 
-It can be installed with the following command:
+It can be installed with the following command, or downloaded [here](https://pypi.org/project/pythereum/):
 
 ```commandline
 python3 -m pip install pythereum
