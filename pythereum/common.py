@@ -8,6 +8,8 @@ class Hex:
     self.integer_value : integer representing the base10 form of the stored hexadecimal number
 
     self.raw_hex : string representing contained hexadecimal number without 0x prefix
+
+    self.hex_bytes: bytes object representing the hex to bytes conversion of the value stored in this object
     """
 
     def __init__(self, hex_string: str | int):
@@ -20,9 +22,10 @@ class Hex:
         hex_string = hex_string[1:] if is_negative else hex_string
         sign = "-" if is_negative else ""
         # Removes the '0x' prefix of an input hex string if it is present
-        self.hex_string = f"{sign}{hex_string}" if hex_string.startswith(("0x", "0X")) else f"{sign}0x{hex_string}"
-        self.raw_hex = f"{sign}{hex_string[2:]}" if hex_string.startswith(("0x", "0X")) else f"{sign}{hex_string}"
-        self.integer_value = int(self.hex_string, 16)
+        self.hex_string: str = f"{sign}{hex_string}" if hex_string.startswith(("0x", "0X")) else f"{sign}0x{hex_string}"
+        self.raw_hex: str = f"{sign}{hex_string[2:]}" if hex_string.startswith(("0x", "0X")) else f"{sign}{hex_string}"
+        self.integer_value: int = int(self.hex_string, 16)
+        self.hex_bytes: bytes = bytes.fromhex(self.raw_hex)
 
     def to_json(self) -> str:  # Possibly needs fixing
         return self.hex_string
@@ -40,7 +43,7 @@ class Hex:
         return f"Hex({self.hex_string})"
 
     def __bytes__(self):
-        return bytes(self.hex_string, "utf-8")
+        return self.hex_bytes
 
     def __index__(self):
         return self.__int__()
