@@ -77,7 +77,7 @@ def parse_results(res: str | dict, is_subscription: bool = False) -> Any:
     if isinstance(res, list):
         return [parse_results(item) for item in res]
 
-    if is_subscription:
+    if is_subscription and "params" in res:
         # Subscription results are returned in a different format to normal calls
         res = res["params"]
 
@@ -225,12 +225,14 @@ class EthRPC:
             self,
             method: str,
             params: list[Any],
-            websocket: websockets.WebSocketClientProtocol | None = None
+            websocket: websockets.WebSocketClientProtocol | None = None,
+            is_subscription: bool = False
     ) -> Any:
         """
         :param method: The ethereum JSON RPC procedure to be called
         :param params: A list of parameters to be passed for the RPC
         :param websocket: An optional external websocket for calls to this function
+        :param is_subscription: A boolean defining whether a result should be decoded as a subscription
 
         Sends a message representing a call to a given method to this object's url
         """
@@ -246,7 +248,7 @@ class EthRPC:
             # Sends a message with a given websocket
             await websocket.send(json_builder(method, params))
             msg = await websocket.recv()
-        return parse_results(msg)
+        return parse_results(msg, is_subscription)
 
     @asynccontextmanager
     async def subscribe(self, method: SubscriptionType) -> Subscription:
@@ -295,7 +297,7 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: The return of this function is not meant to be caught, though it does exist
         """
-        msg = await self.send_message("eth_unsubscribe", [subscription_id], websocket)
+        msg = await self.send_message("eth_unsubscribe", [subscription_id], websocket, True)
         return msg
 
     async def get_block_number(
