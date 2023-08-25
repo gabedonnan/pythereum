@@ -25,7 +25,9 @@ class Hex:
         self.hex_string: str = f"{sign}{hex_string}" if hex_string.startswith(("0x", "0X")) else f"{sign}0x{hex_string}"
         self.raw_hex: str = f"{sign}{hex_string[2:]}" if hex_string.startswith(("0x", "0X")) else f"{sign}{hex_string}"
         self.integer_value: int = int(self.hex_string, 16)
-        self.hex_bytes: bytes = bytes.fromhex(self.raw_hex)
+        self.hex_bytes: bytes = bytes.fromhex(
+            self.raw_hex if len(self.raw_hex) % 2 == 0 else f"0{self.raw_hex}"
+        )
 
     def to_json(self) -> str:  # Possibly needs fixing
         return self.hex_string
