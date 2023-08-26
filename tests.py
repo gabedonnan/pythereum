@@ -1,7 +1,7 @@
 import unittest
 import asyncio
 from time import time
-from pythereum.rpc import EthRPC, SubscriptionType, BlockTag, convert_eth, CurrencyValue
+from pythereum.rpc import EthRPC, SubscriptionType, BlockTag, convert_eth, EthDenomination
 # I store the links I use for testing in my .env file under the name "TEST_WS"
 from dotenv import dotenv_values
 
@@ -107,7 +107,7 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def test_gas_price(self):
         r = await self.erpc_ws.get_gas_price()
-        print(convert_eth(r, CurrencyValue.wei, CurrencyValue.eth))
+        print(convert_eth(r, EthDenomination.wei, EthDenomination.eth))
 
     async def test_get_block_by_hash(self):
         r = await self.erpc_ws.get_block_by_hash("0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae",

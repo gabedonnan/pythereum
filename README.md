@@ -134,10 +134,10 @@ if __name__ == "__main__":
 #### Example currency conversion
 
 ```python
->>> from pythereum import CurrencyValue, convert_eth
->>> convert_eth(1_000_000, convert_from=CurrencyValue.wei, covert_to=CurrencyValue.ether)
+>> > from pythereum import EthDenomination, convert_eth
+>> > convert_eth(1_000_000, convert_from=EthDenomination.wei, covert_to=EthDenomination.ether)
 1e-12
->>> convert_eth(1_000, convert_from=CurrencyValue.babbage, covert_to=CurrencyValue.finney)
+>> > convert_eth(1_000, convert_from=EthDenomination.babbage, covert_to=EthDenomination.finney)
 1e-09
 ```
 

@@ -12,7 +12,7 @@ from pythereum.socket_pool import WebsocketPool
 from pythereum.dclasses import Block, Sync, Receipt, Log, Transaction
 
 
-class CurrencyValue(float, Enum):
+class EthDenomination(float, Enum):
     """
     An enumeration of all names of eth denominations and their corresponding wei values
     """
@@ -42,7 +42,7 @@ class CurrencyValue(float, Enum):
     tether = 1e30
 
 
-def convert_eth(quantity: float, convert_from: CurrencyValue, covert_to: CurrencyValue) -> float:
+def convert_eth(quantity: float, convert_from: EthDenomination, covert_to: EthDenomination) -> float:
     return (convert_from.value * quantity) / covert_to.value
 
 
