@@ -838,7 +838,7 @@ class EthRPC:
             case _:
                 return [Block.from_dict(result, infer_missing=True) for result in msg]
 
-    async def create_filter(
+    async def new_filter(
             self,
             from_block: DefaultBlock | list[DefaultBlock],
             to_block: DefaultBlock | list[DefaultBlock],
@@ -865,6 +865,37 @@ class EthRPC:
             case _:
                 return [int(result, 16) if result is not None else None for result in msg]
 
+    async def new_block_filter(
+            self,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> int:
+        msg = await self.send_message("eth_newBlockFilter", [], websocket)
+        match msg:
+            case None:
+                return msg
+            case _:
+                return int(msg, 16)
+
+    async def new_pending_transaction_filter(
+            self,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> int:
+        msg = await self.send_message("eth_newPendingTransactionFilter", [], websocket)
+        match msg:
+            case None:
+                return msg
+            case _:
+                return int(msg, 16)
+
+    async def uninstall_filter(
+            self,
+            filter_id: int | str | list[int] | list[str],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> bool | list[bool]:
+        filter_id = self.block_formatter(filter_id)
+        msg = await self.send_message("eth_uninstallFilter", [filter_id], websocket)
+        return msg
+
     async def get_filter_changes(
             self,
             filter_id: int | str | list[int] | list[str],
@@ -874,9 +905,25 @@ class EthRPC:
         Returns an array of all logs matching filter with given id.
         Used with other filter creation methods taking in their filter numbers as input.
         """
-        if isinstance(filter_id, int):
-            filter_id = hex(filter_id)
-        msg = await self.send_message("th_getFilterChanges", [filter_id], websocket)
+        filter_id = self.block_formatter(filter_id)
+        msg = await self.send_message("eth_getFilterChanges", [filter_id], websocket)
+        match msg:
+            case None:
+                return msg
+            case l if any(isinstance(elem, list) for elem in l):
+                return [[Log.from_dict(el) for el in result] for result in msg]
+            case list():
+                return [Log.from_dict(result) for result in msg]
+            case _:
+                raise ERPCInvalidReturnException(f"Unexpected return of form {msg} in get_filter_changes")
+
+    async def get_filter_logs(
+            self,
+            filter_id: int | str | list[int] | list[str],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> list[Log] | list[list[Log]]:
+        filter_id = self.block_formatter(filter_id)
+        msg = await self.send_message("eth_getFilterLogs", [filter_id], websocket)
         match msg:
             case None:
                 return msg
