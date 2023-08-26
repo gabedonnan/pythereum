@@ -752,6 +752,9 @@ class EthRPC:
             data: str | Hex | list[str] | list[Hex],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> Transaction | list[Transaction]:
+        """
+        Returns the information about a transaction requested by transaction hash.
+        """
         msg = await self.send_message("eth_getTransactionByHash", [data], websocket)
         match msg:
             case None:
@@ -761,4 +764,125 @@ class EthRPC:
             case _:
                 return [Transaction.from_dict(result, infer_missing=True) for result in msg]
 
+    async def get_transaction_by_block_hash_and_index(
+            self,
+            data: str | Hex | list[str] | list[Hex],
+            index: int | list[int],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> Transaction | list[Transaction]:
+        """
+        Returns information about a transaction by block hash and transaction index position.
+        """
+        msg = await self.send_message("eth_getTransactionByBlockHashAndIndex", [data, index], websocket)
+        match msg:
+            case None:
+                return msg
+            case dict():
+                return Transaction.from_dict(msg, infer_missing=True)
+            case _:
+                return [Transaction.from_dict(result, infer_missing=True) for result in msg]
 
+    async def get_transaction_by_block_number_and_index(
+            self,
+            block_specifier: DefaultBlock | list[DefaultBlock],
+            index: int | list[int],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> Transaction | list[Transaction]:
+        """
+        Returns information about a transaction by block number and transaction index position.
+        """
+        block_specifier = self.block_formatter(block_specifier)
+        msg = await self.send_message("eth_getTransactionByBlockNumberAndIndex", [block_specifier, index], websocket)
+        match msg:
+            case None:
+                return msg
+            case dict():
+                return Transaction.from_dict(msg, infer_missing=True)
+            case _:
+                return [Transaction.from_dict(result, infer_missing=True) for result in msg]
+
+    async def get_uncle_by_block_hash_and_index(
+            self,
+            data: str | Hex | list[str] | list[Hex],
+            index: int | list[int],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> Block | list[Block]:
+        """
+        Returns information about a uncle of a block by hash and uncle index position.
+        """
+        msg = await self.send_message("eth_getUncleByBlockHashAndIndex", [data, index], websocket)
+        match msg:
+            case None:
+                return msg
+            case dict():
+                return Block.from_dict(msg, infer_missing=True)
+            case _:
+                return [Block.from_dict(result, infer_missing=True) for result in msg]
+
+    async def get_uncle_by_block_number_and_index(
+            self,
+            block_specifier: DefaultBlock | list[DefaultBlock],
+            index: int | list[int],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> Block | list[Block]:
+        """
+        Returns information about a uncle of a block by number and uncle index position.
+        """
+        block_specifier = self.block_formatter(block_specifier)
+        msg = await self.send_message("eth_getUncleByBlockNumberAndIndex", [block_specifier, index], websocket)
+        match msg:
+            case None:
+                return msg
+            case dict():
+                return Block.from_dict(msg, infer_missing=True)
+            case _:
+                return [Block.from_dict(result, infer_missing=True) for result in msg]
+
+    async def create_filter(
+            self,
+            from_block: DefaultBlock | list[DefaultBlock],
+            to_block: DefaultBlock | list[DefaultBlock],
+            address: str | Hex | list[str] | list[Hex] | list[list[str]] | list[list[Hex]],
+            topics: list[str] | list[Hex] | list[list[str]] | list[list[Hex]],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> int | list[int]:
+        """
+        :param from_block: Block from which the filter is active
+        :param to_block: Block to which the filter is active
+        :param address: Contract address or list of addresses from which logs should originate
+        :param topics: Array of 32 byte data topics, topics are order dependent
+        :param websocket: An optional external websocket for calls to this function
+        :return: Returns an integer filter ID
+        """
+        from_block = self.block_formatter(from_block)
+        to_block = self.block_formatter(to_block)
+        msg = await self.send_message("eth_newFilter", [from_block, to_block, address, topics], websocket)
+        match msg:
+            case None:
+                return msg
+            case str():
+                return int(msg, 16)
+            case _:
+                return [int(result, 16) if result is not None else None for result in msg]
+
+    async def get_filter_changes(
+            self,
+            filter_id: int | str | list[int] | list[str],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> list[Log] | list[list[Log]]:
+        """
+        Returns an array of all logs matching filter with given id.
+        Used with other filter creation methods taking in their filter numbers as input.
+        """
+        if isinstance(filter_id, int):
+            filter_id = hex(filter_id)
+        msg = await self.send_message("th_getFilterChanges", [filter_id], websocket)
+        match msg:
+            case None:
+                return msg
+            case l if any(isinstance(elem, list) for elem in l):
+                return [[Log.from_dict(el) for el in result] for result in msg]
+            case list():
+                return [Log.from_dict(result) for result in msg]
+            case _:
+                raise ERPCInvalidReturnException(f"Unexpected return of form {msg} in get_filter_changes")
