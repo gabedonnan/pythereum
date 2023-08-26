@@ -44,7 +44,12 @@ Features include:
   - [x] `eth_getUncleByBlockNumberAndIndex`
   - [x] `eth_newFilter`
     - Additional testing needed for batching this function
-  - [x] `eth_getFilterChanges`
+  - [x] `eth_newBlockFilter`
+  - [x] `eth_newPendingTransactionFilter`
+  - [x] `eth_uninstallFilter`
+  - [x] `eth_getFilterLogs`
+  - [x] `eth_getFilterChanges
+`
 
 RPC methods to implement
   - Aiming to complete all methods listed [here.](https://ethereum.org/en/developers/docs/apis/json-rpc/)
