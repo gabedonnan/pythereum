@@ -38,6 +38,13 @@ Features include:
   - [x] `eth_estimateGas`
   - [x] `eth_sign`
   - [x] `eth_getTransactionByHash`
+  - [x] `eth_getTransactionByBlockHashAndIndex`
+  - [x] `eth_getTransactionByBlockNumberAndIndex`
+  - [x] `eth_getUncleByBlockHashAndIndex`
+  - [x] `eth_getUncleByBlockNumberAndIndex`
+  - [x] `eth_newFilter`
+    - Additional testing needed for batching this function
+  - [x] `eth_getFilterChanges`
 
 RPC methods to implement
   - Aiming to complete all methods listed [here.](https://ethereum.org/en/developers/docs/apis/json-rpc/)
@@ -168,10 +175,12 @@ pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 or 
 
 ```toml
-pythereum = "^1.0.1"
+pythereum = "^1.0.2"
 ```
 
-If you would like to install the library via pypi instead of via this git repository
+If you would like to install the library via pypi instead of via this git repository.
+This git repository will always be the most up to date but the releases on pypi should
+be more thoroughly tested.
 
 ### Pip / PyPi installation
 
