@@ -42,7 +42,16 @@ class EthDenomination(float, Enum):
     tether = 1e30
 
 
-def convert_eth(quantity: float, convert_from: EthDenomination, covert_to: EthDenomination) -> float:
+def convert_eth(quantity: float | str | Hex, convert_from: EthDenomination, covert_to: EthDenomination) -> float:
+    """
+    Converts eth values from a given denomination to another.
+    Strings passed in are automatically decoded from hexadecimal to integers, as are Hex values
+    """
+    if isinstance(quantity, str):
+        quantity = int(quantity, 16)
+    elif isinstance(quantity, Hex):
+        quantity = quantity.integer_value
+
     return (convert_from.value * quantity) / covert_to.value
 
 
@@ -147,6 +156,22 @@ class EthRPC:
     def _next_id(self) -> None:
         self._id += 1
 
+    def param_formatter(self, params: list[Any]) -> list[Any]:
+        """
+        Recursively formats parameters such that disallowed types (Hex) are not sent through
+        It is a little inefficient to do it this way, but automatic json decoding is similarly slow
+        """
+        reformed_params = []
+        for param in params:
+            match param:
+                case Hex():
+                    reformed_params.append(param.hex_string)
+                case list():
+                    reformed_params.append(self.param_formatter(param))
+                case _:
+                    reformed_params.append(param)
+        return reformed_params
+
     @staticmethod
     def block_formatter(block_specifier: DefaultBlock | list[DefaultBlock] | tuple[DefaultBlock]) -> DefaultBlock | list[DefaultBlock]:
         """
@@ -175,7 +200,7 @@ class EthRPC:
         res = json.dumps({
             "jsonrpc": "2.0",
             "method": method,
-            "params": [param.hex_string if isinstance(param, Hex) else param for param in params],
+            "params": self.param_formatter(params),
             "id": self._id
         })
         if increment:
@@ -194,7 +219,7 @@ class EthRPC:
             res.append({
                 "jsonrpc": "2.0",
                 "method": method,
-                "params": [param.hex_string if isinstance(param, Hex) else param for param in params],
+                "params": self.param_formatter(params),
                 "id": self._id
             })
             if increment:
@@ -900,7 +925,7 @@ class EthRPC:
             self,
             filter_id: int | str | list[int] | list[str],
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> list[Log] | list[list[Log]]:
+    ) -> list[Hex] | list[list[Hex]]:
         """
         Returns an array of all logs matching filter with given id.
         Used with other filter creation methods taking in their filter numbers as input.
@@ -911,9 +936,9 @@ class EthRPC:
             case None:
                 return msg
             case l if any(isinstance(elem, list) for elem in l):
-                return [[Log.from_dict(el) for el in result] for result in msg]
+                return [[Hex(el) for el in result] for result in msg]
             case list():
-                return [Log.from_dict(result) for result in msg]
+                return [Hex(result) for result in msg]
             case _:
                 raise ERPCInvalidReturnException(f"Unexpected return of form {msg} in get_filter_changes")
 
