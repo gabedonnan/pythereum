@@ -970,9 +970,9 @@ class EthRPC:
         match msg:
             case None:
                 return msg
-            case l if any(isinstance(elem, list) for elem in l):
+            case l if all(isinstance(elem, list) for elem in l):
                 return [[Log.from_dict(el) for el in result] for result in msg]
-            case list():
+            case li if isinstance(li, list) and not any(isinstance(elem, list) for elem in li):
                 return [Log.from_dict(result) for result in msg]
             case _:
                 raise ERPCInvalidReturnException(f"Unexpected return of form {msg} in get_filter_changes")
@@ -1003,9 +1003,9 @@ class EthRPC:
         match msg:
             case None:
                 return msg
-            case l if any(isinstance(elem, list) for elem in l):
+            case l if all(isinstance(elem, list) for elem in l):
                 return [[Log.from_dict(el) for el in result] for result in msg]
-            case list():
+            case li if isinstance(li, list) and not any(isinstance(elem, list) for elem in li):
                 return [Log.from_dict(result) for result in msg]
             case _:
                 raise ERPCInvalidReturnException(f"Unexpected return of form {msg} in get_filter_changes")
