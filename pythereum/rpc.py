@@ -172,6 +172,20 @@ class EthRPC:
                     reformed_params.append(param)
         return reformed_params
 
+    def object_formatter(
+            self,
+            from_block: DefaultBlock | list[DefaultBlock],
+            to_block: DefaultBlock | list[DefaultBlock],
+            address: str | Hex | list[str] | list[Hex] | list[list[str]] | list[list[Hex]],
+            topics: str | Hex | list[str] | list[Hex]
+    ) -> dict:
+        return {
+            "fromBlock": self.block_formatter(from_block),
+            "toBlock": self.block_formatter(from_block),
+            "address": self.param_formatter(address),
+            "topics": self.param_formatter(topics)
+        }
+
     @staticmethod
     def block_formatter(block_specifier: DefaultBlock | list[DefaultBlock] | tuple[DefaultBlock]) -> DefaultBlock | list[DefaultBlock]:
         """
@@ -879,9 +893,13 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: Returns an integer filter ID
         """
-        from_block = self.block_formatter(from_block)
-        to_block = self.block_formatter(to_block)
-        msg = await self.send_message("eth_newFilter", [from_block, to_block, address, topics], websocket)
+        param = self.object_formatter(
+            from_block=from_block,
+            to_block=to_block,
+            address=address,
+            topics=topics
+        )
+        msg = await self.send_message("eth_newFilter", [param], websocket)
         match msg:
             case None:
                 return msg
@@ -949,6 +967,39 @@ class EthRPC:
     ) -> list[Log] | list[list[Log]]:
         filter_id = self.block_formatter(filter_id)
         msg = await self.send_message("eth_getFilterLogs", [filter_id], websocket)
+        match msg:
+            case None:
+                return msg
+            case l if any(isinstance(elem, list) for elem in l):
+                return [[Log.from_dict(el) for el in result] for result in msg]
+            case list():
+                return [Log.from_dict(result) for result in msg]
+            case _:
+                raise ERPCInvalidReturnException(f"Unexpected return of form {msg} in get_filter_changes")
+
+    async def get_logs(
+            self,
+            from_block: DefaultBlock | list[DefaultBlock],
+            to_block: DefaultBlock | list[DefaultBlock],
+            address: str | Hex | list[str] | list[Hex] | list[list[str]] | list[list[Hex]],
+            topics: list[str] | list[Hex] | list[list[str]] | list[list[Hex]],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> list[Log] | list[list[Log]]:
+        """
+        :param from_block: Block from which the filter is active
+        :param to_block: Block to which the filter is active
+        :param address: Contract address or list of addresses from which logs should originate
+        :param topics: Array of 32 byte data topics, topics are order dependent
+        :param websocket: An optional external websocket for calls to this function
+        :return: Returns a list of log objects or nothing if no changes have occurred since last poll
+        """
+        param = self.object_formatter(
+            from_block=from_block,
+            to_block=to_block,
+            address=address,
+            topics=topics
+        )
+        msg = await self.send_message("eth_getLogs", [param], websocket)
         match msg:
             case None:
                 return msg
