@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pythereum"
-version = "1.0.2"
+version = "1.0.3"
 description = "A lightweight Ethereum JSON RPC library written in python"
 authors = ["gabedonnan <47415809+gabedonnan@users.noreply.github.com>"]
 readme = "README.md"
