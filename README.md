@@ -146,10 +146,10 @@ if __name__ == "__main__":
 #### Example currency conversion
 
 ```python
->> > from pythereum import EthDenomination, convert_eth
->> > convert_eth(1_000_000, convert_from=EthDenomination.wei, covert_to=EthDenomination.ether)
+>>> from pythereum import EthDenomination, convert_eth
+>>> convert_eth(1_000_000, convert_from=EthDenomination.wei, covert_to=EthDenomination.ether)
 1e-12
->> > convert_eth(1_000, convert_from=EthDenomination.babbage, covert_to=EthDenomination.finney)
+>>> convert_eth(1_000, convert_from=EthDenomination.babbage, covert_to=EthDenomination.finney)
 1e-09
 ```
 
@@ -180,7 +180,7 @@ pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 or 
 
 ```toml
-pythereum = "^1.0.2"
+pythereum = "^1.0.3"
 ```
 
 If you would like to install the library via pypi instead of via this git repository.

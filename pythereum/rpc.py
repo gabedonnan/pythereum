@@ -6,7 +6,7 @@ import websockets
 from pythereum.exceptions import (
     ERPCRequestException, ERPCInvalidReturnException, ERPCSubscriptionException
 )
-from pythereum.common import Hex
+from pythereum.common import HexStr
 from typing import List, Any
 from pythereum.socket_pool import WebsocketPool
 from pythereum.dclasses import Block, Sync, Receipt, Log, Transaction
@@ -42,14 +42,14 @@ class EthDenomination(float, Enum):
     tether = 1e30
 
 
-def convert_eth(quantity: float | str | Hex, convert_from: EthDenomination, covert_to: EthDenomination) -> float:
+def convert_eth(quantity: float | str | HexStr, convert_from: EthDenomination, covert_to: EthDenomination) -> float:
     """
     Converts eth values from a given denomination to another.
     Strings passed in are automatically decoded from hexadecimal to integers, as are Hex values
     """
     if isinstance(quantity, str):
         quantity = int(quantity, 16)
-    elif isinstance(quantity, Hex):
+    elif isinstance(quantity, HexStr):
         quantity = quantity.integer_value
 
     return (convert_from.value * quantity) / covert_to.value
@@ -122,7 +122,7 @@ class Subscription:
             SubscriptionType.syncing: self.syncing_decoder
         }[subscription_type]
 
-    async def recv(self) -> Block | Log | Hex | Sync:
+    async def recv(self) -> Block | Log | HexStr | Sync:
         """
         infinite async generator function which will yield new information retrieved from a websocket
         """
@@ -140,8 +140,8 @@ class Subscription:
         return Log.from_dict(data, infer_missing=True)
 
     @staticmethod
-    def new_pending_transactions_decoder(data: Any) -> Hex:
-        return Hex(data)
+    def new_pending_transactions_decoder(data: Any) -> HexStr:
+        return HexStr(data)
 
     @staticmethod
     def syncing_decoder(data: Any) -> Sync:
@@ -156,34 +156,18 @@ class EthRPC:
     def _next_id(self) -> None:
         self._id += 1
 
-    def param_formatter(self, params: list[Any]) -> list[Any]:
-        """
-        Recursively formats parameters such that disallowed types (Hex) are not sent through
-        It is a little inefficient to do it this way, but automatic json decoding is similarly slow
-        """
-        reformed_params = []
-        for param in params:
-            match param:
-                case Hex():
-                    reformed_params.append(param.hex_string)
-                case list():
-                    reformed_params.append(self.param_formatter(param))
-                case _:
-                    reformed_params.append(param)
-        return reformed_params
-
+    @staticmethod
     def object_formatter(
-            self,
             from_block: DefaultBlock | list[DefaultBlock],
             to_block: DefaultBlock | list[DefaultBlock],
-            address: str | Hex | list[str] | list[Hex] | list[list[str]] | list[list[Hex]],
-            topics: str | Hex | list[str] | list[Hex]
+            address: str | HexStr | list[str] | list[HexStr] | list[list[str]] | list[list[HexStr]],
+            topics: str | HexStr | list[str] | list[HexStr]
     ) -> dict:
         return {
-            "fromBlock": self.block_formatter(from_block),
-            "toBlock": self.block_formatter(from_block),
-            "address": self.param_formatter(address),
-            "topics": self.param_formatter(topics)
+            "fromBlock": from_block,
+            "toBlock": to_block,
+            "address": address,
+            "topics": topics
         }
 
     @staticmethod
@@ -214,7 +198,7 @@ class EthRPC:
         res = json.dumps({
             "jsonrpc": "2.0",
             "method": method,
-            "params": self.param_formatter(params),
+            "params": params,
             "id": self._id
         })
         if increment:
@@ -233,7 +217,7 @@ class EthRPC:
             res.append({
                 "jsonrpc": "2.0",
                 "method": method,
-                "params": self.param_formatter(params),
+                "params": params,
                 "id": self._id
             })
             if increment:
@@ -328,7 +312,7 @@ class EthRPC:
 
     async def unsubscribe(
             self,
-            subscription_id: str | Hex,
+            subscription_id: str | HexStr,
             websocket: websockets.WebSocketClientProtocol | None = None
     ):
         """
@@ -356,7 +340,7 @@ class EthRPC:
 
     async def get_transaction_count(
             self,
-            address: str | Hex | list[str] | list[Hex],
+            address: str | HexStr | list[str] | list[HexStr],
             block_specifier: DefaultBlock | list[DefaultBlock] = BlockTag.latest,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int | list[int]:
@@ -379,7 +363,7 @@ class EthRPC:
 
     async def get_balance(
             self,
-            contract_address: str | Hex | list[str] | list[Hex],
+            contract_address: str | HexStr | list[str] | list[HexStr],
             block_specifier: DefaultBlock | list[DefaultBlock] = BlockTag.latest,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int | list[int]:
@@ -441,7 +425,7 @@ class EthRPC:
 
     async def get_block_by_hash(
             self,
-            data: str | Hex | list[str] | list[Hex],
+            data: str | HexStr | list[str] | list[HexStr],
             full_object: bool | list[bool] = False,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> Block | list[Block]:
@@ -503,7 +487,7 @@ class EthRPC:
 
     async def get_transaction_receipt(
             self,
-            tx_hash: str | Hex | list[str] | list[Hex],
+            tx_hash: str | HexStr | list[str] | list[HexStr],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> Receipt | list[Receipt]:
         """
@@ -520,7 +504,7 @@ class EthRPC:
 
     async def send_raw_transaction(
             self,
-            raw_transaction: str | Hex | list[str] | list[Hex],
+            raw_transaction: str | HexStr | list[str] | list[HexStr],
             websocket: websockets.WebSocketClientProtocol | None = None
     ):
         """
@@ -650,7 +634,7 @@ class EthRPC:
     async def get_coinbase(
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> str | Hex:
+    ) -> str | HexStr:
         msg = await self.send_message("eth_coinbase", [], websocket)
         return msg
 
@@ -686,13 +670,13 @@ class EthRPC:
     async def get_accounts(
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> List[str | Hex]:
+    ) -> List[str | HexStr]:
         msg = await self.send_message("eth_accounts", [], websocket)
         return msg
 
     async def get_transaction_count_by_hash(
             self,
-            data: str | Hex | list[str] | list[Hex],
+            data: str | HexStr | list[str] | list[HexStr],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int | list[int]:
         msg = await self.send_message("eth_getBlockTransactionCountByHash", [data], websocket)
@@ -721,7 +705,7 @@ class EthRPC:
 
     async def get_uncle_count_by_hash(
             self,
-            data: str | Hex | list[str] | list[Hex],
+            data: str | HexStr | list[str] | list[HexStr],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int | list[int]:
         msg = await self.send_message("eth_getUncleCountByBlockHash", [data], websocket)
@@ -750,20 +734,20 @@ class EthRPC:
 
     async def get_code(
             self,
-            data: str | Hex | list[str] | list[Hex],
+            data: str | HexStr | list[str] | list[HexStr],
             block_specifier: DefaultBlock | list[DefaultBlock],
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> str | Hex | list[str] | list[Hex]:
+    ) -> str | HexStr | list[str] | list[HexStr]:
         block_specifier = self.block_formatter(block_specifier)
         msg = await self.send_message("eth_getCode", [data, block_specifier], websocket)
         return msg
 
     async def sign(
             self,
-            data: str | Hex | list[str] | list[Hex],
-            message: str | Hex | list[str] | list[Hex],
+            data: str | HexStr | list[str] | list[HexStr],
+            message: str | HexStr | list[str] | list[HexStr],
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> str | Hex | list[str] | list[Hex]:
+    ) -> str | HexStr | list[str] | list[HexStr]:
         msg = await self.send_message("eth_sign", [data, message], websocket)
         return msg
 
@@ -788,7 +772,7 @@ class EthRPC:
 
     async def get_transaction_by_hash(
             self,
-            data: str | Hex | list[str] | list[Hex],
+            data: str | HexStr | list[str] | list[HexStr],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> Transaction | list[Transaction]:
         """
@@ -805,7 +789,7 @@ class EthRPC:
 
     async def get_transaction_by_block_hash_and_index(
             self,
-            data: str | Hex | list[str] | list[Hex],
+            data: str | HexStr | list[str] | list[HexStr],
             index: int | list[int],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> Transaction | list[Transaction]:
@@ -842,7 +826,7 @@ class EthRPC:
 
     async def get_uncle_by_block_hash_and_index(
             self,
-            data: str | Hex | list[str] | list[Hex],
+            data: str | HexStr | list[str] | list[HexStr],
             index: int | list[int],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> Block | list[Block]:
@@ -881,8 +865,8 @@ class EthRPC:
             self,
             from_block: DefaultBlock | list[DefaultBlock],
             to_block: DefaultBlock | list[DefaultBlock],
-            address: str | Hex | list[str] | list[Hex] | list[list[str]] | list[list[Hex]],
-            topics: list[str] | list[Hex] | list[list[str]] | list[list[Hex]],
+            address: str | HexStr | list[str] | list[HexStr] | list[list[str]] | list[list[HexStr]],
+            topics: list[str] | list[HexStr] | list[list[str]] | list[list[HexStr]],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int | list[int]:
         """
@@ -943,7 +927,7 @@ class EthRPC:
             self,
             filter_id: int | str | list[int] | list[str],
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> list[Hex] | list[list[Hex]]:
+    ) -> list[HexStr] | list[list[HexStr]]:
         """
         Returns an array of all logs matching filter with given id.
         Used with other filter creation methods taking in their filter numbers as input.
@@ -954,9 +938,9 @@ class EthRPC:
             case None:
                 return msg
             case l if any(isinstance(elem, list) for elem in l):
-                return [[Hex(el) for el in result] for result in msg]
+                return [[HexStr(el) for el in result] for result in msg]
             case list():
-                return [Hex(result) for result in msg]
+                return [HexStr(result) for result in msg]
             case _:
                 raise ERPCInvalidReturnException(f"Unexpected return of form {msg} in get_filter_changes")
 
@@ -981,8 +965,8 @@ class EthRPC:
             self,
             from_block: DefaultBlock | list[DefaultBlock],
             to_block: DefaultBlock | list[DefaultBlock],
-            address: str | Hex | list[str] | list[Hex] | list[list[str]] | list[list[Hex]],
-            topics: list[str] | list[Hex] | list[list[str]] | list[list[Hex]],
+            address: str | HexStr | list[str] | list[HexStr] | list[list[str]] | list[list[HexStr]],
+            topics: list[str] | list[HexStr] | list[list[str]] | list[list[HexStr]],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> list[Log] | list[list[Log]]:
         """

@@ -1,7 +1,7 @@
 import re
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json, LetterCase, config
-from pythereum.common import Hex
+from pythereum.common import HexStr
 from pythereum.exceptions import (
     ERPCDecoderException, ERPCEncoderException
 )
@@ -24,36 +24,36 @@ def hex_int_encoder(int_val: int | None) -> str | None:
     return hex(int_val)
 
 
-def hex_decoder(hex_string: str | None) -> Hex | None:
+def hex_decoder(hex_string: str | None) -> HexStr | None:
     if hex_string is None:
         return None
     elif re.match(r"^(0[xX])?[A-Fa-f0-9]+$", hex_string):
-        return Hex(hex_string)
+        return HexStr(hex_string)
     elif hex_string == "0x":
         return None
     else:
         raise ERPCDecoderException(f"{type(hex_string)} \"{hex_string}\" is an invalid input to decoder \"hex_decoder\"")
 
 
-def hex_encoder(hex_obj: Hex | None) -> str | None:
+def hex_encoder(hex_obj: HexStr | None) -> str | None:
     """
     Takes in a hex object and returns its hex string representation
     """
     if hex_obj is None:
         return None
-    elif not isinstance(hex_obj, Hex):
+    elif not isinstance(hex_obj, HexStr):
         raise ERPCEncoderException(f"{type(hex_obj)} {hex_obj} is an invalid input to encoder \"hex_encoder\"")
-    return f"0x{hex_obj.hex_string}"
+    return str(hex_obj)
 
 
-def hex_list_decoder(hex_string_list: list[str] | None) -> list[Hex] | None:
+def hex_list_decoder(hex_string_list: list[str] | None) -> list[HexStr] | None:
     if hex_string_list is not None:
         return [hex_decoder(hex_string) for hex_string in hex_string_list]
     else:
         return None
 
 
-def hex_list_encoder(hex_obj_list: list[Hex]) -> list[str] | None:
+def hex_list_encoder(hex_obj_list: list[HexStr]) -> list[str] | None:
     if hex_obj_list is not None:
         return [hex_encoder(hex_obj) for hex_obj in hex_obj_list]
     else:
@@ -151,7 +151,7 @@ class Block:
     difficulty: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # The extra data field of the block
-    extra_data: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    extra_data: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # The maximum gas allowed on this block
     gas_limit: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
@@ -160,16 +160,16 @@ class Block:
     gas_used: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # 32 Byte hash of a block, null if block is pending
-    hash: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    hash: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # 256 Bytes bloom filter for the logs of the block. Null if the block is pending
-    logs_bloom: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    logs_bloom: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # 20 Byte address of the beneficiary of mining rewards
-    miner: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    miner: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     #
-    mix_hash: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    mix_hash: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # 8 Byte hash of the generated proof of work. Null when the block is pending
     nonce: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
@@ -178,22 +178,22 @@ class Block:
     number: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # 32 Byte hash of the parent of the block
-    parent_hash: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    parent_hash: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # 32 Byte root of the receipts trie of the block
-    receipts_root: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    receipts_root: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # 32 Byte SHA3 of the uncles of the data in the block
-    sha3_uncles: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    sha3_uncles: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # Integer size of the block in bytes
     size: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # 32 Byte root of the final state trie of the block
-    state_root: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    state_root: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # The unix timestamp for when the block was collated
-    timestamp: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    timestamp: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # Integer of the total difficulty of the chain until this block
     total_difficulty: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
@@ -204,10 +204,10 @@ class Block:
     )
 
     # 32 Byte root of the transaction trie of the block
-    transactions_root: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    transactions_root: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # List of uncle hashes
-    uncles: list[Hex] | None = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
+    uncles: list[HexStr] | None = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -216,31 +216,31 @@ class Sync:
     """
     Class representing ethereum sync status
     """
-    starting_block: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
-    current_block: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
-    highest_block: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    starting_block: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    current_block: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    highest_block: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Receipt:
     # 32 Byte hash of transaction
-    transaction_hash: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    transaction_hash: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # Integer of the transactions index position in the block
     transaction_index: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # 32 Byte hash of the block in which the transaction was contained
-    block_hash: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    block_hash: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # Block number of transaction
     block_number: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # 20 Byte sender address
-    from_address: Hex | None = field(metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder))
+    from_address: HexStr | None = field(metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder))
 
     # 20 Byte receiver address, can be null
-    to_address: Hex | None = field(metadata=config(field_name="to", decoder=hex_decoder, encoder=hex_encoder))
+    to_address: HexStr | None = field(metadata=config(field_name="to", decoder=hex_decoder, encoder=hex_encoder))
 
     # Total amount of gas used when this transaction was executed on the block
     cumulative_gas_used: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
@@ -252,13 +252,13 @@ class Receipt:
     gas_used: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # The 20 Byte contract address created
-    contract_address: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    contract_address: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # List of log objects, which this transaction generated
     logs: list['Log'] | None = field(metadata=config(decoder=log_list_decoder, encoder=log_list_encoder))
 
     # 256 Byte bloom for light clients to quickly retrieve related logs
-    logs_bloom: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    logs_bloom: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
     # Integer representation of transaction type, 0x0 for legacy, 0x1 for list, 0x2 for dynamic fees
     type: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
@@ -267,19 +267,19 @@ class Receipt:
     status: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # Optional: 32 Bytes of post-transaction stateroot
-    root: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    root: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Log:
-    address: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
-    block_hash: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    address: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    block_hash: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
     block_number: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
-    data: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    data: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
     log_index: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
-    topics: list[Hex] | None = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
-    transaction_hash: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    topics: list[HexStr] | None = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
+    transaction_hash: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
     transaction_index: int | None= field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
     removed: bool
 
@@ -287,25 +287,25 @@ class Log:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Transaction:
-    block_hash: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    block_hash: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
     block_number: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
-    from_address: Hex | None = field(metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder))
+    from_address: HexStr | None = field(metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder))
     gas: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
     gas_price: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
     max_fee_per_gas: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
     max_priority_fee_per_gas: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
-    hash: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
-    input: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    hash: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    input: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
     nonce: int | None= field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
-    to_address: Hex | None = field(metadata=config(field_name="to", decoder=hex_decoder, encoder=hex_encoder))
+    to_address: HexStr | None = field(metadata=config(field_name="to", decoder=hex_decoder, encoder=hex_encoder))
     transaction_index: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
     value: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
     type: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
     access_list: list['Access'] | None = field(metadata=config(decoder=access_list_decoder, encoder=access_list_encoder))
     chain_id: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
     v: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
-    r: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
-    s: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    r: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    s: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -314,5 +314,5 @@ class Access:
     """
     Information on access lists available at https://eips.ethereum.org/EIPS/eip-2930
     """
-    address: Hex | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
-    storage_keys: list[Hex] | None = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
+    address: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    storage_keys: list[HexStr] | None = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))

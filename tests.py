@@ -1,7 +1,7 @@
 import unittest
 import asyncio
 from time import time
-from pythereum import Hex
+from pythereum import HexStr
 from pythereum.rpc import EthRPC, SubscriptionType, BlockTag, convert_eth, EthDenomination
 # I store the links I use for testing in my .env file under the name "TEST_WS"
 from dotenv import dotenv_values
@@ -9,12 +9,13 @@ from dotenv import dotenv_values
 config = dotenv_values(".env")  # Pulls variables from .env into a dictionary
 
 ANVIL_URL = "ws://127.0.0.1:8545"
+TEST_URL = config["TEST_WS"]
 
 
 class MyTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self) -> None:
-        self.rpc = EthRPC(config["TEST_WS"], 8)
+        self.rpc = EthRPC(ANVIL_URL, 8)
         await self.rpc.start_pool()
 
     async def asyncTearDown(self) -> None:
@@ -133,7 +134,7 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def test_batch_transaction_count_by_hash(self):
         r = await self.rpc.get_transaction_count_by_hash(
-            [Hex("0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae"),
+            [HexStr("0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae"),
              "0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae"]
         )
         print(r)
