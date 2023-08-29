@@ -8,31 +8,47 @@
 
 name: Upload Python Package
 
-on: push
+on:
+  push:
+    branches: 
+      - master
+
+permissions:
+  contents: read
 
 jobs:
-  build-publish:
-    name: Build and publish Python distributions to PyPi
+  test:
     runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 2
+      matrix:
+        # https://github.com/actions/python-versions/blob/main/versions-manifest.json
+        python-version: ["3.11", "3.12"]
+
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
-        python-version: "3.x"
-    - name: Install pypa/build
-      run: >-
-        python3 -m
-        pip install
-        build
-        --user
-    - name: Build a binary wheel and a source tarball
-      run: >-
-        python3 -m
-        build
-        --sdist
-        --wheel
-        --outdir dist/
+        python-version: ${{ matrix.python-version }}
+        allow-prereleases: true
+    - name: Install Poetry and dependencies
+      shell: bash
+      env:
+        PYTHON_VERSION: ${{ matrix.python-version }}
+      run: |
+        set -e
+        curl -sSL https://install.python-poetry.org | python3 -
+        poetry install --all-extras
+        poetry self add "poetry-dynamic-versioning[plugin]"
+    - name: Lint with flake8
+      run: |
+        set -e
+        poetry run flake8 pythereum --show-source --statistics --count
+    - name: Build package
+      run: |
+        set -e
+        poetry build
     - name: Publish distribution 📦 to PyPI
       if: startsWith(github.ref, 'refs/tags')
       uses: pypa/gh-action-pypi-publish@release/v1
