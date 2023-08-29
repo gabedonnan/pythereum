@@ -60,28 +60,28 @@ def hex_list_encoder(hex_obj_list: list[HexStr]) -> list[str] | None:
         return None
 
 
-def transaction_decoder(transaction_hex: dict | str) -> 'Transaction | Hex':
+def transaction_decoder(transaction_hex: dict | str) -> 'Transaction | HexStr':
     if isinstance(transaction_hex, dict):
         return Transaction.from_dict(transaction_hex, infer_missing=True)
     else:
         return hex_decoder(transaction_hex)
 
 
-def transaction_encoder(transaction_obj: 'Hex | Transaction') -> str | dict:
+def transaction_encoder(transaction_obj: 'HexStr | Transaction') -> str | dict:
     if isinstance(transaction_obj, Transaction):
         return transaction_obj.to_dict()
     else:
         return hex_encoder(transaction_obj)
 
 
-def transaction_list_decoder(tr_list: list[dict | str] | None) -> list['Transaction | Hex'] | None:
+def transaction_list_decoder(tr_list: list[dict | str] | None) -> list['Transaction | HexStr'] | None:
     if tr_list is not None:
         return [transaction_decoder(transaction) for transaction in tr_list]
     else:
         return None
 
 
-def transaction_list_encoder(tr_list: list['Transaction| Hex'] | None) -> list[dict | str] | None:
+def transaction_list_encoder(tr_list: list['Transaction| HexStr'] | None) -> list[dict | str] | None:
     if tr_list is not None:
         return [transaction_encoder(transaction) for transaction in tr_list]
     else:
@@ -199,7 +199,7 @@ class Block:
     total_difficulty: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # List of all transaction objects or 32 Byte transaction hashes for the block
-    transactions: list['Transaction | Hex'] | None = field(
+    transactions: list['Transaction | HexStr'] | None = field(
         metadata=config(decoder=transaction_list_decoder, encoder=transaction_list_encoder)
     )
 

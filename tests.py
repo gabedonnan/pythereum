@@ -162,7 +162,7 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
             from_block=30_000,
             to_block=30_010,
             address=["0xA69babEF1cA67A37Ffaf7a485DfFF3382056e78C", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"],
-            topics=["2c76e7a47fd53e2854856ac3f0a5f3ee40d15cfaa82266357ea9779c486ab9c3"],
+            topics=["0x2c76e7a47fd53e2854856ac3f0a5f3ee40d15cfaa82266357ea9779c486ab9c3"],
         )
         r = await self.rpc.get_filter_changes(ftr)
         print(r)
