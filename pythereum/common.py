@@ -22,8 +22,8 @@ class HexStr(str):
     def __int__(self):
         return int(self, 16)
 
-    def __repr__(self):
-        return f"h'{self}'"
+    def __repr__(self) -> str:
+        return f"HexStr({super().__repr__()})"
 
     def __bytes__(self):
         return bytes.fromhex(self.raw_hex() if len(self) % 2 == 0 else f"0{self.raw_hex()}")
