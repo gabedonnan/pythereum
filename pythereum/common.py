@@ -1,3 +1,6 @@
+import re
+
+
 class HexStr(str):
     """
     Data type representing a base16 hexadecimal number.
@@ -8,7 +11,8 @@ class HexStr(str):
     - raw_hex: returns string representing the hexadecimal number without 0x prefix.
     - hex_bytes: returns bytes object representing the conversion of the value.
     """
-    HEX_PATTERN = re.compile(r'^0x[0-9a-fA-F]+$')
+
+    HEX_PATTERN = re.compile(r"^0x[0-9a-fA-F]+$")
 
     def __new__(cls, value: str | int):
         if isinstance(value, str):
@@ -16,7 +20,9 @@ class HexStr(str):
         elif isinstance(value, int):
             formatted_value = hex(value)
         else:
-            raise ValueError(f"Unsupported type {type(value)} for HexStr. Must be str or int.")
+            raise ValueError(
+                f"Unsupported type {type(value)} for HexStr. Must be str or int."
+            )
 
         return super().__new__(cls, formatted_value)
 
@@ -42,7 +48,9 @@ class HexStr(str):
 
     def __bytes__(self):
         # If odd length, pad with zero to make byte conversion valid
-        return bytes.fromhex(self.raw_hex() if len(self) % 2 == 0 else f"0{self.raw_hex()}")
+        return bytes.fromhex(
+            self.raw_hex if len(self) % 2 == 0 else f"0{self.raw_hex}"
+        )
 
     @property
     def hex_bytes(self):
