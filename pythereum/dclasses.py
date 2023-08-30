@@ -209,6 +209,9 @@ class Block:
     # List of uncle hashes
     uncles: list[HexStr] | None = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
 
+    # The base fee per gas, only added after EIP-1559
+    base_fee_per_gas: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
