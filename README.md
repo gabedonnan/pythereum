@@ -149,7 +149,7 @@ if __name__ == "__main__":
 >>> from pythereum import EthDenomination, convert_eth
 >>> convert_eth(1_000_000, convert_from=EthDenomination.wei, covert_to=EthDenomination.ether)
 1e-12
->>> convert_eth(1_000, convert_from=EthDenomination.babbage, covert_to=EthDenomination.finney)
+>>> convert_eth(1_000, EthDenomination.babbage, EthDenomination.finney)
 1e-09
 ```
 
