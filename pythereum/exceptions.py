@@ -1,49 +1,41 @@
-class ERPCRequestException(Exception):
+class ERPCBaseException(Exception):
     """
-    Raised when an error is returned from the Ethereum RPC
+    Base exception class for Ethereum RPC interactions.
     """
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
 
+
+class ERPCRequestException(ERPCBaseException):
+    """
+    Raised when an error is returned from the Ethereum RPC.
+    """
     def __init__(self, code: int, message: str = "Generic ERPC Error"):
-        self.code = code
-        self.message = message
-        super().__init__(f"Error {code}: " + self.message)
+        self.code = code  # Error code, e.g., HTTP error code or custom ERPC code
+        full_message = f"Error {code}: {message}"
+        super().__init__(full_message)
 
 
-class ERPCInvalidReturnException(Exception):
+class ERPCInvalidReturnException(ERPCBaseException):
     """
-    Raised when the Ethereum RPC returns a value which is incorrectly formatted
-    """
-
-    def __init__(self, message: str):
-        self.message = message
-        super().__init__(self.message)
-
-
-class ERPCDecoderException(Exception):
-    """
-    Raised when invalid data is input to a decoder and an error is thrown
+    Raised when the Ethereum RPC returns a value which is incorrectly formatted.
     """
 
-    def __init__(self, message: str):
-        self.message = message
-        super().__init__(self.message)
 
-
-class ERPCEncoderException(Exception):
+class ERPCDecoderException(ERPCBaseException):
     """
-    Raised when invalid data is input to an encoder and an error is thrown
+    Raised when invalid data is input to a decoder and an error is thrown.
     """
 
-    def __init__(self, message: str):
-        self.message = message
-        super().__init__(self.message)
 
-
-class ERPCSubscriptionException(Exception):
+class ERPCEncoderException(ERPCBaseException):
     """
-    Raised when a subscription request is rejected by a host or for other generic subscription errors
+    Raised when invalid data is input to an encoder and an error is thrown.
     """
 
-    def __init__(self, message: str):
-        self.message = message
-        super().__init__(self.message)
+
+class ERPCSubscriptionException(ERPCBaseException):
+    """
+    Raised when a subscription request is rejected by a host or for other generic subscription errors.
+    """
