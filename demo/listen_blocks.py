@@ -32,5 +32,5 @@ async def listen_blocks(url):
     await erpc.close_pool()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(listen_blocks(config["TEST_WS"]))

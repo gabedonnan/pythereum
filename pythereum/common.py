@@ -48,9 +48,7 @@ class HexStr(str):
 
     def __bytes__(self):
         # If odd length, pad with zero to make byte conversion valid
-        return bytes.fromhex(
-            self.raw_hex if len(self) % 2 == 0 else f"0{self.raw_hex}"
-        )
+        return bytes.fromhex(self.raw_hex if len(self) % 2 == 0 else f"0{self.raw_hex}")
 
     @property
     def hex_bytes(self):
