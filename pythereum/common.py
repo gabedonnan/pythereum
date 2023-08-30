@@ -8,6 +8,7 @@ class HexStr(str):
     - raw_hex: returns string representing the hexadecimal number without 0x prefix.
     - hex_bytes: returns bytes object representing the conversion of the value.
     """
+    HEX_PATTERN = re.compile(r'^0x[0-9a-fA-F]+$')
 
     def __new__(cls, value: str | int):
         if isinstance(value, str):
@@ -15,7 +16,7 @@ class HexStr(str):
         elif isinstance(value, int):
             formatted_value = hex(value)
         else:
-            raise ValueError(f"Unsupported type {type(value)} for HexStr")
+            raise ValueError(f"Unsupported type {type(value)} for HexStr. Must be str or int.")
 
         return super().__new__(cls, formatted_value)
 
@@ -24,11 +25,14 @@ class HexStr(str):
         """
         Formats a string value to be a proper hex string with a "0x" prefix.
         """
-        if not value.startswith(("0x", "0X")):
+        if HexStr.HEX_PATTERN.match(value):
+            return value
+        elif not value.startswith(("0x", "0X")):
             value = f"0x{value}"
-        if not all(c in '0123456789abcdefABCDEF' for c in value[2:]):
-            raise ValueError(f"{value} is not a valid hex string")
-        return value
+            if HexStr.HEX_PATTERN.match(value):
+                return value
+
+        raise ValueError(f"{value} is not a valid hex string")
 
     def __int__(self):
         return int(self, 16)
