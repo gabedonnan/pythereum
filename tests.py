@@ -15,7 +15,7 @@ TEST_URL = config["TEST_WS"]
 class MyTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self) -> None:
-        self.rpc = EthRPC(ANVIL_URL, 8)
+        self.rpc = EthRPC(TEST_URL, 8)
         await self.rpc.start_pool()
 
     async def asyncTearDown(self) -> None:
@@ -166,6 +166,20 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
         )
         r = await self.rpc.get_filter_changes(ftr)
         print(r)
+
+    async def test_net_functions(self):
+        msg = await self.rpc.get_net_version()
+        print(msg)
+        msg = await self.rpc.get_net_listening()
+        print(msg)
+        msg = await self.rpc.get_net_peer_count()
+        print(msg)
+
+    async def test_w3_functions(self):
+        msg = await self.rpc.get_client_version()
+        print(msg)
+        msg = await self.rpc.sha3("0x68656c6c6f20776f726c64")
+        print(msg)
 
 
 if __name__ == '__main__':
