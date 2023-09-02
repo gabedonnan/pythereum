@@ -299,6 +299,8 @@ class EthRPC:
                     raise ERPCSubscriptionException(f"Subscription of type {method.value} rejected by destination.")
                 await self.unsubscribe(subscription_id, ws)
 
+    # Public RPC methods
+
     async def get_subscription(
             self,
             method: SubscriptionType,
@@ -307,8 +309,7 @@ class EthRPC:
         """
         Supporting function for self.subscribe, opening a subscription for the provided websocket
         """
-        msg = await self._send_message("eth_subscribe", [method.value], websocket)
-        return msg
+        return await self._send_message("eth_subscribe", [method.value], websocket)
 
     async def unsubscribe(
             self,
@@ -320,8 +321,7 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: The return of this function is not meant to be caught, though it does exist
         """
-        msg = await self._send_message("eth_unsubscribe", [subscription_id], websocket, True)
-        return msg
+        return await self._send_message("eth_unsubscribe", [subscription_id], websocket, True)
 
     async def get_block_number(
             self,
@@ -482,8 +482,7 @@ class EthRPC:
         :return: Hex value of the executed contract
         """
         block_specifier = self._block_formatter(block_specifier)
-        msg = await self._send_message("eth_call", [transaction, block_specifier], websocket)
-        return msg
+        return await self._send_message("eth_call", [transaction, block_specifier], websocket)
 
     async def get_transaction_receipt(
             self,
@@ -563,8 +562,7 @@ class EthRPC:
             :key status: Either 0x1 for success or 0x0 for failure
             :type: Hex Int
         """
-        msg = await self._send_message("eth_sendRawTransaction", [raw_transaction], websocket)
-        return msg
+        return await self._send_message("eth_sendRawTransaction", [raw_transaction], websocket)
 
     async def send_transaction(
             self,
@@ -604,8 +602,7 @@ class EthRPC:
         :return: Transaction hash (or zero hash if the transaction is not yet available)
         :type: 32 Byte Hex
         """
-        msg = await self._send_message("eth_sendTransaction", [transaction], websocket)
-        return msg
+        return await self._send_message("eth_sendTransaction", [transaction], websocket)
 
     async def get_protocol_version(
             self,
@@ -635,8 +632,7 @@ class EthRPC:
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> str | HexStr:
-        msg = await self._send_message("eth_coinbase", [], websocket)
-        return msg
+        return await self._send_message("eth_coinbase", [], websocket)
 
     async def get_chain_id(
             self,
@@ -653,8 +649,7 @@ class EthRPC:
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> bool:
-        msg = await self._send_message("eth_mining", [], websocket)
-        return msg
+        return await self._send_message("eth_mining", [], websocket)
 
     async def get_hashrate(
             self,
@@ -671,8 +666,7 @@ class EthRPC:
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> List[str | HexStr]:
-        msg = await self._send_message("eth_accounts", [], websocket)
-        return msg
+        return await self._send_message("eth_accounts", [], websocket)
 
     async def get_transaction_count_by_hash(
             self,
@@ -739,8 +733,7 @@ class EthRPC:
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> str | HexStr | list[str] | list[HexStr]:
         block_specifier = self._block_formatter(block_specifier)
-        msg = await self._send_message("eth_getCode", [data, block_specifier], websocket)
-        return msg
+        return await self._send_message("eth_getCode", [data, block_specifier], websocket)
 
     async def sign(
             self,
@@ -748,8 +741,7 @@ class EthRPC:
             message: str | HexStr | list[str] | list[HexStr],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> str | HexStr | list[str] | list[HexStr]:
-        msg = await self._send_message("eth_sign", [data, message], websocket)
-        return msg
+        return await self._send_message("eth_sign", [data, message], websocket)
 
     async def estimate_gas(
             self,
@@ -994,11 +986,64 @@ class EthRPC:
             case _:
                 raise ERPCInvalidReturnException(f"Unexpected return of form {msg} in get_filter_changes")
 
+    # Web3 functions
+
+    async def get_client_version(
+            self,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> str:
+        return await self._send_message("web3_clientVersion", [], websocket)
+
+    async def sha3(
+            self,
+            data: str | HexStr | list[str] | list[HexStr],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> HexStr | list[HexStr]:
+        msg = await self._send_message("web3_sha3", [data], websocket)
+        match msg:
+            case str():
+                return HexStr(msg)
+            case list():
+                return [HexStr(result) for result in msg]
+            case _:
+                raise ERPCInvalidReturnException(f"Unexpected return of form {msg} in sha3")
+
+    # Net functions
+
+    async def get_net_version(
+            self,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> int:
+        msg = await self._send_message("net_version", [], websocket)
+        match msg:
+            case None:
+                return msg
+            case _:
+                return int(msg)
+
+    async def get_net_listening(
+            self,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> bool:
+        return await self._send_message("net_listening", [], websocket)
+
+    async def get_net_peer_count(
+            self,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> int:
+        msg = await self._send_message("net_peerCount", [], websocket)
+        match msg:
+            case None:
+                return msg
+            case _:
+                return int(msg, 16)
+
+    # Generic sending
+
     async def send_raw(
             self,
             method_name: str | HexStr| list[str] | list[HexStr],
             params: list[Any] | list[list[Any]],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> Any:
-        msg = await self._send_message(method_name, params, websocket)
-        return msg
+        return await self._send_message(method_name, params, websocket)
