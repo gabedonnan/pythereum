@@ -23,6 +23,9 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def test_task_group(self):
         rpc = self.rpc
+
+        # It is important to start the websocket pool before task groups
+        # This is due to different tasks trying to start the pool simultaneously when run
         await rpc.start_pool()
         t0 = time()
         async with asyncio.TaskGroup() as tg:
