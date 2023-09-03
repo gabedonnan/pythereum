@@ -60,28 +60,28 @@ def hex_list_encoder(hex_obj_list: list[HexStr]) -> list[str] | None:
         return None
 
 
-def transaction_decoder(transaction_hex: dict | str) -> 'Transaction | HexStr':
+def transaction_decoder(transaction_hex: dict | str) -> 'TransactionFull | HexStr':
     if isinstance(transaction_hex, dict):
-        return Transaction.from_dict(transaction_hex, infer_missing=True)
+        return TransactionFull.from_dict(transaction_hex, infer_missing=True)
     else:
         return hex_decoder(transaction_hex)
 
 
-def transaction_encoder(transaction_obj: 'HexStr | Transaction') -> str | dict:
-    if isinstance(transaction_obj, Transaction):
+def transaction_encoder(transaction_obj: 'HexStr | TransactionFull') -> str | dict:
+    if isinstance(transaction_obj, TransactionFull):
         return transaction_obj.to_dict()
     else:
         return hex_encoder(transaction_obj)
 
 
-def transaction_list_decoder(tr_list: list[dict | str] | None) -> list['Transaction | HexStr'] | None:
+def transaction_list_decoder(tr_list: list[dict | str] | None) -> list['TransactionFull | HexStr'] | None:
     if tr_list is not None:
         return [transaction_decoder(transaction) for transaction in tr_list]
     else:
         return None
 
 
-def transaction_list_encoder(tr_list: list['Transaction| HexStr'] | None) -> list[dict | str] | None:
+def transaction_list_encoder(tr_list: list['TransactionFull | HexStr'] | None) -> list[dict | str] | None:
     if tr_list is not None:
         return [transaction_encoder(transaction) for transaction in tr_list]
     else:
@@ -199,7 +199,7 @@ class Block:
     total_difficulty: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
 
     # List of all transaction objects or 32 Byte transaction hashes for the block
-    transactions: list['Transaction | HexStr'] | None = field(
+    transactions: list['TransactionFull | HexStr'] | None = field(
         metadata=config(decoder=transaction_list_decoder, encoder=transaction_list_encoder)
     )
 
@@ -289,7 +289,7 @@ class Log:
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
-class Transaction:
+class TransactionFull:
     block_hash: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
     block_number: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
     from_address: HexStr | None = field(metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder))
@@ -321,12 +321,37 @@ class Access:
     storage_keys: list[HexStr] | None = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
 
 
-@dataclass
-class Transaction1559:
-    from_address: HexStr = field(metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder))
-    to_address: HexStr | None = field(metadata=config(field_name="to", decoder=hex_decoder, encoder=hex_encoder))
-    gas: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
-    gas_price: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
-    value: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
-    data: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
-    nonce: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+class Transaction(dict):
+    # Not actually a dataclass but a custom implementation was easiest here
+    def __init__(
+            self,
+            from_address: str | HexStr,
+            to_address: str | HexStr | None,
+            gas: int | HexStr | str | None,
+            gas_price: int | HexStr | str | None,
+            value: int | HexStr | str | None,
+            data: str | HexStr | None,
+            nonce: int | HexStr | str
+    ):
+        from_address = HexStr(from_address)
+        to_address = HexStr(to_address)
+        data = HexStr(data)
+
+        if isinstance(gas, int):
+            gas = hex(gas)
+
+        if isinstance(gas_price, int):
+            gas_price = hex(gas_price)
+
+        if isinstance(value, int):
+            value = hex(value)
+
+        if isinstance(nonce, int):
+            nonce = hex(nonce)
+
+        super().__init__({
+            key: val for key, val in zip(
+                ("from", "to", "gas", "gasPrice", "value", "data", "nonce"),
+                (from_address, to_address, gas, gas_price, value, data, nonce)
+            ) if val is not None
+        })

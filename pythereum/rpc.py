@@ -9,7 +9,7 @@ from pythereum.exceptions import (
 from pythereum.common import HexStr
 from typing import List, Any
 from pythereum.socket_pool import WebsocketPool
-from pythereum.dclasses import Block, Sync, Receipt, Log, Transaction
+from pythereum.dclasses import Block, Sync, Receipt, Log, TransactionFull
 
 
 class EthDenomination(float, Enum):
@@ -799,7 +799,7 @@ class EthRPC:
             self,
             data: str | HexStr | list[str] | list[HexStr],
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> Transaction | list[Transaction]:
+    ) -> TransactionFull | list[TransactionFull]:
         """
         Returns the information about a transaction requested by transaction hash.
         """
@@ -808,16 +808,16 @@ class EthRPC:
             case None:
                 return msg
             case dict():
-                return Transaction.from_dict(msg, infer_missing=True)
+                return TransactionFull.from_dict(msg, infer_missing=True)
             case _:
-                return [Transaction.from_dict(result, infer_missing=True) for result in msg]
+                return [TransactionFull.from_dict(result, infer_missing=True) for result in msg]
 
     async def get_transaction_by_block_hash_and_index(
             self,
             data: str | HexStr | list[str] | list[HexStr],
             index: int | list[int],
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> Transaction | list[Transaction]:
+    ) -> TransactionFull | list[TransactionFull]:
         """
         Returns information about a transaction by block hash and transaction index position.
         """
@@ -826,16 +826,16 @@ class EthRPC:
             case None:
                 return msg
             case dict():
-                return Transaction.from_dict(msg, infer_missing=True)
+                return TransactionFull.from_dict(msg, infer_missing=True)
             case _:
-                return [Transaction.from_dict(result, infer_missing=True) for result in msg]
+                return [TransactionFull.from_dict(result, infer_missing=True) for result in msg]
 
     async def get_transaction_by_block_number_and_index(
             self,
             block_specifier: DefaultBlock | list[DefaultBlock],
             index: int | list[int],
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> Transaction | list[Transaction]:
+    ) -> TransactionFull | list[TransactionFull]:
         """
         Returns information about a transaction by block number and transaction index position.
         """
@@ -845,9 +845,9 @@ class EthRPC:
             case None:
                 return msg
             case dict():
-                return Transaction.from_dict(msg, infer_missing=True)
+                return TransactionFull.from_dict(msg, infer_missing=True)
             case _:
-                return [Transaction.from_dict(result, infer_missing=True) for result in msg]
+                return [TransactionFull.from_dict(result, infer_missing=True) for result in msg]
 
     async def get_uncle_by_block_hash_and_index(
             self,
