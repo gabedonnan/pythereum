@@ -157,18 +157,33 @@ class EthRPC:
         self._id += 1
 
     @staticmethod
-    def _object_formatter(
+    def _filter_option_formatter(
             from_block: DefaultBlock | list[DefaultBlock],
             to_block: DefaultBlock | list[DefaultBlock],
             address: str | HexStr | list[str] | list[HexStr] | list[list[str]] | list[list[HexStr]],
             topics: str | HexStr | list[str] | list[HexStr]
-    ) -> dict:
-        return {
-            "fromBlock": from_block,
-            "toBlock": to_block,
-            "address": address,
-            "topics": topics
-        }
+    ) -> dict | list[dict]:
+        """
+        Converts a given set of filter options into either a dictionary or list of dictionaries to be passed to the RPC
+        """
+        if all(isinstance(param, list) for param in (from_block, to_block, address, topics)):
+            # Detects whether a set of filter options is batched
+            return [
+                {
+                    "fromBlock": f,
+                    "toBlock": t,
+                    "address": a,
+                    "topics": tpc
+                } for (f, t, a, tpc) in zip(from_block, to_block, address, topics)
+            ]
+        else:
+            # Non-batched object return
+            return {
+                "fromBlock": from_block,
+                "toBlock": to_block,
+                "address": address,
+                "topics": topics
+            }
 
     @staticmethod
     def _block_formatter(block_specifier: DefaultBlock | list[DefaultBlock] | tuple[DefaultBlock]) -> DefaultBlock | list[DefaultBlock]:
@@ -732,6 +747,9 @@ class EthRPC:
             block_specifier: DefaultBlock | list[DefaultBlock],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> str | HexStr | list[str] | list[HexStr]:
+        """
+        Returns code at a given address for a given block number.
+        """
         block_specifier = self._block_formatter(block_specifier)
         return await self._send_message("eth_getCode", [data, block_specifier], websocket)
 
@@ -741,7 +759,22 @@ class EthRPC:
             message: str | HexStr | list[str] | list[HexStr],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> str | HexStr | list[str] | list[HexStr]:
+        """
+        Calculates the ethereum specific signature.
+        """
         return await self._send_message("eth_sign", [data, message], websocket)
+
+    async def sign_transaction(
+            self,
+            send_from: str | HexStr | list[str] | list[HexStr],
+            send_to: str | HexStr | list[str] | list[HexStr],
+            gas: int | HexStr | str | list[int] | list[HexStr] | list[str],
+            gas_price: int | HexStr | str | list[int] | list[HexStr] | list[str],
+            value: int | HexStr | str | list[int] | list[HexStr] | list[str],
+            nonce: int | HexStr | str | list[int] | list[HexStr] | list[str],
+    ) -> HexStr | list[HexStr]:
+        # TODO: Build formatter for this and for send_transaction, find standardised way of formatting inputs here.
+        ...
 
     async def estimate_gas(
             self,
@@ -862,6 +895,9 @@ class EthRPC:
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int | list[int]:
         """
+        Creates a filter object based on filter parameters to notify when the state changes.
+        To check if the state has changed use EthRPC.get_filter_changes()
+
         :param from_block: Block from which the filter is active
         :param to_block: Block to which the filter is active
         :param address: Contract address or list of addresses from which logs should originate
@@ -869,7 +905,7 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: Returns an integer filter ID
         """
-        param = self._object_formatter(
+        param = self._filter_option_formatter(
             from_block=from_block,
             to_block=to_block,
             address=address,
@@ -888,6 +924,10 @@ class EthRPC:
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
+        """
+        Creates a filter in the endpoint to notify when a new block arrives.
+        To check if the state has changed use EthRPC.get_filter_changes()
+        """
         msg = await self._send_message("eth_newBlockFilter", [], websocket)
         match msg:
             case None:
@@ -899,6 +939,10 @@ class EthRPC:
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
+        """
+        Creates a filter in the endpoint to notify when new pending transactions arrive.
+        To check if the state has changed use EthRPC.get_filter_changes()
+        """
         msg = await self._send_message("eth_newPendingTransactionFilter", [], websocket)
         match msg:
             case None:
@@ -911,6 +955,10 @@ class EthRPC:
             filter_id: int | str | list[int] | list[str],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> bool | list[bool]:
+        """
+        Uninstalls a filter with a given name.
+        Should always be called when a filter is no longer needed.
+        """
         filter_id = self._block_formatter(filter_id)
         msg = await self._send_message("eth_uninstallFilter", [filter_id], websocket)
         return msg
@@ -921,7 +969,7 @@ class EthRPC:
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> list[HexStr] | list[list[HexStr]]:
         """
-        Returns an array of all logs matching filter with given id.
+        Returns a list of all logs matching filter with given id.
         Used with other filter creation methods taking in their filter numbers as input.
         """
         filter_id = self._block_formatter(filter_id)
@@ -941,6 +989,9 @@ class EthRPC:
             filter_id: int | str | list[int] | list[str],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> list[Log] | list[list[Log]]:
+        """
+        Returns a list of all logs matching the filter with the provided ID
+        """
         filter_id = self._block_formatter(filter_id)
         msg = await self._send_message("eth_getFilterLogs", [filter_id], websocket)
         match msg:
@@ -969,7 +1020,7 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: Returns a list of log objects or nothing if no changes have occurred since last poll
         """
-        param = self._object_formatter(
+        param = self._filter_option_formatter(
             from_block=from_block,
             to_block=to_block,
             address=address,
@@ -992,6 +1043,9 @@ class EthRPC:
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> str:
+        """
+        Returns the current client version
+        """
         return await self._send_message("web3_clientVersion", [], websocket)
 
     async def sha3(
@@ -999,6 +1053,9 @@ class EthRPC:
             data: str | HexStr | list[str] | list[HexStr],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> HexStr | list[HexStr]:
+        """
+        Returns Keccac-256 of the given data
+        """
         msg = await self._send_message("web3_sha3", [data], websocket)
         match msg:
             case str():
@@ -1014,6 +1071,9 @@ class EthRPC:
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
+        """
+        Returns the network version ID
+        """
         msg = await self._send_message("net_version", [], websocket)
         match msg:
             case None:
@@ -1025,12 +1085,18 @@ class EthRPC:
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> bool:
+        """
+        Returns whether a client is actively listening for network connections
+        """
         return await self._send_message("net_listening", [], websocket)
 
     async def get_net_peer_count(
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
+        """
+        Returns the number of peers connected to the client
+        """
         msg = await self._send_message("net_peerCount", [], websocket)
         match msg:
             case None:
@@ -1046,4 +1112,7 @@ class EthRPC:
             params: list[Any] | list[list[Any]],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> Any:
+        """
+        Sends a custom method name method_name to the endpoint's url with the given parameter list
+        """
         return await self._send_message(method_name, params, websocket)
