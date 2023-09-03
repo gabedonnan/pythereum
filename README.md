@@ -16,6 +16,7 @@ Features include:
 All methods listed in the [Ethereum JSON RPC API specification](https://ethereum.org/en/developers/docs/apis/json-rpc/) are completed as of version `1.0.5`, 
 alongside methods for subscriptions, and support for calling custom function names with custom parameters.
 
+(Methods eth_signTransaction and eth_sendTransaction are currently under construction for reformatting)
 
 
 ### Example usage
