@@ -9,7 +9,7 @@ from pythereum.exceptions import (
 from pythereum.common import HexStr
 from typing import List, Any
 from pythereum.socket_pool import WebsocketPool
-from pythereum.dclasses import Block, Sync, Receipt, Log, TransactionFull
+from pythereum.dclasses import Block, Sync, Receipt, Log, TransactionFull, Transaction
 
 
 class EthDenomination(float, Enum):
@@ -581,12 +581,12 @@ class EthRPC:
 
     async def send_transaction(
             self,
-            transaction: dict | list[dict],
+            tx: Transaction | dict | list[Transaction] | list[dict],
             websocket: websockets.WebSocketClientProtocol | None = None
     ):
         """
         Creates a new message call transaction or contract creation
-        :param transaction: Built transaction object, formed as a dict with the following keys
+        :param tx: Built transaction object, formed as a dict with the following keys
             :key from: The address the transaction is sent from
             :type: 20 Byte Hex Address
 
@@ -617,7 +617,7 @@ class EthRPC:
         :return: Transaction hash (or zero hash if the transaction is not yet available)
         :type: 32 Byte Hex
         """
-        return await self._send_message("eth_sendTransaction", [transaction], websocket)
+        return await self._send_message("eth_sendTransaction", [tx], websocket)
 
     async def get_protocol_version(
             self,
@@ -646,8 +646,9 @@ class EthRPC:
     async def get_coinbase(
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> str | HexStr:
-        return await self._send_message("eth_coinbase", [], websocket)
+    ) -> HexStr:
+        msg = await self._send_message("eth_coinbase", [], websocket)
+        return HexStr(msg) if msg is not None else msg
 
     async def get_chain_id(
             self,
@@ -680,8 +681,9 @@ class EthRPC:
     async def get_accounts(
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> List[str | HexStr]:
-        return await self._send_message("eth_accounts", [], websocket)
+    ) -> List[HexStr]:
+        msg = await self._send_message("eth_accounts", [], websocket)
+        return [HexStr(result) for result in msg if result is not None]
 
     async def get_transaction_count_by_hash(
             self,
@@ -746,35 +748,51 @@ class EthRPC:
             data: str | HexStr | list[str] | list[HexStr],
             block_specifier: DefaultBlock | list[DefaultBlock],
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> str | HexStr | list[str] | list[HexStr]:
+    ) -> HexStr | list[HexStr]:
         """
         Returns code at a given address for a given block number.
         """
         block_specifier = self._block_formatter(block_specifier)
-        return await self._send_message("eth_getCode", [data, block_specifier], websocket)
+        msg = await self._send_message("eth_getCode", [data, block_specifier], websocket)
+        match msg:
+            case None:
+                return msg
+            case str():
+                return HexStr(msg)
+            case list():
+                return [HexStr(result) for result in msg]
 
     async def sign(
             self,
             data: str | HexStr | list[str] | list[HexStr],
             message: str | HexStr | list[str] | list[HexStr],
             websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> str | HexStr | list[str] | list[HexStr]:
+    ) -> HexStr | list[HexStr]:
         """
         Calculates the ethereum specific signature.
         """
-        return await self._send_message("eth_sign", [data, message], websocket)
+        msg = await self._send_message("eth_sign", [data, message], websocket)
+        match msg:
+            case None:
+                return msg
+            case str():
+                return HexStr(msg)
+            case list():
+                return [HexStr(result) for result in msg]
 
     async def sign_transaction(
             self,
-            send_from: str | HexStr | list[str] | list[HexStr],
-            send_to: str | HexStr | list[str] | list[HexStr],
-            gas: int | HexStr | str | list[int] | list[HexStr] | list[str],
-            gas_price: int | HexStr | str | list[int] | list[HexStr] | list[str],
-            value: int | HexStr | str | list[int] | list[HexStr] | list[str],
-            nonce: int | HexStr | str | list[int] | list[HexStr] | list[str],
+            tx: dict | Transaction | list[dict] | list[Transaction],
+            websocket: websockets.WebSocketClientProtocol | None = None
     ) -> HexStr | list[HexStr]:
-        # TODO: Build formatter for this and for send_transaction, find standardised way of formatting inputs here.
-        ...
+        msg = await self._send_message("eth_signTransaction", [tx], websocket)
+        match msg:
+            case None:
+                return msg
+            case str():
+                return HexStr(msg)
+            case list():
+                return [HexStr(result) for result in msg]
 
     async def estimate_gas(
             self,
