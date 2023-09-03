@@ -333,9 +333,14 @@ class Transaction(dict):
             data: str | HexStr | None,
             nonce: int | HexStr | str
     ):
-        from_address = HexStr(from_address)
-        to_address = HexStr(to_address)
-        data = HexStr(data)
+        if from_address is not None:
+            from_address = HexStr(from_address)
+
+        if to_address is not None:
+            to_address = HexStr(to_address)
+
+        if data is not None:
+            data = HexStr(data)
 
         if isinstance(gas, int):
             gas = hex(gas)
