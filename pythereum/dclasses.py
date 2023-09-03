@@ -319,3 +319,14 @@ class Access:
     """
     address: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
     storage_keys: list[HexStr] | None = field(metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder))
+
+
+@dataclass
+class Transaction1559:
+    from_address: HexStr = field(metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder))
+    to_address: HexStr | None = field(metadata=config(field_name="to", decoder=hex_decoder, encoder=hex_encoder))
+    gas: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    gas_price: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    value: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
+    data: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    nonce: int | None = field(metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder))
