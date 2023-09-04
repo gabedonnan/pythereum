@@ -682,6 +682,9 @@ class EthRPC:
             self,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> List[HexStr]:
+        """
+        Returns a list of addresses owned by client.
+        """
         msg = await self._send_message("eth_accounts", [], websocket)
         return [HexStr(result) for result in msg if result is not None]
 
@@ -690,6 +693,9 @@ class EthRPC:
             data: str | HexStr | list[str] | list[HexStr],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int | list[int]:
+        """
+        Returns the number of transactions in a block from a block matching the given block hash.
+        """
         msg = await self._send_message("eth_getBlockTransactionCountByHash", [data], websocket)
         match msg:
             case None:
@@ -704,6 +710,9 @@ class EthRPC:
             block_specifier: DefaultBlock | list[DefaultBlock],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int | list[int]:
+        """
+        Returns the number of transactions in a block matching the given block number.
+        """
         block_specifier = self._block_formatter(block_specifier)
         msg = await self._send_message("eth_getBlockTransactionCountByNumber", [block_specifier], websocket)
         match msg:
@@ -719,6 +728,9 @@ class EthRPC:
             data: str | HexStr | list[str] | list[HexStr],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int | list[int]:
+        """
+        Returns the number of uncles in a block from a block matching the given block hash.
+        """
         msg = await self._send_message("eth_getUncleCountByBlockHash", [data], websocket)
         match msg:
             case None:
@@ -733,6 +745,9 @@ class EthRPC:
             block_specifier: DefaultBlock | list[DefaultBlock],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int | list[int]:
+        """
+        Returns the number of uncles in a block from a block matching the given block number.
+        """
         block_specifier = self._block_formatter(block_specifier)
         msg = await self._send_message("eth_getUncleCountByBlockNumber", [block_specifier], websocket)
         match msg:
@@ -770,6 +785,11 @@ class EthRPC:
     ) -> HexStr | list[HexStr]:
         """
         Calculates the ethereum specific signature.
+
+        :param data: 20 byte address(es) to sign with
+        :param message: N byte message(s) to be signed
+        :param websocket: An optional external websocket for calls to this function
+        :return: Hex string(s) containing signature(s) for given data
         """
         msg = await self._send_message("eth_sign", [data, message], websocket)
         match msg:
@@ -782,9 +802,16 @@ class EthRPC:
 
     async def sign_transaction(
             self,
-            tx: dict | Transaction | list[dict] | list[Transaction],
+            tx: Transaction | dict | list[Transaction] | list[dict],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> HexStr | list[HexStr]:
+        """
+        Signs a transaction that can be submitted to the network at a later time using with eth_sendRawTransaction.
+
+        :param tx: Transaction object(s) or dict(s) defining transaction parameters to be signed
+        :param websocket: An optional external websocket for calls to this function
+        :return: Hex string(s) containing result(s) of signed transaction(s)
+        """
         msg = await self._send_message("eth_signTransaction", [tx], websocket)
         match msg:
             case None:
@@ -796,11 +823,16 @@ class EthRPC:
 
     async def estimate_gas(
             self,
-            transaction: dict | list[dict],
+            transaction: Transaction | dict | list[Transaction] | list[dict],
             block_specifier: DefaultBlock | list[DefaultBlock] = BlockTag.latest,
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int | list[int]:
         """
+        Generates and returns an estimate of how much gas is necessary to allow the transaction to complete.
+        The transaction will not be added to the blockchain.
+        Note that the estimate may be significantly more than the amount of gas actually used by the transaction,
+        for a variety of reasons including EVM mechanics and node performance.
+
         Uses the same parameters as eth_call, see above
         """
         block_specifier = self._block_formatter(block_specifier)
@@ -820,6 +852,10 @@ class EthRPC:
     ) -> TransactionFull | list[TransactionFull]:
         """
         Returns the information about a transaction requested by transaction hash.
+
+        :param data: A hash (or list thereof) delineating the transaction(s) to get
+        :param websocket: An optional external websocket for calls to this function
+        :return: A TransactionFull object (or list thereof) containing information about the selected transaction(s)
         """
         msg = await self._send_message("eth_getTransactionByHash", [data], websocket)
         match msg:
@@ -838,6 +874,11 @@ class EthRPC:
     ) -> TransactionFull | list[TransactionFull]:
         """
         Returns information about a transaction by block hash and transaction index position.
+
+        :param data: A hash (or list thereof) delineating the block number(s) to get
+        :param index: The index position(s) of the transaction(s) for the given block
+        :param websocket: An optional external websocket for calls to this function
+        :return: A TransactionFull object (or list thereof) containing information about the selected transaction(s)
         """
         msg = await self._send_message("eth_getTransactionByBlockHashAndIndex", [data, index], websocket)
         match msg:
@@ -856,6 +897,11 @@ class EthRPC:
     ) -> TransactionFull | list[TransactionFull]:
         """
         Returns information about a transaction by block number and transaction index position.
+
+        :param block_specifier: A specifier, either int or tag, (or list thereof) delineating the block number(s) to get
+        :param index: The index position(s) of the transaction for the given block(s)
+        :param websocket: An optional external websocket for calls to this function
+        :return: A TransactionFull object (or list thereof) containing information about the selected transaction(s)
         """
         block_specifier = self._block_formatter(block_specifier)
         msg = await self._send_message("eth_getTransactionByBlockNumberAndIndex", [block_specifier, index], websocket)
@@ -875,6 +921,11 @@ class EthRPC:
     ) -> Block | list[Block]:
         """
         Returns information about a uncle of a block by hash and uncle index position.
+
+        :param data: A hash delineating the block number to get
+        :param index: The index position(s) of the uncle(s) for the given block(s)
+        :param websocket: An optional external websocket for calls to this function
+        :return: A Block object (or list thereof) containing information about the selected uncle(s)
         """
         msg = await self._send_message("eth_getUncleByBlockHashAndIndex", [data, index], websocket)
         match msg:
@@ -893,6 +944,11 @@ class EthRPC:
     ) -> Block | list[Block]:
         """
         Returns information about a uncle of a block by number and uncle index position.
+
+        :param block_specifier: A specifier, either int or tag, (or list thereof) delineating the block number(s) to get
+        :param index: The index position(s) of the uncle(s) for the given block(s)
+        :param websocket: An optional external websocket for calls to this function
+        :return: A Block object (or list thereof) containing information about the selected uncle(s)
         """
         block_specifier = self._block_formatter(block_specifier)
         msg = await self._send_message("eth_getUncleByBlockNumberAndIndex", [block_specifier, index], websocket)
@@ -976,6 +1032,10 @@ class EthRPC:
         """
         Uninstalls a filter with a given name.
         Should always be called when a filter is no longer needed.
+
+        :param filter_id: A filter ID generated by creating a filter previously
+        :param websocket: An optional external websocket for calls to this function
+        :return: bool or list of bools indicating the success or failure of each filter uninstallation
         """
         filter_id = self._block_formatter(filter_id)
         msg = await self._send_message("eth_uninstallFilter", [filter_id], websocket)
@@ -989,6 +1049,10 @@ class EthRPC:
         """
         Returns a list of all logs matching filter with given id.
         Used with other filter creation methods taking in their filter numbers as input.
+
+        :param filter_id: A filter ID generated by creating a filter previously
+        :param websocket: An optional external websocket for calls to this function
+        :return: list of Hex strings (or list of lists) indicating changes made since filter was last checked
         """
         filter_id = self._block_formatter(filter_id)
         msg = await self._send_message("eth_getFilterChanges", [filter_id], websocket)
@@ -1009,6 +1073,10 @@ class EthRPC:
     ) -> list[Log] | list[list[Log]]:
         """
         Returns a list of all logs matching the filter with the provided ID
+
+        :param filter_id: A filter ID generated by creating a filter previously
+        :param websocket: An optional external websocket for calls to this function
+        :return: list or list of lists of Log objects indicating the new logs created since the filter was last checked
         """
         filter_id = self._block_formatter(filter_id)
         msg = await self._send_message("eth_getFilterLogs", [filter_id], websocket)
@@ -1073,6 +1141,9 @@ class EthRPC:
     ) -> HexStr | list[HexStr]:
         """
         Returns Keccac-256 of the given data
+
+        :param data: A string of data for keccac conversion
+        :param websocket: An optional external websocket for calls to this function
         """
         msg = await self._send_message("web3_sha3", [data], websocket)
         match msg:
@@ -1126,11 +1197,17 @@ class EthRPC:
 
     async def send_raw(
             self,
-            method_name: str | HexStr| list[str] | list[HexStr],
+            method_name: str | HexStr | list[str] | list[HexStr],
             params: list[Any] | list[list[Any]],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> Any:
         """
         Sends a custom method name method_name to the endpoint's url with the given parameter list
+
+        :param method_name: A string indicating the method name to be called with the given parameters
+        :param params: A list of parameters to be sent for the function call
+        :param websocket: An optional external websocket for calls to this function
+        :return: Returns the result of the given transaction,
+        if the function does not exist for the given params an error will be raised
         """
         return await self._send_message(method_name, params, websocket)
