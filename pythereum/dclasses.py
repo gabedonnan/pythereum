@@ -360,3 +360,53 @@ class Transaction(dict):
                 (from_address, to_address, gas, gas_price, value, data, nonce)
             ) if val is not None
         })
+
+
+class Bundle(dict):
+    def __init__(
+            self,
+            txs: list[str] | list[HexStr],
+            block_number: str | HexStr | None = None,
+            min_timestamp: int | HexStr | str | None = None,
+            max_timestamp: int | HexStr | str | None = None,
+            reverting_tx_hashes: list[str] | list[HexStr] | None = None,
+            uuid: str | HexStr | None = None,
+            replacement_uuid: str | HexStr | None = None,
+            refund_percent: int | HexStr | str | None = None,
+            refund_index: int | HexStr | str | None = None,
+            refund_recipient: str | HexStr | None = None,
+            refund_tx_hashes: list[str] | list[HexStr] | None = None
+    ):
+        res = {"txs": txs}
+
+        if block_number is not None:
+            res["blockNumber"] = block_number
+
+        if min_timestamp is not None:
+            res["minTimestamp"] = min_timestamp
+
+        if max_timestamp is not None:
+            res["maxTimestamp"] = max_timestamp
+
+        if reverting_tx_hashes is not None:
+            res["revertingTxHashes"] = reverting_tx_hashes
+
+        if uuid is not None:
+            res["uuid"] = uuid
+
+        if replacement_uuid is not None:
+            res["replacementUuid"] = replacement_uuid
+
+        if refund_percent is not None:
+            res["refundPercent"] = refund_percent
+
+        if refund_index is not None:
+            res["refundIndex"] = refund_index
+
+        if refund_recipient is not None:
+            res["refundRecipient"] = refund_recipient
+
+        if refund_tx_hashes is not None:
+            res["refundTxHashes"] = refund_tx_hashes
+
+        super().__init__(res)
