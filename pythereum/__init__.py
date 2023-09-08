@@ -1,3 +1,21 @@
-from pythereum.rpc import EthRPC, SubscriptionType, BlockTag, EthDenomination, convert_eth, BuilderRPC
+from pythereum.rpc import (
+    EthRPC,
+    SubscriptionType,
+    BlockTag,
+    EthDenomination,
+    convert_eth,
+    BuilderRPC
+)
+
 from pythereum.common import HexStr
-from pythereum.dclasses import Sync, Receipt, Block, Log, TransactionFull, Access, Transaction, Bundle
+
+from pythereum.dclasses import (
+  Sync, 
+  Receipt, 
+  Block, 
+  Log, 
+  TransactionFull, 
+  Access, 
+  Transaction, 
+  Bundle
+)

@@ -8,6 +8,7 @@ class WebsocketPool:
     Builds a pool of reusable websockets from which to pull
     Greatly improves speed over having to handshake a new connection for each request
     """
+
     def __init__(self, url: str, pool_size: int = 6):
         self._url = url
         self._id = 0
