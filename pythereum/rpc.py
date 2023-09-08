@@ -11,7 +11,8 @@ from pythereum.exceptions import (
 from pythereum.common import HexStr
 from typing import List, Any
 from pythereum.socket_pool import WebsocketPool
-from pythereum.dclasses import Block, Sync, Receipt, Log, Transaction
+from pythereum.builders import Builder, BeaverBuilder, TitanBuilder
+from pythereum.dclasses import Block, Sync, Receipt, Log, TransactionFull, Transaction, Bundle
 
 
 class EthDenomination(float, Enum):
@@ -168,7 +169,7 @@ class EthRPC:
         self._id += 1
 
     @staticmethod
-    def _object_formatter(
+    def _filter_option_formatter(
         from_block: DefaultBlock | list[DefaultBlock],
         to_block: DefaultBlock | list[DefaultBlock],
         address: str
@@ -178,13 +179,28 @@ class EthRPC:
         | list[list[str]]
         | list[list[HexStr]],
         topics: str | HexStr | list[str] | list[HexStr],
-    ) -> dict:
-        return {
-            "fromBlock": from_block,
-            "toBlock": to_block,
-            "address": address,
-            "topics": topics,
-        }
+    ) -> dict | list[dict]:
+        """
+        Converts a given set of filter options into either a dictionary or list of dictionaries to be passed to the RPC
+        """
+        if all(isinstance(param, list) for param in (from_block, to_block, address, topics)):
+            # Detects whether a set of filter options is batched
+            return [
+                {
+                    "fromBlock": f,
+                    "toBlock": t,
+                    "address": a,
+                    "topics": tpc
+                } for (f, t, a, tpc) in zip(from_block, to_block, address, topics)
+            ]
+        else:
+            # Non-batched object return
+            return {
+                "fromBlock": from_block,
+                "toBlock": to_block,
+                "address": address,
+                "topics": topics
+            }
 
     @staticmethod
     def _block_formatter(
@@ -323,6 +339,8 @@ class EthRPC:
                     )
                 await self.unsubscribe(subscription_id, ws)
 
+    # Public RPC methods
+
     async def get_subscription(
         self,
         method: SubscriptionType,
@@ -331,8 +349,7 @@ class EthRPC:
         """
         Supporting function for self.subscribe, opening a subscription for the provided websocket
         """
-        msg = await self._send_message("eth_subscribe", [method.value], websocket)
-        return msg
+        return await self._send_message("eth_subscribe", [method.value], websocket)
 
     async def unsubscribe(
         self,
@@ -615,7 +632,7 @@ class EthRPC:
     ):
         """
         Creates a new message call transaction or contract creation
-        :param transaction: Built transaction object, formed as a dict with the following keys
+        :param tx: Built transaction object, formed as a dict with the following keys
             :key from: The address the transaction is sent from
             :type: 20 Byte Hex Address
 
@@ -646,8 +663,7 @@ class EthRPC:
         :return: Transaction hash (or zero hash if the transaction is not yet available)
         :type: 32 Byte Hex
         """
-        msg = await self._send_message("eth_sendTransaction", [transaction], websocket)
-        return msg
+        return await self._send_message("eth_sendTransaction", [tx], websocket)
 
     async def get_protocol_version(
         self, websocket: websockets.WebSocketClientProtocol | None = None
@@ -675,7 +691,7 @@ class EthRPC:
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> str | HexStr:
         msg = await self._send_message("eth_coinbase", [], websocket)
-        return msg
+        return HexStr(msg) if msg is not None else msg
 
     async def get_chain_id(
         self, websocket: websockets.WebSocketClientProtocol | None = None
@@ -690,8 +706,7 @@ class EthRPC:
     async def is_mining(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> bool:
-        msg = await self._send_message("eth_mining", [], websocket)
-        return msg
+        return await self._send_message("eth_mining", [], websocket)
 
     async def get_hashrate(
         self, websocket: websockets.WebSocketClientProtocol | None = None
@@ -706,14 +721,20 @@ class EthRPC:
     async def get_accounts(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> List[str | HexStr]:
+        """
+        Returns a list of addresses owned by client.
+        """
         msg = await self._send_message("eth_accounts", [], websocket)
-        return msg
+        return [HexStr(result) for result in msg if result is not None]
 
     async def get_transaction_count_by_hash(
         self,
         data: str | HexStr | list[str] | list[HexStr],
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> int | list[int]:
+        """
+        Returns the number of transactions in a block from a block matching the given block hash.
+        """
         msg = await self._send_message(
             "eth_getBlockTransactionCountByHash", [data], websocket
         )
@@ -732,6 +753,9 @@ class EthRPC:
         block_specifier: DefaultBlock | list[DefaultBlock],
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> int | list[int]:
+        """
+        Returns the number of transactions in a block matching the given block number.
+        """
         block_specifier = self._block_formatter(block_specifier)
         msg = await self._send_message(
             "eth_getBlockTransactionCountByNumber", [block_specifier], websocket
@@ -751,6 +775,9 @@ class EthRPC:
         data: str | HexStr | list[str] | list[HexStr],
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> int | list[int]:
+        """
+        Returns the number of uncles in a block from a block matching the given block hash.
+        """
         msg = await self._send_message(
             "eth_getUncleCountByBlockHash", [data], websocket
         )
@@ -769,6 +796,9 @@ class EthRPC:
         block_specifier: DefaultBlock | list[DefaultBlock],
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> int | list[int]:
+        """
+        Returns the number of uncles in a block from a block matching the given block number.
+        """
         block_specifier = self._block_formatter(block_specifier)
         msg = await self._send_message(
             "eth_getUncleCountByBlockNumber", [block_specifier], websocket
@@ -789,6 +819,9 @@ class EthRPC:
         block_specifier: DefaultBlock | list[DefaultBlock],
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> str | HexStr | list[str] | list[HexStr]:
+        """
+        Returns code at a given address for a given block number.
+        """
         block_specifier = self._block_formatter(block_specifier)
         msg = await self._send_message(
             "eth_getCode", [data, block_specifier], websocket
@@ -801,8 +834,43 @@ class EthRPC:
         message: str | HexStr | list[str] | list[HexStr],
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> str | HexStr | list[str] | list[HexStr]:
+        """
+        Calculates the ethereum specific signature.
+
+        :param data: 20 byte address(es) to sign with
+        :param message: N byte message(s) to be signed
+        :param websocket: An optional external websocket for calls to this function
+        :return: Hex string(s) containing signature(s) for given data
+        """
         msg = await self._send_message("eth_sign", [data, message], websocket)
-        return msg
+        match msg:
+            case None:
+                return msg
+            case str():
+                return HexStr(msg)
+            case list():
+                return [HexStr(result) for result in msg]
+
+    async def sign_transaction(
+            self,
+            tx: Transaction | dict | list[Transaction] | list[dict],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> HexStr | list[HexStr]:
+        """
+        Signs a transaction that can be submitted to the network at a later time using with eth_sendRawTransaction.
+
+        :param tx: Transaction object(s) or dict(s) defining transaction parameters to be signed
+        :param websocket: An optional external websocket for calls to this function
+        :return: Hex string(s) containing result(s) of signed transaction(s)
+        """
+        msg = await self._send_message("eth_signTransaction", [tx], websocket)
+        match msg:
+            case None:
+                return msg
+            case str():
+                return HexStr(msg)
+            case list():
+                return [HexStr(result) for result in msg]
 
     async def estimate_gas(
         self,
@@ -811,6 +879,11 @@ class EthRPC:
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> int | list[int]:
         """
+        Generates and returns an estimate of how much gas is necessary to allow the transaction to complete.
+        The transaction will not be added to the blockchain.
+        Note that the estimate may be significantly more than the amount of gas actually used by the transaction,
+        for a variety of reasons including EVM mechanics and node performance.
+
         Uses the same parameters as eth_call, see above
         """
         block_specifier = self._block_formatter(block_specifier)
@@ -834,13 +907,17 @@ class EthRPC:
     ) -> Transaction | list[Transaction]:
         """
         Returns the information about a transaction requested by transaction hash.
+
+        :param data: A hash (or list thereof) delineating the transaction(s) to get
+        :param websocket: An optional external websocket for calls to this function
+        :return: A TransactionFull object (or list thereof) containing information about the selected transaction(s)
         """
         msg = await self._send_message("eth_getTransactionByHash", [data], websocket)
         match msg:
             case None:
                 return msg
             case dict():
-                return Transaction.from_dict(msg, infer_missing=True)
+                return TransactionFull.from_dict(msg, infer_missing=True)
             case _:
                 return [
                     Transaction.from_dict(result, infer_missing=True) for result in msg
@@ -854,6 +931,11 @@ class EthRPC:
     ) -> Transaction | list[Transaction]:
         """
         Returns information about a transaction by block hash and transaction index position.
+
+        :param data: A hash (or list thereof) delineating the block number(s) to get
+        :param index: The index position(s) of the transaction(s) for the given block
+        :param websocket: An optional external websocket for calls to this function
+        :return: A TransactionFull object (or list thereof) containing information about the selected transaction(s)
         """
         msg = await self._send_message(
             "eth_getTransactionByBlockHashAndIndex", [data, index], websocket
@@ -862,7 +944,7 @@ class EthRPC:
             case None:
                 return msg
             case dict():
-                return Transaction.from_dict(msg, infer_missing=True)
+                return TransactionFull.from_dict(msg, infer_missing=True)
             case _:
                 return [
                     Transaction.from_dict(result, infer_missing=True) for result in msg
@@ -876,6 +958,11 @@ class EthRPC:
     ) -> Transaction | list[Transaction]:
         """
         Returns information about a transaction by block number and transaction index position.
+
+        :param block_specifier: A specifier, either int or tag, (or list thereof) delineating the block number(s) to get
+        :param index: The index position(s) of the transaction for the given block(s)
+        :param websocket: An optional external websocket for calls to this function
+        :return: A TransactionFull object (or list thereof) containing information about the selected transaction(s)
         """
         block_specifier = self._block_formatter(block_specifier)
         msg = await self._send_message(
@@ -887,7 +974,7 @@ class EthRPC:
             case None:
                 return msg
             case dict():
-                return Transaction.from_dict(msg, infer_missing=True)
+                return TransactionFull.from_dict(msg, infer_missing=True)
             case _:
                 return [
                     Transaction.from_dict(result, infer_missing=True) for result in msg
@@ -901,6 +988,11 @@ class EthRPC:
     ) -> Block | list[Block]:
         """
         Returns information about a uncle of a block by hash and uncle index position.
+
+        :param data: A hash delineating the block number to get
+        :param index: The index position(s) of the uncle(s) for the given block(s)
+        :param websocket: An optional external websocket for calls to this function
+        :return: A Block object (or list thereof) containing information about the selected uncle(s)
         """
         msg = await self._send_message(
             "eth_getUncleByBlockHashAndIndex", [data, index], websocket
@@ -921,6 +1013,11 @@ class EthRPC:
     ) -> Block | list[Block]:
         """
         Returns information about a uncle of a block by number and uncle index position.
+
+        :param block_specifier: A specifier, either int or tag, (or list thereof) delineating the block number(s) to get
+        :param index: The index position(s) of the uncle(s) for the given block(s)
+        :param websocket: An optional external websocket for calls to this function
+        :return: A Block object (or list thereof) containing information about the selected uncle(s)
         """
         block_specifier = self._block_formatter(block_specifier)
         msg = await self._send_message(
@@ -948,6 +1045,9 @@ class EthRPC:
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> int | list[int]:
         """
+        Creates a filter object based on filter parameters to notify when the state changes.
+        To check if the state has changed use EthRPC.get_filter_changes()
+
         :param from_block: Block from which the filter is active
         :param to_block: Block to which the filter is active
         :param address: Contract address or list of addresses from which logs should originate
@@ -972,6 +1072,10 @@ class EthRPC:
     async def new_block_filter(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
+        """
+        Creates a filter in the endpoint to notify when a new block arrives.
+        To check if the state has changed use EthRPC.get_filter_changes()
+        """
         msg = await self._send_message("eth_newBlockFilter", [], websocket)
         match msg:
             case None:
@@ -982,6 +1086,10 @@ class EthRPC:
     async def new_pending_transaction_filter(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
+        """
+        Creates a filter in the endpoint to notify when new pending transactions arrive.
+        To check if the state has changed use EthRPC.get_filter_changes()
+        """
         msg = await self._send_message("eth_newPendingTransactionFilter", [], websocket)
         match msg:
             case None:
@@ -994,6 +1102,14 @@ class EthRPC:
         filter_id: int | str | list[int] | list[str],
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> bool | list[bool]:
+        """
+        Uninstalls a filter with a given name.
+        Should always be called when a filter is no longer needed.
+
+        :param filter_id: A filter ID generated by creating a filter previously
+        :param websocket: An optional external websocket for calls to this function
+        :return: bool or list of bools indicating the success or failure of each filter uninstallation
+        """
         filter_id = self._block_formatter(filter_id)
         msg = await self._send_message("eth_uninstallFilter", [filter_id], websocket)
         return msg
@@ -1004,8 +1120,12 @@ class EthRPC:
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> list[HexStr] | list[list[HexStr]]:
         """
-        Returns an array of all logs matching filter with given id.
+        Returns a list of all logs matching filter with given id.
         Used with other filter creation methods taking in their filter numbers as input.
+
+        :param filter_id: A filter ID generated by creating a filter previously
+        :param websocket: An optional external websocket for calls to this function
+        :return: list of Hex strings (or list of lists) indicating changes made since filter was last checked
         """
         filter_id = self._block_formatter(filter_id)
         msg = await self._send_message("eth_getFilterChanges", [filter_id], websocket)
@@ -1026,6 +1146,13 @@ class EthRPC:
         filter_id: int | str | list[int] | list[str],
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> list[Log] | list[list[Log]]:
+        """
+        Returns a list of all logs matching the filter with the provided ID
+
+        :param filter_id: A filter ID generated by creating a filter previously
+        :param websocket: An optional external websocket for calls to this function
+        :return: list or list of lists of Log objects indicating the new logs created since the filter was last checked
+        """
         filter_id = self._block_formatter(filter_id)
         msg = await self._send_message("eth_getFilterLogs", [filter_id], websocket)
         match msg:
@@ -1081,11 +1208,139 @@ class EthRPC:
                     f"Unexpected return of form {msg} in get_filter_changes"
                 )
 
+    # Web3 functions
+
+    async def get_client_version(
+            self,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> str:
+        """
+        Returns the current client version
+        """
+        return await self._send_message("web3_clientVersion", [], websocket)
+
+    async def sha3(
+            self,
+            data: str | HexStr | list[str] | list[HexStr],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> HexStr | list[HexStr]:
+        """
+        Returns Keccac-256 of the given data
+
+        :param data: A string of data for keccac conversion
+        :param websocket: An optional external websocket for calls to this function
+        """
+        msg = await self._send_message("web3_sha3", [data], websocket)
+        match msg:
+            case str():
+                return HexStr(msg)
+            case list():
+                return [HexStr(result) for result in msg]
+            case _:
+                raise ERPCInvalidReturnException(f"Unexpected return of form {msg} in sha3")
+
+    # Net functions
+
+    async def get_net_version(
+            self,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> int:
+        """
+        Returns the network version ID
+        """
+        msg = await self._send_message("net_version", [], websocket)
+        match msg:
+            case None:
+                return msg
+            case _:
+                return int(msg)
+
+    async def get_net_listening(
+            self,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> bool:
+        """
+        Returns whether a client is actively listening for network connections
+        """
+        return await self._send_message("net_listening", [], websocket)
+
+    async def get_net_peer_count(
+            self,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> int:
+        """
+        Returns the number of peers connected to the client
+        """
+        msg = await self._send_message("net_peerCount", [], websocket)
+        match msg:
+            case None:
+                return msg
+            case _:
+                return int(msg, 16)
+
+    # Generic sending
+
     async def send_raw(
         self,
         method_name: str | HexStr | list[str] | list[HexStr],
         params: list[Any] | list[list[Any]],
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> Any:
-        msg = await self._send_message(method_name, params, websocket)
-        return msg
+        """
+        Sends a custom method name method_name to the endpoint's url with the given parameter list
+
+        :param method_name: A string indicating the method name to be called with the given parameters
+        :param params: A list of parameters to be sent for the function call
+        :param websocket: An optional external websocket for calls to this function
+        :return: Returns the result of the given transaction,
+        if the function does not exist for the given params an error will be raised
+        """
+        return await self._send_message(method_name, params, websocket)
+
+
+class BuilderRPC:
+    """
+    An RPC class designed for sending raw transactions and bundles to specific block builders
+    """
+    def __init__(self, builder: Builder, pool_size: int = 1):
+        self.builder = builder
+        self.rpc = EthRPC(builder.url, pool_size)
+
+    async def send_private_transaction(
+            self,
+            tx: str | HexStr | list[str] | list[HexStr],
+            extra_info: Any = None,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> Any:
+        transaction = self.builder.format_private_transaction(tx, extra_info)
+        if self.builder.header is not None and websocket is not None:
+            # Builders like Flashbots require signed headers to identify the sender.
+            # This unfortunately means we must open new websockets for now as my websocket pools do not support headers
+            async with websockets.connect(self.builder.url, extra_headers=self.builder.header) as ws:
+                return await self.rpc.send_raw(self.builder.private_transaction_method, [transaction], ws)
+        else:
+            return await self.rpc.send_raw(self.builder.private_transaction_method, [transaction], websocket)
+
+    async def send_bundle(
+            self,
+            bundle: Bundle | list[Bundle],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> HexStr | list[HexStr]:
+        bundle = self.builder.format_bundle(bundle)
+        if self.builder.header is not None and websocket is not None:
+            async with websockets.connect(self.builder.url, extra_headers=self.builder.header) as ws:
+                await self.rpc.send_raw(self.builder.bundle_method, [bundle], ws)
+        else:
+            return await self.rpc.send_raw(self.builder.bundle_method, [bundle], websocket)
+
+    async def cancel_bundle(
+            self,
+            replacement_uuid: str | HexStr | list[str] | list[HexStr],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ):
+        if self.builder.header is not None and websocket is not None:
+            async with websockets.connect(self.builder.url, extra_headers=self.builder.header) as ws:
+                return await self.rpc.send_raw(self.builder.cancel_bundle_method, [replacement_uuid], ws)
+        else:
+            return await self.rpc.send_raw(self.builder.cancel_bundle_method, [replacement_uuid], websocket)
+

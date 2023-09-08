@@ -13,47 +13,10 @@ Features include:
 
 ### Implemented RPC methods
 
-  - [x] `eth_blockNumber`
-  - [x] `eth_getTransactionCount`
-  - [x] `eth_getBalance`
-  - [x] `eth_gasPrice`
-  - [x] `eth_getBlockByNumber`
-  - [x] `eth_getblockByHash`
-  - [x] `eth_call`
-  - [x] `eth_getTransactionReceipt`
-  - [x] `eth_sendRawTransaction`
-  - [x] `eth_sendTransaction`
-  - [x] `eth_syncing`
-  - [x] `eth_coinbase`
-  - [x] `eth_chainId`
-  - [x] `eth_mining`
-  - [x] `eth_hashrate`
-  - [x] `eth_accounts`
-  - [x] `eth_subscribe`
-  - [x] `eth_getBlockTransactionCountByHash`
-  - [x] `eth_getBlocktransactionCountbyNumber`
-  - [x] `eth_getUncleCountByBlockHash`
-  - [x] `eth_getUncleCountByBlockNumber`
-  - [x] `eth_getCode`
-  - [x] `eth_estimateGas`
-  - [x] `eth_sign`
-  - [x] `eth_getTransactionByHash`
-  - [x] `eth_getTransactionByBlockHashAndIndex`
-  - [x] `eth_getTransactionByBlockNumberAndIndex`
-  - [x] `eth_getUncleByBlockHashAndIndex`
-  - [x] `eth_getUncleByBlockNumberAndIndex`
-  - [x] `eth_newFilter`
-    - Additional testing needed for batching this function
-  - [x] `eth_newBlockFilter`
-  - [x] `eth_newPendingTransactionFilter`
-  - [x] `eth_uninstallFilter`
-  - [x] `eth_getFilterLogs`
-  - [x] `eth_getFilterChanges
-`
+All methods listed in the [Ethereum JSON RPC API specification](https://ethereum.org/en/developers/docs/apis/json-rpc/) are completed as of version `1.0.5`, 
+alongside methods for subscriptions, and support for calling custom function names with custom parameters.
 
-RPC methods to implement
-  - Aiming to complete all methods listed [here.](https://ethereum.org/en/developers/docs/apis/json-rpc/)
-
+(Methods eth_signTransaction and eth_sendTransaction are currently under construction for reformatting)
 
 
 ### Example usage
@@ -180,7 +143,7 @@ pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 or 
 
 ```toml
-pythereum = "^1.0.4"
+pythereum = "^1.0.5"
 ```
 
 If you would like to install the library via pypi instead of via this git repository.

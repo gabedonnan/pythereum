@@ -67,17 +67,20 @@ def hex_list_encoder(hex_obj_list: list[HexStr]) -> list[str] | None:
 
 
 def transaction_decoder(transaction_hex: dict | str) -> "Transaction | HexStr":
+
     if isinstance(transaction_hex, dict):
-        return Transaction.from_dict(transaction_hex, infer_missing=True)
+        return TransactionFull.from_dict(transaction_hex, infer_missing=True)
     else:
         return hex_decoder(transaction_hex)
 
 
 def transaction_encoder(transaction_obj: "HexStr | Transaction") -> str | dict:
     if isinstance(transaction_obj, Transaction):
+
         return transaction_obj.to_dict()
     else:
         return hex_encoder(transaction_obj)
+
 
 
 def transaction_list_decoder(
@@ -446,8 +449,12 @@ class Transaction:
     v: int | None = field(
         metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
-    r: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
-    s: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    r: HexStr | None = field(
+      metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+    )
+    s: HexStr | None = field(
+      metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+    )
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -463,3 +470,94 @@ class Access:
     storage_keys: list[HexStr] | None = field(
         metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder)
     )
+
+
+class Transaction(dict):
+    # Not actually a dataclass but a custom implementation was easiest here
+    def __init__(
+            self,
+            from_address: str | HexStr,
+            to_address: str | HexStr | None,
+            gas: int | HexStr | str | None,
+            gas_price: int | HexStr | str | None,
+            value: int | HexStr | str | None,
+            data: str | HexStr | None,
+            nonce: int | HexStr | str
+    ):
+        if from_address is not None:
+            from_address = HexStr(from_address)
+
+        if to_address is not None:
+            to_address = HexStr(to_address)
+
+        if data is not None:
+            data = HexStr(data)
+
+        if isinstance(gas, int):
+            gas = hex(gas)
+
+        if isinstance(gas_price, int):
+            gas_price = hex(gas_price)
+
+        if isinstance(value, int):
+            value = hex(value)
+
+        if isinstance(nonce, int):
+            nonce = hex(nonce)
+
+        super().__init__({
+            key: val for key, val in zip(
+                ("from", "to", "gas", "gasPrice", "value", "data", "nonce"),
+                (from_address, to_address, gas, gas_price, value, data, nonce)
+            ) if val is not None
+        })
+
+
+class Bundle(dict):
+    def __init__(
+            self,
+            txs: list[str] | list[HexStr],
+            block_number: str | HexStr | None = None,
+            min_timestamp: int | HexStr | str | None = None,
+            max_timestamp: int | HexStr | str | None = None,
+            reverting_tx_hashes: list[str] | list[HexStr] | None = None,
+            uuid: str | HexStr | None = None,
+            replacement_uuid: str | HexStr | None = None,
+            refund_percent: int | HexStr | str | None = None,
+            refund_index: int | HexStr | str | None = None,
+            refund_recipient: str | HexStr | None = None,
+            refund_tx_hashes: list[str] | list[HexStr] | None = None
+    ):
+        res = {"txs": txs}
+
+        if block_number is not None:
+            res["blockNumber"] = block_number
+
+        if min_timestamp is not None:
+            res["minTimestamp"] = min_timestamp
+
+        if max_timestamp is not None:
+            res["maxTimestamp"] = max_timestamp
+
+        if reverting_tx_hashes is not None:
+            res["revertingTxHashes"] = reverting_tx_hashes
+
+        if uuid is not None:
+            res["uuid"] = uuid
+
+        if replacement_uuid is not None:
+            res["replacementUuid"] = replacement_uuid
+
+        if refund_percent is not None:
+            res["refundPercent"] = refund_percent
+
+        if refund_index is not None:
+            res["refundIndex"] = refund_index
+
+        if refund_recipient is not None:
+            res["refundRecipient"] = refund_recipient
+
+        if refund_tx_hashes is not None:
+            res["refundTxHashes"] = refund_tx_hashes
+
+        super().__init__(res)

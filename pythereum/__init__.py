@@ -4,6 +4,18 @@ from pythereum.rpc import (
     BlockTag,
     EthDenomination,
     convert_eth,
+    BuilderRPC
 )
+
 from pythereum.common import HexStr
-from pythereum.dclasses import Sync, Receipt, Block, Log, Transaction, Access
+
+from pythereum.dclasses import (
+  Sync, 
+  Receipt, 
+  Block, 
+  Log, 
+  TransactionFull, 
+  Access, 
+  Transaction, 
+  Bundle
+)
