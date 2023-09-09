@@ -1,6 +1,8 @@
 from abc import ABC
 from typing import Any
 
+import websockets
+
 from pythereum import HexStr, EthRPC, Bundle
 
 
@@ -165,3 +167,50 @@ class FlashbotsBuilder(Builder):
             preferences: dict = None
     ) -> list[Any]:
         return [{"tx": tx, "preferences": preferences}]
+
+
+class BuilderRPC:
+    """
+    An RPC class designed for sending raw transactions and bundles to specific block builders
+    """
+    def __init__(self, builder: Builder, pool_size: int = 1):
+        self.builder = builder
+        self.rpc = EthRPC(builder.url, pool_size)
+
+    async def send_private_transaction(
+            self,
+            tx: str | HexStr | list[str] | list[HexStr],
+            extra_info: Any = None,
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> Any:
+        transaction = self.builder.format_private_transaction(tx, extra_info)
+        if self.builder.header is not None and websocket is not None:
+            # Builders like Flashbots require signed headers to identify the sender.
+            # This unfortunately means we must open new websockets for now as my websocket pools do not support headers
+            async with websockets.connect(self.builder.url, extra_headers=self.builder.header) as ws:
+                return await self.rpc.send_raw(self.builder.private_transaction_method, [transaction], ws)
+        else:
+            return await self.rpc.send_raw(self.builder.private_transaction_method, [transaction], websocket)
+
+    async def send_bundle(
+            self,
+            bundle: Bundle | list[Bundle],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> HexStr | list[HexStr]:
+        bundle = self.builder.format_bundle(bundle)
+        if self.builder.header is not None and websocket is not None:
+            async with websockets.connect(self.builder.url, extra_headers=self.builder.header) as ws:
+                await self.rpc.send_raw(self.builder.bundle_method, [bundle], ws)
+        else:
+            return await self.rpc.send_raw(self.builder.bundle_method, [bundle], websocket)
+
+    async def cancel_bundle(
+            self,
+            replacement_uuid: str | HexStr | list[str] | list[HexStr],
+            websocket: websockets.WebSocketClientProtocol | None = None
+    ):
+        if self.builder.header is not None and websocket is not None:
+            async with websockets.connect(self.builder.url, extra_headers=self.builder.header) as ws:
+                return await self.rpc.send_raw(self.builder.cancel_bundle_method, [replacement_uuid], ws)
+        else:
+            return await self.rpc.send_raw(self.builder.cancel_bundle_method, [replacement_uuid], websocket)
