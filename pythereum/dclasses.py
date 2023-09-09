@@ -66,7 +66,7 @@ def hex_list_encoder(hex_obj_list: list[HexStr]) -> list[str] | None:
         return None
 
 
-def transaction_decoder(transaction_hex: dict | str) -> "Transaction | HexStr":
+def transaction_decoder(transaction_hex: dict | str) -> "TransactionFull | HexStr":
 
     if isinstance(transaction_hex, dict):
         return TransactionFull.from_dict(transaction_hex, infer_missing=True)
@@ -74,18 +74,17 @@ def transaction_decoder(transaction_hex: dict | str) -> "Transaction | HexStr":
         return hex_decoder(transaction_hex)
 
 
-def transaction_encoder(transaction_obj: "HexStr | Transaction") -> str | dict:
-    if isinstance(transaction_obj, Transaction):
+def transaction_encoder(transaction_obj: "HexStr | TransactionFull") -> str | dict:
+    if isinstance(transaction_obj, TransactionFull):
 
         return transaction_obj.to_dict()
     else:
         return hex_encoder(transaction_obj)
 
 
-
 def transaction_list_decoder(
     tr_list: list[dict | str] | None,
-) -> list["Transaction | HexStr"] | None:
+) -> list["TransactionFull | HexStr"] | None:
     if tr_list is not None:
         return [transaction_decoder(transaction) for transaction in tr_list]
     else:
@@ -93,7 +92,7 @@ def transaction_list_decoder(
 
 
 def transaction_list_encoder(
-    tr_list: list["Transaction| HexStr"] | None,
+    tr_list: list["TransactionFull | HexStr"] | None,
 ) -> list[dict | str] | None:
     if tr_list is not None:
         return [transaction_encoder(transaction) for transaction in tr_list]
@@ -246,7 +245,7 @@ class Block:
     )
 
     # List of all transaction objects or 32 Byte transaction hashes for the block
-    transactions: list["Transaction | HexStr"] | None = field(
+    transactions: list["TransactionFull | HexStr"] | None = field(
         metadata=config(
             decoder=transaction_list_decoder, encoder=transaction_list_encoder
         )
@@ -397,7 +396,7 @@ class Log:
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
-class Transaction:
+class TransactionFull:
     block_hash: HexStr | None = field(
         metadata=config(decoder=hex_decoder, encoder=hex_encoder)
     )

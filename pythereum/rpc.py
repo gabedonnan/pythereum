@@ -11,15 +11,13 @@ from pythereum.exceptions import (
 from pythereum.common import HexStr
 from typing import List, Any
 from pythereum.socket_pool import WebsocketPool
-from pythereum.builders import Builder, BeaverBuilder, TitanBuilder
-from pythereum.dclasses import Block, Sync, Receipt, Log, TransactionFull, Transaction, Bundle
+from pythereum.dclasses import Block, Sync, Receipt, Log, TransactionFull, TransactionFull, Bundle
 
 
 class EthDenomination(float, Enum):
     """
     An enumeration of all names of eth denominations and their corresponding wei values
     """
-
     wei = 1.0
     kwei = 1e3
     babbage = 1e3
@@ -632,7 +630,7 @@ class EthRPC:
     ):
         """
         Creates a new message call transaction or contract creation
-        :param tx: Built transaction object, formed as a dict with the following keys
+        :param transaction: Built transaction object, formed as a dict with the following keys
             :key from: The address the transaction is sent from
             :type: 20 Byte Hex Address
 
@@ -663,7 +661,7 @@ class EthRPC:
         :return: Transaction hash (or zero hash if the transaction is not yet available)
         :type: 32 Byte Hex
         """
-        return await self._send_message("eth_sendTransaction", [tx], websocket)
+        return await self._send_message("eth_sendTransaction", [transaction], websocket)
 
     async def get_protocol_version(
         self, websocket: websockets.WebSocketClientProtocol | None = None
@@ -853,7 +851,7 @@ class EthRPC:
 
     async def sign_transaction(
             self,
-            tx: Transaction | dict | list[Transaction] | list[dict],
+            tx: TransactionFull | dict | list[TransactionFull] | list[dict],
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> HexStr | list[HexStr]:
         """
@@ -904,7 +902,7 @@ class EthRPC:
         self,
         data: str | HexStr | list[str] | list[HexStr],
         websocket: websockets.WebSocketClientProtocol | None = None,
-    ) -> Transaction | list[Transaction]:
+    ) -> TransactionFull | list[TransactionFull]:
         """
         Returns the information about a transaction requested by transaction hash.
 
@@ -920,7 +918,7 @@ class EthRPC:
                 return TransactionFull.from_dict(msg, infer_missing=True)
             case _:
                 return [
-                    Transaction.from_dict(result, infer_missing=True) for result in msg
+                    TransactionFull.from_dict(result, infer_missing=True) for result in msg
                 ]
 
     async def get_transaction_by_block_hash_and_index(
@@ -928,7 +926,7 @@ class EthRPC:
         data: str | HexStr | list[str] | list[HexStr],
         index: int | list[int],
         websocket: websockets.WebSocketClientProtocol | None = None,
-    ) -> Transaction | list[Transaction]:
+    ) -> TransactionFull | list[TransactionFull]:
         """
         Returns information about a transaction by block hash and transaction index position.
 
@@ -947,7 +945,7 @@ class EthRPC:
                 return TransactionFull.from_dict(msg, infer_missing=True)
             case _:
                 return [
-                    Transaction.from_dict(result, infer_missing=True) for result in msg
+                    TransactionFull.from_dict(result, infer_missing=True) for result in msg
                 ]
 
     async def get_transaction_by_block_number_and_index(
@@ -955,7 +953,7 @@ class EthRPC:
         block_specifier: DefaultBlock | list[DefaultBlock],
         index: int | list[int],
         websocket: websockets.WebSocketClientProtocol | None = None,
-    ) -> Transaction | list[Transaction]:
+    ) -> TransactionFull | list[TransactionFull]:
         """
         Returns information about a transaction by block number and transaction index position.
 
@@ -977,7 +975,7 @@ class EthRPC:
                 return TransactionFull.from_dict(msg, infer_missing=True)
             case _:
                 return [
-                    Transaction.from_dict(result, infer_missing=True) for result in msg
+                    TransactionFull.from_dict(result, infer_missing=True) for result in msg
                 ]
 
     async def get_uncle_by_block_hash_and_index(
@@ -1296,51 +1294,3 @@ class EthRPC:
         if the function does not exist for the given params an error will be raised
         """
         return await self._send_message(method_name, params, websocket)
-
-
-class BuilderRPC:
-    """
-    An RPC class designed for sending raw transactions and bundles to specific block builders
-    """
-    def __init__(self, builder: Builder, pool_size: int = 1):
-        self.builder = builder
-        self.rpc = EthRPC(builder.url, pool_size)
-
-    async def send_private_transaction(
-            self,
-            tx: str | HexStr | list[str] | list[HexStr],
-            extra_info: Any = None,
-            websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> Any:
-        transaction = self.builder.format_private_transaction(tx, extra_info)
-        if self.builder.header is not None and websocket is not None:
-            # Builders like Flashbots require signed headers to identify the sender.
-            # This unfortunately means we must open new websockets for now as my websocket pools do not support headers
-            async with websockets.connect(self.builder.url, extra_headers=self.builder.header) as ws:
-                return await self.rpc.send_raw(self.builder.private_transaction_method, [transaction], ws)
-        else:
-            return await self.rpc.send_raw(self.builder.private_transaction_method, [transaction], websocket)
-
-    async def send_bundle(
-            self,
-            bundle: Bundle | list[Bundle],
-            websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> HexStr | list[HexStr]:
-        bundle = self.builder.format_bundle(bundle)
-        if self.builder.header is not None and websocket is not None:
-            async with websockets.connect(self.builder.url, extra_headers=self.builder.header) as ws:
-                await self.rpc.send_raw(self.builder.bundle_method, [bundle], ws)
-        else:
-            return await self.rpc.send_raw(self.builder.bundle_method, [bundle], websocket)
-
-    async def cancel_bundle(
-            self,
-            replacement_uuid: str | HexStr | list[str] | list[HexStr],
-            websocket: websockets.WebSocketClientProtocol | None = None
-    ):
-        if self.builder.header is not None and websocket is not None:
-            async with websockets.connect(self.builder.url, extra_headers=self.builder.header) as ws:
-                return await self.rpc.send_raw(self.builder.cancel_bundle_method, [replacement_uuid], ws)
-        else:
-            return await self.rpc.send_raw(self.builder.cancel_bundle_method, [replacement_uuid], websocket)
-
