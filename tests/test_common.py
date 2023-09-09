@@ -1,6 +1,6 @@
 import pytest
 
-from pythereum.common import HexStr
+from pythereum import HexStr
 
 
 def test_integer_initialization():

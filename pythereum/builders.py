@@ -3,7 +3,8 @@ from typing import Any
 
 import websockets
 
-from pythereum import HexStr, EthRPC, Bundle
+from pythereum.common import HexStr
+from pythereum.rpc import EthRPC, Bundle
 
 
 class Builder(ABC):
