@@ -166,6 +166,13 @@ class EthRPC:
     def _next_id(self) -> None:
         self._id += 1
 
+    async def __aenter__(self):
+        await self._pool.start()
+        return self
+
+    async def __aexit__(self, *args):
+        await self.close_pool()
+
     @staticmethod
     def _filter_option_formatter(
         from_block: DefaultBlock | list[DefaultBlock],

@@ -178,6 +178,12 @@ class BuilderRPC:
         self.builder = builder
         self.rpc = EthRPC(builder.url, pool_size)
 
+    async def start_pool(self):
+        await self.rpc.start_pool()
+
+    async def close_pool(self):
+        await self.rpc.close_pool()
+
     async def send_private_transaction(
             self,
             tx: str | HexStr | list[str] | list[HexStr],
@@ -215,3 +221,10 @@ class BuilderRPC:
                 return await self.rpc.send_raw(self.builder.cancel_bundle_method, [replacement_uuid], ws)
         else:
             return await self.rpc.send_raw(self.builder.cancel_bundle_method, [replacement_uuid], websocket)
+
+    async def __aenter__(self):
+        await self.start_pool()
+        return self
+
+    async def __aexit__(self, *args):
+        await self.close_pool()
