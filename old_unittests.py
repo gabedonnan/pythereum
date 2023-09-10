@@ -1,7 +1,7 @@
 import unittest
 import asyncio
 from time import time
-from pythereum import HexStr
+from pythereum.common import HexStr
 from pythereum.rpc import (
     EthRPC,
     SubscriptionType,
@@ -252,6 +252,10 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
         print(msg)
         msg = await self.rpc.sha3("0x68656c6c6f20776f726c64")
         print(msg)
+
+    async def test_with(self):
+        async with EthRPC(ANVIL_URL, 1) as rpc:
+            await rpc.get_net_version()
 
 
 if __name__ == "__main__":
