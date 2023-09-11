@@ -29,18 +29,12 @@ import asyncio
 from pythereum import EthRPC
 
 TEST_URL = "ws://127.0.0.1:8545"
-erpc = EthRPC(TEST_URL, pool_size=2)
-
 
 async def test_transaction_count():
-  # Optional step to start your thread pool before your RPC call
-  await erpc.start_pool()
-  # Gets the number of transactions sent from a given EOA address
-  r = await erpc.get_transaction_count("0xabcdefghijklmnopqrstuvwxyz1234567890")
-  print(r)
-  # Ensures no hanging connections are left
-  await erpc.close_pool()
-
+  async with EthRPC(TEST_URL, pool_size=1) as erpc:
+    # Gets the number of transactions sent from a given EOA address
+    r = await erpc.get_transaction_count("0xabcdefghijklmnopqrstuvwxyz1234567890")
+    print(r)
 
 if __name__ == "__main__":
   asyncio.run(test_transaction_count())
@@ -79,27 +73,24 @@ if __name__ == "__main__":
 ```python
 # Example batch call
 import asyncio
-from pythereum import EthRPC, BlockTag
+from pythereum import EthRPC
 
 TEST_URL = "ws://127.0.0.1:8545"
-erpc = EthRPC(TEST_URL, pool_size=2)
-
 
 async def test_batching():
-  await erpc.start_pool()
   # Batch calls can be applied to any parameterised method
   # Each parameter must be passed in as a list 
   # With list length k where k is the batch size
-  r = await erpc.get_block_by_number(
-    block_specifier=[
-      i for i in range(40000, 40010)
-    ],
-    full_object=[
-      True for i in range(10)
-    ]
-  )
-  print(r)
-  await erpc.close_pool()
+  async with EthRPC(TEST_URL, pool_size=1) as erpc:
+    r = await erpc.get_block_by_number(
+      block_specifier=[
+        i for i in range(40000, 40010)
+      ],
+      full_object=[
+        True for _ in range(10)
+      ]
+    )
+    print(r)
 
 
 if __name__ == "__main__":
@@ -114,6 +105,41 @@ if __name__ == "__main__":
 1e-12
 >>> convert_eth(1_000, EthDenomination.babbage, EthDenomination.finney)
 1e-09
+```
+
+#### Example builder submission
+
+```python
+# Example builder submission
+import asyncio
+from eth_account import Account
+from pythereum import BuilderRPC, TitanBuilder
+
+
+async def test_building():
+  # Create new arbitrary account wallet
+  acct = Account.create()
+  # Create an arbitrary transaction
+  tx = {
+    "from": f"{acct.address}",
+    "to": "0x5fC2E691E520bbd3499f409bb9602DBA94184672",
+    "value": 1,
+    "gas": 2000000,
+    "gasPrice": 234567897654321,
+    "nonce": 0,
+    "chainId": 1
+  }
+  
+  # Sign your transaction with your account's key
+  signed_tx = Account.sign_transaction(tx, acct.key)
+  
+  async with BuilderRPC(TitanBuilder()) as brpc:
+    msg = await brpc.send_private_transaction(signed_tx)
+    print(msg)
+
+
+if __name__ == "__main__":
+  asyncio.run(test_building())
 ```
 
 More examples available in the [demo](https://github.com/gabedonnan/pythereum/tree/main/demo) folder.
