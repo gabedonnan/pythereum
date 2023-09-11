@@ -1,10 +1,11 @@
 from abc import ABC
 from typing import Any
+import aiohttp
 
-import websockets
-
+from pythereum.rpc import parse_results
 from pythereum.common import HexStr
-from pythereum.rpc import EthRPC, Bundle
+from pythereum.dclasses import Bundle
+from pythereum.exceptions import ERPCBuilderException, ERPCRequestException
 
 
 class Builder(ABC):
@@ -52,7 +53,7 @@ class Builder(ABC):
 class TitanBuilder(Builder):
     def __init__(self):
         super().__init__(
-            "wss://rpc.titanbuilder.xyz",
+            "https://rpc.titanbuilder.xyz",
             "eth_sendPrivateTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
@@ -83,7 +84,7 @@ class TitanBuilder(Builder):
 class BeaverBuilder(Builder):
     def __init__(self):
         super().__init__(
-            "wss://rpc.beaverbuild.org/",
+            "https://rpc.beaverbuild.org/",
             "eth_sendPrivateTransaction"
         )
 
@@ -91,7 +92,7 @@ class BeaverBuilder(Builder):
 class RsyncBuilder(Builder):
     def __init__(self):
         super().__init__(
-            "wss://rsync-builder.xyz/",
+            "https://rsync-builder.xyz/",
             "eth_sendPrivateRawTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
@@ -119,7 +120,7 @@ class RsyncBuilder(Builder):
 class Builder0x69(Builder):
     def __init__(self):
         super().__init__(
-            "wss://builder0x69.io/",
+            "https://builder0x69.io/",
             "eth_sendRawTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
@@ -147,7 +148,7 @@ class Builder0x69(Builder):
 class FlashbotsBuilder(Builder):
     def __init__(self, wallet_address: str, signed_payload: str):
         super().__init__(
-            "wss://relay.flashbots.net",
+            "https://relay.flashbots.net",
             "eth_sendPrivateRawTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
@@ -174,57 +175,78 @@ class BuilderRPC:
     """
     An RPC class designed for sending raw transactions and bundles to specific block builders
     """
-    def __init__(self, builder: Builder, pool_size: int = 1):
+    def __init__(self, builder: Builder):
         self.builder = builder
-        self.rpc = EthRPC(builder.url, pool_size)
+        self.session = None
+        self._id = 0
 
-    async def start_pool(self):
-        await self.rpc.start_pool()
+    def _next_id(self) -> None:
+        self._id += 1
 
-    async def close_pool(self):
-        await self.rpc.close_pool()
+    def _build_json(
+        self, method: str, params: list[Any], increment: bool = True
+    ) -> dict:
+        """
+        :param method: ethereum RPC method
+        :param params: list of parameters to use in the function call, cast to string so Hex data may be used
+        :param increment: Boolean determining whether self._id will be advanced after the json is built
+        :return: json string converted with json.dumps
+        This is slightly slower than raw string construction with fstrings, but more elegant
+        """
+        res = {"jsonrpc": "2.0", "method": method, "params": params, "id": self._id}
+
+        if increment:
+            self._next_id()
+        return res
+
+    async def _send_message(self, method: str, params: list[Any]):
+        if self.session is not None:
+            async with self.session.post(self.builder.url, json=self._build_json(method, params)) as resp:
+                if resp.status != 200:
+                    raise ERPCRequestException(
+                        resp.status,
+                        f"Invalid BuilderRPC request for url {self.builder.url} of form "
+                        f"(method={method}, params={params})"
+                    )
+
+                msg = await resp.json()
+        else:
+            raise ERPCBuilderException(
+                "BuilderRPC session not started. Either context manage this class or call BuilderRPC.start_session()"
+            )
+
+        return parse_results(msg)
+
+    async def start_session(self):
+        self.session = aiohttp.ClientSession(headers=self.builder.header)
+
+    async def close_session(self):
+        await self.session.close()
 
     async def send_private_transaction(
             self,
             tx: str | HexStr | list[str] | list[HexStr],
             extra_info: Any = None,
-            websocket: websockets.WebSocketClientProtocol | None = None
     ) -> Any:
         transaction = self.builder.format_private_transaction(tx, extra_info)
-        if self.builder.header is not None and websocket is not None:
-            # Builders like Flashbots require signed headers to identify the sender.
-            # This unfortunately means we must open new websockets for now as my websocket pools do not support headers
-            async with websockets.connect(self.builder.url, extra_headers=self.builder.header) as ws:
-                return await self.rpc.send_raw(self.builder.private_transaction_method, [transaction], ws)
-        else:
-            return await self.rpc.send_raw(self.builder.private_transaction_method, [transaction], websocket)
+        return await self._send_message(self.builder.private_transaction_method, [transaction])
 
     async def send_bundle(
             self,
             bundle: Bundle | list[Bundle],
-            websocket: websockets.WebSocketClientProtocol | None = None
     ) -> HexStr | list[HexStr]:
         bundle = self.builder.format_bundle(bundle)
-        if self.builder.header is not None and websocket is not None:
-            async with websockets.connect(self.builder.url, extra_headers=self.builder.header) as ws:
-                await self.rpc.send_raw(self.builder.bundle_method, [bundle], ws)
-        else:
-            return await self.rpc.send_raw(self.builder.bundle_method, [bundle], websocket)
+        return await self._send_message(self.builder.bundle_method, [bundle])
 
     async def cancel_bundle(
             self,
             replacement_uuid: str | HexStr | list[str] | list[HexStr],
-            websocket: websockets.WebSocketClientProtocol | None = None
     ):
-        if self.builder.header is not None and websocket is not None:
-            async with websockets.connect(self.builder.url, extra_headers=self.builder.header) as ws:
-                return await self.rpc.send_raw(self.builder.cancel_bundle_method, [replacement_uuid], ws)
-        else:
-            return await self.rpc.send_raw(self.builder.cancel_bundle_method, [replacement_uuid], websocket)
+        return await self._send_message(self.builder.cancel_bundle_method, [replacement_uuid])
 
     async def __aenter__(self):
-        await self.start_pool()
+        await self.start_session()
         return self
 
     async def __aexit__(self, *args):
-        await self.close_pool()
+        await self.close_session()
