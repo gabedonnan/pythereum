@@ -39,3 +39,9 @@ class ERPCSubscriptionException(ERPCBaseException):
     """
     Raised when a subscription request is rejected by a host or for other generic subscription errors.
     """
+
+
+class ERPCBuilderException(ERPCBaseException):
+    """
+    Raised for exceptions related to builders and the BuilderRPC
+    """
