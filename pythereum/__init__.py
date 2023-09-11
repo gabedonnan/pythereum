@@ -25,6 +25,6 @@ from pythereum.dclasses import (
     Log,
     TransactionFull,
     Access,
-    TransactionFull,
+    Transaction,
     Bundle
 )
