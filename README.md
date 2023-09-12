@@ -10,14 +10,28 @@ Features include:
 - Websocket pooling for high performance calls
 - Support for RPC batching, allowing multiple calls to the same function at once
 - Currency conversion for wei, so you don't have to rely on external libs like Web3.py
+- Private transaction and Bundle support for communication directly with block builders
 
 ### Implemented RPC methods
 
 All methods listed in the [Ethereum JSON RPC API specification](https://ethereum.org/en/developers/docs/apis/json-rpc/) are completed as of version `1.0.5`, 
 alongside methods for subscriptions, and support for calling custom function names with custom parameters.
 
-(Methods eth_signTransaction and eth_sendTransaction are currently under construction for reformatting)
+### Supported Builders
 
+With the `BuilderRPC` class, pythereum supports submitting bundles and private transactions directly to block builders.
+Each builder class that can be passed into BuilderRPC instances automatically manages communication with the given builder.
+
+The following builder classes are currently implemented:
+
+- Titan Builder
+- Rsync Builder
+- Beaver Builder (Using same parameters as rsync, may need adjustment)
+- Builder0x69
+- Flashbots Builder (additional robustness testing needed)
+
+With support for creating custom builder classes by inheriting from the `Builder` class.
+An implementation of the Beaver Builder and support for [mevboost](mevboost.pics) coming in future versions.
 
 ### Example usage
 
@@ -48,20 +62,19 @@ import asyncio
 from pythereum import EthRPC, SubscriptionType
 
 TEST_URL = "ws://127.0.0.1:8545"
-erpc = EthRPC(TEST_URL, pool_size=2)
-
 
 async def test_subscription(subscription_type: SubscriptionType):
   """
   Creates a subscription to receive data about all new heads
   Prints each new subscription result as it is received
   """
-  async with erpc.subscribe(subscription_type) as sc:
-    # The following will iterate as each item is gotten by sc.recv()
-    async for item in sc.recv():
-      # 'item' is formatted into the appropriate form for its subscription type
-      # this is done by the sc.recv() automatically
-      print(item)
+  async with EthRPC(TEST_URL, pool_size=1) as erpc:
+    async with erpc.subscribe(subscription_type) as sc:
+      # The following will iterate as each item is gotten by sc.recv()
+      async for item in sc.recv():
+        # 'item' is formatted into the appropriate form for its subscription type
+        # this is done by the sc.recv() automatically
+        print(item)
 
 
 if __name__ == "__main__":
@@ -169,7 +182,7 @@ pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 or 
 
 ```toml
-pythereum = "^1.0.5"
+pythereum = "^1.1.0"
 ```
 
 If you would like to install the library via pypi instead of via this git repository.

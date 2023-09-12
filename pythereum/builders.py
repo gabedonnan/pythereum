@@ -89,9 +89,29 @@ class TitanBuilder(Builder):
 class BeaverBuilder(Builder):
     def __init__(self):
         super().__init__(
-            "https://rpc.beaverbuild.org/",
-            "eth_sendPrivateTransaction"
+            "https://rsync-builder.xyz/",
+            "eth_sendPrivateRawTransaction",
+            "eth_sendBundle",
+            "eth_cancelBundle",
+            {
+                "txs",
+                "blockNumber",
+                "minTimestamp",
+                "maxTimestamp",
+                "revertingTxHashes",
+                "replacementUuid",
+                "refundPercent",
+                "refundRecipient",
+                "refundTxHashes"
+            }
         )
+
+    def format_private_transaction(
+            self,
+            tx: str | HexStr | list[str] | list[HexStr],
+            max_block_number: str | HexStr | list[str] | list[HexStr] | None = None
+    ) -> list[Any]:
+        return [tx]
 
 
 class RsyncBuilder(Builder):
@@ -297,4 +317,4 @@ class BuilderRPC:
 
 
 # A list containing all the current supported builders. Can be passed in to a BuilderRPC to send to all
-ALL_BUILDERS = [TitanBuilder(), Builder0x69(), RsyncBuilder()]
+ALL_BUILDERS = [TitanBuilder(), Builder0x69(), RsyncBuilder(), BeaverBuilder()]

@@ -12,6 +12,7 @@ from pythereum.builders import (
     BuilderRPC,
     Builder,
     Builder0x69,
+    BeaverBuilder,
     TitanBuilder,
     RsyncBuilder,
     FlashbotsBuilder,
