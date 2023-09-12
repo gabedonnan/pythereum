@@ -89,7 +89,7 @@ class TitanBuilder(Builder):
 class BeaverBuilder(Builder):
     def __init__(self):
         super().__init__(
-            "https://rsync-builder.xyz/",
+            "https://rpc.beaverbuild.org/",
             "eth_sendPrivateRawTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
