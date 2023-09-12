@@ -2,6 +2,7 @@ import pytest
 
 import pythereum as pye
 
+from eth_account import Account
 from pythereum.exceptions import ERPCRequestException
 
 """
@@ -38,7 +39,7 @@ async def test_0x69_builder():
 
 @pytest.mark.asyncio
 async def test_flashbots_builder():
-    async with pye.BuilderRPC(pye.FlashbotsBuilder("", "")) as brpc:
+    async with pye.BuilderRPC(pye.FlashbotsBuilder(Account.create().key)) as brpc:
         try:
             await brpc.send_private_transaction(None)
         except ERPCRequestException as e:
