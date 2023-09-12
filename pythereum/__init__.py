@@ -12,10 +12,10 @@ from pythereum.builders import (
     BuilderRPC,
     Builder,
     Builder0x69,
-    BeaverBuilder,
     TitanBuilder,
     RsyncBuilder,
-    FlashbotsBuilder
+    FlashbotsBuilder,
+    ALL_BUILDERS
 )
 
 from pythereum.dclasses import (
