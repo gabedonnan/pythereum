@@ -209,11 +209,11 @@ class BuilderRPC:
             self._next_id()
         return res
 
-    async def _send_message(self, method: str, params: list[Any]):
+    async def _send_message(self, method: str | list[str], params: list[Any]):
         if self.session is not None:
             if isinstance(self.builder, list):
                 msg = await asyncio.gather(
-                    self._post(method, params, builder) for builder in self.builder
+                    *(self._post(mth, param, builder) for mth, param, builder in zip(method, params, self.builder))
                 )
             else:
                 msg = await self._post(method, params, self.builder)
@@ -224,7 +224,7 @@ class BuilderRPC:
 
         return parse_results(msg)
 
-    async def _post(self, method: str, params: list[Any], builder):
+    async def _post(self, method: str, params: list[Any], builder: Builder) -> Any:
         constructed_json = self._build_json(method, params)
         async with self.session.post(
                 builder.url,
@@ -252,21 +252,36 @@ class BuilderRPC:
             tx: str | HexStr | list[str] | list[HexStr],
             extra_info: Any = None,
     ) -> Any:
-        transaction = self.builder.format_private_transaction(tx, extra_info)
-        return await self._send_message(self.builder.private_transaction_method, [transaction])
+        if isinstance(self.builder, list):
+            transaction = [builder.format_private_transaction(tx, extra_info) for builder in self.builder]
+            tx_method = [builder.private_transaction_method for builder in self.builder]
+        else:
+            transaction = [self.builder.format_private_transaction(tx, extra_info)]
+            tx_method = self.builder.private_transaction_method
+        return await self._send_message(tx_method, transaction)
 
     async def send_bundle(
             self,
             bundle: Bundle | list[Bundle],
     ) -> HexStr | list[HexStr]:
-        bundle = self.builder.format_bundle(bundle)
-        return await self._send_message(self.builder.bundle_method, [bundle])
+        if isinstance(self.builder, list):
+            transaction = [builder.format_bundle(bundle) for builder in self.builder]
+            tx_method = [builder.bundle_method for builder in self.builder]
+        else:
+            transaction = [self.builder.format_bundle(bundle)]
+            tx_method = self.builder.bundle_method
+        return await self._send_message(tx_method, transaction)
 
     async def cancel_bundle(
             self,
             replacement_uuid: str | HexStr | list[str] | list[HexStr],
     ):
-        return await self._send_message(self.builder.cancel_bundle_method, [replacement_uuid])
+        if isinstance(self.builder, list):
+            cancel_method = [builder.cancel_bundle_method for builder in self.builder]
+        else:
+            cancel_method = self.builder.cancel_bundle_method
+            replacement_uuid = [replacement_uuid]
+        return await self._send_message(cancel_method, replacement_uuid)
 
     async def __aenter__(self):
         await self.start_session()
