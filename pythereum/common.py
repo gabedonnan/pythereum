@@ -14,11 +14,13 @@ class HexStr(str):
 
     HEX_PATTERN = re.compile(r"^0x[0-9a-fA-F]+$")
 
-    def __new__(cls, value: str | int):
+    def __new__(cls, value: str | int | bytes):
         if isinstance(value, str):
             formatted_value = cls._format_string_value(value)
         elif isinstance(value, int):
             formatted_value = hex(value)
+        elif isinstance(value, bytes):
+            formatted_value = value.hex()
         else:
             raise ValueError(
                 f"Unsupported type {type(value)} for HexStr. Must be str or int."
