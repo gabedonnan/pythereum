@@ -10,6 +10,8 @@ Each of the following tests sends invalid requests to the given endpoint
 Real usage would involve signing a given transaction and passing it into send_private_transaction instead of None
 
 The flashbots builder requires a wallet address and a signed payload to include in the headers for a given transaction
+
+More comprehensive tests will be generated for these at a later date
 """
 
 
@@ -34,7 +36,8 @@ async def test_0x69_builder():
         try:
             await brpc.send_private_transaction(None)
         except ERPCRequestException as e:
-            assert str(e) == "Error -32602: invalid argument 0: json: cannot unmarshal non-string into Go value of type hexutil.Bytes"
+            assert str(e) == ("Error -32602: invalid argument 0: json: cannot unmarshal non-string into Go value of "
+                              "type hexutil.Bytes")
 
 
 @pytest.mark.asyncio
@@ -43,4 +46,14 @@ async def test_flashbots_builder():
         try:
             await brpc.send_private_transaction(None)
         except ERPCRequestException as e:
-            assert str(e) == "Error 403: Invalid BuilderRPC request for url https://relay.flashbots.net of form (method=eth_sendPrivateRawTransaction, params=[[{'tx': None, 'preferences': None}]])"
+            assert str(e) == ("Error 403: Invalid BuilderRPC request for url https://relay.flashbots.net of form ("
+                              "method=eth_sendPrivateRawTransaction, params=[[{'tx': None, 'preferences': None}]])")
+
+
+@pytest.mark.asyncio
+async def test_all_builders():
+    async with pye.BuilderRPC(pye.ALL_BUILDERS) as brpc:
+        try:
+            await brpc.send_private_transaction(None)
+        except ERPCRequestException as e:
+            assert str(e) == "Error -32000: no transaction found"
