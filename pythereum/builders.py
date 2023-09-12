@@ -1,7 +1,11 @@
+import asyncio
+import json
 from abc import ABC
 from typing import Any
 import aiohttp
 
+from eth_account import Account, messages
+from eth_utils import keccak
 from pythereum.rpc import parse_results
 from pythereum.common import HexStr
 from pythereum.dclasses import Bundle
@@ -16,7 +20,6 @@ class Builder(ABC):
             bundle_method: str | HexStr = "eth_sendBundle",
             cancel_bundle_method: str | HexStr = "eth_cancelBundle",
             bundle_params: set = None,
-            header: dict = None
     ):
         if bundle_params is None:
             bundle_params = {
@@ -36,7 +39,6 @@ class Builder(ABC):
         self.bundle_method = bundle_method
         self.cancel_bundle_method = cancel_bundle_method
         self.bundle_params = bundle_params
-        self.header = header
         super().__init__()
 
     def format_private_transaction(
@@ -48,6 +50,9 @@ class Builder(ABC):
 
     def format_bundle(self, bundle: dict | Bundle) -> dict:
         return {key: bundle[key] for key in bundle.keys() & self.bundle_params}
+
+    def get_header(self, data: Any = None) -> Any:
+        return None
 
 
 class TitanBuilder(Builder):
@@ -74,7 +79,7 @@ class TitanBuilder(Builder):
             self,
             tx: str | HexStr | list[str] | list[HexStr],
             max_block_number: str | HexStr | list[str] | list[HexStr] | None = None
-    ) -> list[Any]:
+    ) -> list[dict]:
         res = {"tx": tx}
         if max_block_number is not None:
             res["maxBlockNumber"] = max_block_number
@@ -146,7 +151,8 @@ class Builder0x69(Builder):
 
 
 class FlashbotsBuilder(Builder):
-    def __init__(self, wallet_address: str, signed_payload: str):
+    def __init__(self, private_key: str | HexStr):
+        self.private_key = HexStr(private_key)
         super().__init__(
             "https://relay.flashbots.net",
             "eth_sendPrivateRawTransaction",
@@ -160,7 +166,6 @@ class FlashbotsBuilder(Builder):
                 "revertingTxHashes",
                 "replacementUuid"
             },
-            {"X-Flashbots-Signature": f"{wallet_address}:{signed_payload}"}
         )
 
     def format_private_transaction(
@@ -170,13 +175,18 @@ class FlashbotsBuilder(Builder):
     ) -> list[Any]:
         return [{"tx": tx, "preferences": preferences}]
 
+    def get_header(self, payload: str = "") -> dict:
+        payload = messages.encode_defunct(keccak(text=payload))
+        return {"X-Flashbots-Signature": f"{Account.from_key(self.private_key.hex_bytes).address}:"
+                                         f"{Account.sign_message(payload, self.private_key.hex_bytes).signature.hex()}"}
+
 
 class BuilderRPC:
     """
     An RPC class designed for sending raw transactions and bundles to specific block builders
     """
-    def __init__(self, builder: Builder):
-        self.builder = builder
+    def __init__(self, builders: Builder | list[Builder]):
+        self.builder = builders
         self.session = None
         self._id = 0
 
@@ -190,7 +200,7 @@ class BuilderRPC:
         :param method: ethereum RPC method
         :param params: list of parameters to use in the function call, cast to string so Hex data may be used
         :param increment: Boolean determining whether self._id will be advanced after the json is built
-        :return: json string converted with json.dumps
+        :return: json dictionary
         This is slightly slower than raw string construction with fstrings, but more elegant
         """
         res = {"jsonrpc": "2.0", "method": method, "params": params, "id": self._id}
@@ -201,15 +211,12 @@ class BuilderRPC:
 
     async def _send_message(self, method: str, params: list[Any]):
         if self.session is not None:
-            async with self.session.post(self.builder.url, json=self._build_json(method, params)) as resp:
-                if resp.status != 200:
-                    raise ERPCRequestException(
-                        resp.status,
-                        f"Invalid BuilderRPC request for url {self.builder.url} of form "
-                        f"(method={method}, params={params})"
-                    )
-
-                msg = await resp.json()
+            if isinstance(self.builder, list):
+                msg = await asyncio.gather(
+                    self._post(method, params, builder) for builder in self.builder
+                )
+            else:
+                msg = await self._post(method, params, self.builder)
         else:
             raise ERPCBuilderException(
                 "BuilderRPC session not started. Either context manage this class or call BuilderRPC.start_session()"
@@ -217,8 +224,25 @@ class BuilderRPC:
 
         return parse_results(msg)
 
+    async def _post(self, method: str, params: list[Any], builder):
+        constructed_json = self._build_json(method, params)
+        async with self.session.post(
+                builder.url,
+                json=constructed_json,
+                headers=builder.get_header(json.dumps(constructed_json))
+        ) as resp:
+            if resp.status != 200:
+                raise ERPCRequestException(
+                    resp.status,
+                    f"Invalid BuilderRPC request for url {builder.url} of form "
+                    f"(method={method}, params={params})"
+                )
+
+            msg = await resp.json()
+        return msg
+
     async def start_session(self):
-        self.session = aiohttp.ClientSession(headers=self.builder.header)
+        self.session = aiohttp.ClientSession()
 
     async def close_session(self):
         await self.session.close()
@@ -250,3 +274,7 @@ class BuilderRPC:
 
     async def __aexit__(self, *args):
         await self.close_session()
+
+
+# A list containing all the current supported builders. Can be passed in to a BuilderRPC to send to all
+ALL_BUILDERS = [TitanBuilder(), Builder0x69(), RsyncBuilder()]
