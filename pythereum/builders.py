@@ -186,6 +186,9 @@ class BuilderRPC:
     An RPC class designed for sending raw transactions and bundles to specific block builders
     """
     def __init__(self, builders: Builder | list[Builder]):
+        if isinstance(builders, list):
+            if len(builders) == 1:
+                builders = builders[0]
         self.builder = builders
         self.session = None
         self._id = 0
@@ -215,8 +218,10 @@ class BuilderRPC:
                 msg = await asyncio.gather(
                     *(self._post(mth, param, builder) for mth, param, builder in zip(method, params, self.builder))
                 )
+                self._next_id()
             else:
                 msg = await self._post(method, params, self.builder)
+                self._next_id()
         else:
             raise ERPCBuilderException(
                 "BuilderRPC session not started. Either context manage this class or call BuilderRPC.start_session()"
@@ -225,7 +230,7 @@ class BuilderRPC:
         return parse_results(msg)
 
     async def _post(self, method: str, params: list[Any], builder: Builder) -> Any:
-        constructed_json = self._build_json(method, params)
+        constructed_json = self._build_json(method, params, increment=False)
         async with self.session.post(
                 builder.url,
                 json=constructed_json,
