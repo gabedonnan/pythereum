@@ -8,17 +8,18 @@ from eth_account import Account, messages
 from eth_utils import keccak
 from pythereum.rpc import parse_results
 from pythereum.common import HexStr
-from pythereum.dclasses import Bundle
+from pythereum.dclasses import Bundle, MEVBundle
 from pythereum.exceptions import ERPCBuilderException, ERPCRequestException
 
 
 class Builder(ABC):
     def __init__(
             self,
-            url: str | HexStr,
-            private_transaction_method: str | HexStr = "eth_sendPrivateTransaction",
-            bundle_method: str | HexStr = "eth_sendBundle",
-            cancel_bundle_method: str | HexStr = "eth_cancelBundle",
+            url: str,
+            private_transaction_method: str = "eth_sendPrivateTransaction",
+            bundle_method: str = "eth_sendBundle",
+            cancel_bundle_method: str = "eth_cancelBundle",
+            mev_bundle_method: str = "mev_sendBundle",
             bundle_params: set = None,
     ):
         if bundle_params is None:
@@ -39,6 +40,7 @@ class Builder(ABC):
         self.bundle_method = bundle_method
         self.cancel_bundle_method = cancel_bundle_method
         self.bundle_params = bundle_params
+        self.mev_bundle_method = mev_bundle_method
         super().__init__()
 
     def format_private_transaction(
@@ -51,6 +53,9 @@ class Builder(ABC):
     def format_bundle(self, bundle: dict | Bundle) -> dict:
         return {key: bundle[key] for key in bundle.keys() & self.bundle_params}
 
+    def format_mev_bundle(self, bundle: MEVBundle) -> list[dict]:
+        return [bundle]
+
     def get_header(self, data: Any = None) -> Any:
         return None
 
@@ -62,6 +67,7 @@ class TitanBuilder(Builder):
             "eth_sendPrivateTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
+            "mev_sendBundle",
             {
                 "txs",
                 "blockNumber",
@@ -93,6 +99,7 @@ class BeaverBuilder(Builder):
             "eth_sendPrivateRawTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
+            "mev_sendBundle",
             {
                 "txs",
                 "blockNumber",
@@ -121,6 +128,7 @@ class RsyncBuilder(Builder):
             "eth_sendPrivateRawTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
+            "mev_sendBundle",
             {
                 "txs",
                 "blockNumber",
@@ -149,6 +157,7 @@ class Builder0x69(Builder):
             "eth_sendRawTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
+            "mev_sendBundle",
             {
                 "txs",
                 "blockNumber",
@@ -178,6 +187,7 @@ class FlashbotsBuilder(Builder):
             "eth_sendPrivateRawTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
+            "mev_sendBundle",
             {
                 "txs",
                 "blockNumber",
@@ -307,6 +317,18 @@ class BuilderRPC:
             cancel_method = self.builder.cancel_bundle_method
             replacement_uuid = [replacement_uuid]
         return await self._send_message(cancel_method, replacement_uuid)
+
+    async def send_mev_bundle(
+            self,
+            bundle: MEVBundle
+    ) -> HexStr:
+        if isinstance(self.builder, list):
+            mev_method = [builder.mev_bundle_method for builder in self.builder]
+            bundle = [builder.format_mev_bundle(bundle) for builder in self.builder]
+        else:
+            mev_method = self.builder.mev_bundle_method
+            bundle = [bundle]
+        return await self._send_message(mev_method, bundle)
 
     async def __aenter__(self):
         await self.start_session()

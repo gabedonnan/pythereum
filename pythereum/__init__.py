@@ -27,5 +27,6 @@ from pythereum.dclasses import (
     TransactionFull,
     Access,
     Transaction,
-    Bundle
+    Bundle,
+    MEVBundle
 )

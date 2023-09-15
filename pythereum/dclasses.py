@@ -560,3 +560,56 @@ class Bundle(dict):
             res["refundTxHashes"] = refund_tx_hashes
 
         super().__init__(res)
+
+
+class MEVBundle(dict):
+    def __init__(
+            self,
+            version: str = "v0.1",
+            block: HexStr = HexStr(0),
+            max_block: HexStr | None = None,
+            flashbots_hashes: list[HexStr] | None = None,
+            transactions: list[HexStr] | None = None,
+            transaction_can_revert: bool | list[bool] = False,
+            extra_mev_bundles: list[dict] | None = None,
+            refund_addresses: list[str] | None = None,
+            refund_percentages: list[int] | None = None
+    ):
+        """
+        :param version: MEVBoost protocol version to use
+        :param block: The first block in which this bundle must be included
+        :param max_block: The maximum block height in which this bundle may be included
+        """
+        if refund_percentages is None:
+            refund_percentages = [100]
+
+        if isinstance(transaction_can_revert, bool):
+            transaction_can_revert = [transaction_can_revert for _ in range(len(transactions))]
+
+        res = {
+            "version": version,
+            "inclusion": {"block": block},
+            "body": []
+        }
+        if flashbots_hashes is not None:
+            res["body"].extend([{"hash": f_hash} for f_hash in flashbots_hashes])
+
+        if transactions is not None:
+            res["body"].extend([{"tx": tx, "canRevert": rvt} for tx, rvt in zip(transactions, transaction_can_revert)])
+
+        if extra_mev_bundles is not None:
+            res["body"].extend([{"bundle": bd} for bd in extra_mev_bundles])
+
+        if max_block is not None:
+            res["inclusion"]["maxBlock"] = max_block
+
+        if refund_addresses is not None:
+            res["validity"] = {}
+            res["validity"]["refundConfig"] = [
+                    {
+                        "address": r_address,
+                        "percent": r_percent
+                    } for r_address, r_percent in zip(refund_addresses, refund_percentages)
+                ]
+
+        super().__init__(res)
