@@ -21,6 +21,7 @@ class Builder(ABC):
             cancel_bundle_method: str = "eth_cancelBundle",
             mev_bundle_method: str = "mev_sendBundle",
             bundle_params: set = None,
+            private_key: str = None
     ):
         if bundle_params is None:
             bundle_params = {
@@ -41,6 +42,7 @@ class Builder(ABC):
         self.cancel_bundle_method = cancel_bundle_method
         self.bundle_params = bundle_params
         self.mev_bundle_method = mev_bundle_method
+        self.private_key = HexStr(private_key) if private_key is not None else None
         super().__init__()
 
     def format_private_transaction(
@@ -59,9 +61,14 @@ class Builder(ABC):
     def get_header(self, data: Any = None) -> Any:
         return None
 
+    def get_flashbots_header(self, payload: str = "") -> dict:
+        payload = messages.encode_defunct(keccak(text=payload))
+        return {"X-Flashbots-Signature": f"{Account.from_key(self.private_key.hex_bytes).address}:"
+                                         f"{Account.sign_message(payload, self.private_key.hex_bytes).signature.hex()}"}
+
 
 class TitanBuilder(Builder):
-    def __init__(self):
+    def __init__(self, private_key: str | HexStr | None = None):
         super().__init__(
             "https://rpc.titanbuilder.xyz",
             "eth_sendPrivateTransaction",
@@ -78,7 +85,8 @@ class TitanBuilder(Builder):
                 "refundPercent",
                 "refundIndex"
                 "refundRecipient",
-            }
+            },
+            private_key
         )
 
     def format_private_transaction(
@@ -93,7 +101,7 @@ class TitanBuilder(Builder):
 
 
 class BeaverBuilder(Builder):
-    def __init__(self):
+    def __init__(self, private_key: str | HexStr | None = None):
         super().__init__(
             "https://rpc.beaverbuild.org/",
             "eth_sendPrivateRawTransaction",
@@ -110,7 +118,8 @@ class BeaverBuilder(Builder):
                 "refundPercent",
                 "refundRecipient",
                 "refundTxHashes"
-            }
+            },
+            private_key
         )
 
     def format_private_transaction(
@@ -122,7 +131,7 @@ class BeaverBuilder(Builder):
 
 
 class RsyncBuilder(Builder):
-    def __init__(self):
+    def __init__(self, private_key: str | HexStr | None = None):
         super().__init__(
             "https://rsync-builder.xyz/",
             "eth_sendPrivateRawTransaction",
@@ -139,7 +148,8 @@ class RsyncBuilder(Builder):
                 "refundPercent",
                 "refundRecipient",
                 "refundTxHashes"
-            }
+            },
+            private_key
         )
 
     def format_private_transaction(
@@ -151,7 +161,7 @@ class RsyncBuilder(Builder):
 
 
 class Builder0x69(Builder):
-    def __init__(self):
+    def __init__(self, private_key: str | HexStr | None = None):
         super().__init__(
             "https://builder0x69.io/",
             "eth_sendRawTransaction",
@@ -168,7 +178,8 @@ class Builder0x69(Builder):
                 "replacementUuid",
                 "refundPercent",
                 "refundRecipient",
-            }
+            },
+            private_key
         )
 
     def format_private_transaction(
@@ -180,8 +191,7 @@ class Builder0x69(Builder):
 
 
 class FlashbotsBuilder(Builder):
-    def __init__(self, private_key: str | HexStr):
-        self.private_key = HexStr(private_key)
+    def __init__(self, private_key: str | HexStr | None = None):
         super().__init__(
             "https://relay.flashbots.net",
             "eth_sendPrivateRawTransaction",
@@ -196,6 +206,7 @@ class FlashbotsBuilder(Builder):
                 "revertingTxHashes",
                 "replacementUuid"
             },
+            private_key
         )
 
     def format_private_transaction(
@@ -215,11 +226,17 @@ class BuilderRPC:
     """
     An RPC class designed for sending raw transactions and bundles to specific block builders
     """
-    def __init__(self, builders: Builder | list[Builder]):
-        if isinstance(builders, list):
-            if len(builders) == 1:
-                builders = builders[0]
-        self.builder = builders
+    def __init__(self, builders: Builder | list[Builder], private_key: str | HexStr | list[str] | list[HexStr] = None):
+        if not isinstance(builders, list):
+            builders = [builders]
+        self.builders = builders
+        match private_key:
+            case list():
+                for key, builder in zip(private_key, self.builders):
+                    builder.private_key = HexStr(key)
+            case str():
+                for builder in self.builders:
+                    builder.private_key = HexStr(private_key)
         self.session = None
         self._id = 0
 
@@ -242,16 +259,10 @@ class BuilderRPC:
             self._next_id()
         return res
 
-    async def _send_message(self, method: str | list[str], params: list[Any]):
+    async def _send_message(self, builder: Builder, method: str | list[str], params: list[Any], use_flashbots_signature: bool = False):
         if self.session is not None:
-            if isinstance(self.builder, list):
-                msg = await asyncio.gather(
-                    *(self._post(mth, param, builder) for mth, param, builder in zip(method, params, self.builder))
-                )
-                self._next_id()
-            else:
-                msg = await self._post(method, params, self.builder)
-                self._next_id()
+            msg = await self._post(builder, method, params, use_flashbots_signature)
+            self._next_id()
         else:
             raise ERPCBuilderException(
                 "BuilderRPC session not started. Either context manage this class or call BuilderRPC.start_session()"
@@ -259,12 +270,15 @@ class BuilderRPC:
 
         return parse_results(msg)
 
-    async def _post(self, method: str, params: list[Any], builder: Builder) -> Any:
+    async def _post(self, builder: Builder, method: str, params: list[Any], use_flashbots_signature: bool) -> Any:
         constructed_json = self._build_json(method, params, increment=False)
+        header_data = builder.get_flashbots_header(
+            json.dumps(constructed_json)
+        ) if use_flashbots_signature else builder.get_header(json.dumps(constructed_json))
         async with self.session.post(
                 builder.url,
                 json=constructed_json,
-                headers=builder.get_header(json.dumps(constructed_json))
+                headers=header_data
         ) as resp:
             if resp.status != 200:
                 raise ERPCRequestException(
@@ -287,48 +301,45 @@ class BuilderRPC:
             tx: str | HexStr | list[str] | list[HexStr],
             extra_info: Any = None,
     ) -> Any:
-        if isinstance(self.builder, list):
-            transaction = [builder.format_private_transaction(tx, extra_info) for builder in self.builder]
-            tx_method = [builder.private_transaction_method for builder in self.builder]
-        else:
-            transaction = [self.builder.format_private_transaction(tx, extra_info)]
-            tx_method = self.builder.private_transaction_method
-        return await self._send_message(tx_method, transaction)
+        tx_methods = [builder.private_transaction_method for builder in self.builders]
+        tx = [builder.format_private_transaction(tx, extra_info) for builder in self.builders]
+        return await asyncio.gather(
+            *(self._send_message(builder, method, transaction) for builder, method, transaction in
+              zip(self.builders, tx_methods, tx))
+        )
 
     async def send_bundle(
             self,
             bundle: Bundle | list[Bundle],
-    ) -> HexStr | list[HexStr]:
-        if isinstance(self.builder, list):
-            transaction = [builder.format_bundle(bundle) for builder in self.builder]
-            tx_method = [builder.bundle_method for builder in self.builder]
-        else:
-            transaction = [self.builder.format_bundle(bundle)]
-            tx_method = self.builder.bundle_method
-        return await self._send_message(tx_method, transaction)
+    ) -> Any:
+        tx_methods = [builder.bundle_method for builder in self.builders]
+        tx = [builder.format_bundle(bundle) for builder in self.builders]
+        return await asyncio.gather(
+            *(self._send_message(builder, method, transaction) for builder, method, transaction in
+              zip(self.builders, tx_methods, tx))
+        )
 
     async def cancel_bundle(
             self,
-            replacement_uuid: str | HexStr | list[str] | list[HexStr],
+            replacement_uuids: str | HexStr | list[str] | list[HexStr],
     ):
-        if isinstance(self.builder, list):
-            cancel_method = [builder.cancel_bundle_method for builder in self.builder]
-        else:
-            cancel_method = self.builder.cancel_bundle_method
-            replacement_uuid = [replacement_uuid]
-        return await self._send_message(cancel_method, replacement_uuid)
+        cancel_methods = [builder.cancel_bundle_method for builder in self.builders]
+        replacement_uuids = [replacement_uuids for _ in self.builders]
+        return await asyncio.gather(
+            *(self._send_message(builder, method, uuid) for builder, method, uuid in
+              zip(self.builders, cancel_methods, replacement_uuids))
+        )
 
     async def send_mev_bundle(
             self,
             bundle: MEVBundle
-    ) -> HexStr:
-        if isinstance(self.builder, list):
-            mev_method = [builder.mev_bundle_method for builder in self.builder]
-            bundle = [builder.format_mev_bundle(bundle) for builder in self.builder]
-        else:
-            mev_method = self.builder.mev_bundle_method
-            bundle = [bundle]
-        return await self._send_message(mev_method, bundle)
+    ) -> Any:
+        mev_methods = [builder.mev_bundle_method for builder in self.builders]
+        bundles = [builder.format_mev_bundle(bundle) for builder in self.builders]
+        return await asyncio.gather(
+            *(self._send_message(builder, method, bundle, True) for builder, method, bundle in
+              zip(self.builders, mev_methods, bundles))
+        )
 
     async def __aenter__(self):
         await self.start_session()
