@@ -1,6 +1,6 @@
 import asyncio
 
-from pythereum.rpc import EthRPC, SubscriptionType
+from pythereum import EthRPC, SubscriptionType
 from dotenv import dotenv_values
 
 config = dotenv_values("../.env")  # Pulls variables from .env into a dictionary
