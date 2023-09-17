@@ -566,25 +566,37 @@ class MEVBundle(dict):
     def __init__(
             self,
             version: str = "v0.1",
-            block: HexStr = HexStr(0),
-            max_block: HexStr | None = None,
-            flashbots_hashes: list[HexStr] | None = None,
-            transactions: list[HexStr] | None = None,
-            transaction_can_revert: bool | list[bool] = False,
+            block: HexStr | int | str = 0,
+            max_block: HexStr | int | str | None = None,
+            flashbots_hashes: list[HexStr] | list[str] | None = None,
+            transactions: list[HexStr] | list[str] | None = None,
+            transactions_can_revert: bool | list[bool] = False,
             extra_mev_bundles: list[dict] | None = None,
             refund_addresses: list[str] | None = None,
             refund_percentages: list[int] | None = None
     ):
         """
-        :param version: MEVBoost protocol version to use
-        :param block: The first block in which this bundle must be included
-        :param max_block: The maximum block height in which this bundle may be included
+        :param version: (OPTIONAL) MEVBoost protocol version to use
+        :param block: The first (or only) block in which this bundle must be included
+        :param max_block: (OPTIONAL) The maximum block height in which this bundle may be included
+        :param flashbots_hashes: (OPTIONAL) The hashes of flashbots transactions (transactions returned by flashbots)
+        :param transactions: (OPTIONAL) The hex hashes of signed transactions to be passed
+        :param transactions_can_revert: (OPTIONAL) Bool or list of bools defining whether each transaction may be reverted
+        :param extra_mev_bundles: (OPTIONAL) MEV bundles may be compounded, this parameter is a list of extra MEV bundles to include in this bundle
+        :param refund_addresses: A list of addresses for refunds to be addressed to
+        :param refund_percentages: A list of integers defining the percentage of refunds directed to each address
         """
+        if not isinstance(block, HexStr):
+            block = HexStr(block)
+
+        if max_block is not None and not isinstance(max_block, HexStr):
+            max_block = HexStr(max_block)
+
         if refund_percentages is None:
             refund_percentages = [100]
 
-        if isinstance(transaction_can_revert, bool):
-            transaction_can_revert = [transaction_can_revert for _ in range(len(transactions))]
+        if isinstance(transactions_can_revert, bool):
+            transactions_can_revert = [transactions_can_revert for _ in range(len(transactions))]
 
         res = {
             "version": version,
@@ -595,7 +607,7 @@ class MEVBundle(dict):
             res["body"].extend([{"hash": f_hash} for f_hash in flashbots_hashes])
 
         if transactions is not None:
-            res["body"].extend([{"tx": tx, "canRevert": rvt} for tx, rvt in zip(transactions, transaction_can_revert)])
+            res["body"].extend([{"tx": tx, "canRevert": rvt} for tx, rvt in zip(transactions, transactions_can_revert)])
 
         if extra_mev_bundles is not None:
             res["body"].extend([{"bundle": bd} for bd in extra_mev_bundles])
@@ -604,12 +616,11 @@ class MEVBundle(dict):
             res["inclusion"]["maxBlock"] = max_block
 
         if refund_addresses is not None:
-            res["validity"] = {}
-            res["validity"]["refundConfig"] = [
+            res["validity"] = {"refundConfig": [
                     {
                         "address": r_address,
                         "percent": r_percent
                     } for r_address, r_percent in zip(refund_addresses, refund_percentages)
-                ]
+            ]}
 
         super().__init__(res)
