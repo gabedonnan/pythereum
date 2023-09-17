@@ -226,17 +226,20 @@ class BuilderRPC:
     """
     An RPC class designed for sending raw transactions and bundles to specific block builders
     """
-    def __init__(self, builders: Builder | list[Builder], private_key: str | HexStr | list[str] | list[HexStr] = None):
+    def __init__(
+            self,
+            builders: Builder | list[Builder],
+            private_key: str | bytes | HexStr | list[str] | list[bytes] | list[HexStr] = None
+    ):
         if not isinstance(builders, list):
             builders = [builders]
         self.builders = builders
-        match private_key:
-            case list():
-                for key, builder in zip(private_key, self.builders):
-                    builder.private_key = HexStr(key)
-            case str():
-                for builder in self.builders:
-                    builder.private_key = HexStr(private_key)
+        if isinstance(private_key, list):
+            for key, builder in zip(private_key, self.builders):
+                builder.private_key = HexStr(key)
+        elif private_key is not None:
+            for builder in self.builders:
+                builder.private_key = HexStr(private_key)
         self.session = None
         self._id = 0
 
@@ -251,7 +254,6 @@ class BuilderRPC:
         :param params: list of parameters to use in the function call, cast to string so Hex data may be used
         :param increment: Boolean determining whether self._id will be advanced after the json is built
         :return: json dictionary
-        This is slightly slower than raw string construction with fstrings, but more elegant
         """
         res = {"jsonrpc": "2.0", "method": method, "params": params, "id": self._id}
 
@@ -259,36 +261,37 @@ class BuilderRPC:
             self._next_id()
         return res
 
-    async def _send_message(self, builder: Builder, method: str | list[str], params: list[Any], use_flashbots_signature: bool = False):
+    async def _send_message(
+            self,
+            builder: Builder,
+            method: str | list[str],
+            params: list[Any],
+            use_flashbots_signature: bool = False
+    ):
         if self.session is not None:
-            msg = await self._post(builder, method, params, use_flashbots_signature)
-            self._next_id()
+            constructed_json = self._build_json(method, params)
+            header_data = builder.get_flashbots_header(
+                json.dumps(constructed_json)
+            ) if use_flashbots_signature else builder.get_header(json.dumps(constructed_json))
+            async with self.session.post(
+                    builder.url,
+                    json=constructed_json,
+                    headers=header_data
+            ) as resp:
+                if resp.status != 200:
+                    raise ERPCRequestException(
+                        resp.status,
+                        f"Invalid BuilderRPC request for url {builder.url} of form "
+                        f"(method={method}, params={params})"
+                    )
+
+                msg = await resp.json()
         else:
             raise ERPCBuilderException(
                 "BuilderRPC session not started. Either context manage this class or call BuilderRPC.start_session()"
             )
 
         return parse_results(msg)
-
-    async def _post(self, builder: Builder, method: str, params: list[Any], use_flashbots_signature: bool) -> Any:
-        constructed_json = self._build_json(method, params, increment=False)
-        header_data = builder.get_flashbots_header(
-            json.dumps(constructed_json)
-        ) if use_flashbots_signature else builder.get_header(json.dumps(constructed_json))
-        async with self.session.post(
-                builder.url,
-                json=constructed_json,
-                headers=header_data
-        ) as resp:
-            if resp.status != 200:
-                raise ERPCRequestException(
-                    resp.status,
-                    f"Invalid BuilderRPC request for url {builder.url} of form "
-                    f"(method={method}, params={params})"
-                )
-
-            msg = await resp.json()
-        return msg
 
     async def start_session(self):
         self.session = aiohttp.ClientSession()
@@ -298,7 +301,7 @@ class BuilderRPC:
 
     async def send_private_transaction(
             self,
-            tx: str | HexStr | list[str] | list[HexStr],
+            tx: str | HexStr,
             extra_info: Any = None,
     ) -> Any:
         tx_methods = [builder.private_transaction_method for builder in self.builders]
@@ -310,7 +313,7 @@ class BuilderRPC:
 
     async def send_bundle(
             self,
-            bundle: Bundle | list[Bundle],
+            bundle: Bundle,
     ) -> Any:
         tx_methods = [builder.bundle_method for builder in self.builders]
         tx = [builder.format_bundle(bundle) for builder in self.builders]
@@ -321,7 +324,7 @@ class BuilderRPC:
 
     async def cancel_bundle(
             self,
-            replacement_uuids: str | HexStr | list[str] | list[HexStr],
+            replacement_uuids: str | HexStr,
     ):
         cancel_methods = [builder.cancel_bundle_method for builder in self.builders]
         replacement_uuids = [replacement_uuids for _ in self.builders]
@@ -350,4 +353,4 @@ class BuilderRPC:
 
 
 # A list containing all the current supported builders. Can be passed in to a BuilderRPC to send to all
-ALL_BUILDERS = [TitanBuilder(), Builder0x69(), RsyncBuilder(), BeaverBuilder()]
+ALL_BUILDERS = [TitanBuilder(), Builder0x69(), RsyncBuilder(), BeaverBuilder(), FlashbotsBuilder()]
