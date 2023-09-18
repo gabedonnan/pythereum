@@ -3,8 +3,7 @@ import statistics
 
 from time import time
 from pythereum.rpc import EthRPC, BlockTag
-from pythereum.dclasses import Receipt, Transaction
-from pythereum.common import HexStr
+from pythereum.dclasses import Receipt
 
 # auto get nonce for user, automatically supply gas stuff, etc.
 
@@ -71,27 +70,4 @@ class GasStrategy:
         return time() - self.storage_time
 
 
-class NonceManager:
-    def __init__(self, rpc: EthRPC):
-        self.rpc = rpc
-        self.nonces = {}
-
-    def __getitem__(self, key):
-        return self.nonces[HexStr(key)]
-
-    def __setitem__(self, key, value):
-        self.nonces[HexStr(key)] = value
-
-    async def next_nonce(self, address: str | HexStr) -> int:
-        address = HexStr(address)
-        if address in self.nonces:
-            self.nonces[address] += 1
-            return self.nonces[address]
-        else:
-            self.nonces[address] = await self.rpc.get_transaction_count(address)
-            return self.nonces[address]
-
-    async def fill_transaction(self, tx: Transaction) -> Transaction:
-        tx["nonce"] = await self.next_nonce(tx["from"])
-        return tx
 

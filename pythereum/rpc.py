@@ -11,7 +11,7 @@ from pythereum.exceptions import (
 from pythereum.common import HexStr
 from typing import List, Any
 from pythereum.socket_pool import WebsocketPool
-from pythereum.dclasses import Block, Sync, Receipt, Log, TransactionFull, TransactionFull, Bundle
+from pythereum.dclasses import Block, Sync, Receipt, Log, Transaction, TransactionFull, Bundle
 
 
 class EthDenomination(float, Enum):
@@ -158,10 +158,51 @@ class Subscription:
         return Sync.from_dict(data)
 
 
+class NonceManager:
+    def __init__(self, rpc: "EthRPC"):
+        self.rpc = rpc
+        self.nonces = {}
+
+    def __getitem__(self, key):
+        return self.nonces[HexStr(key)]
+
+    def __setitem__(self, key, value):
+        self.nonces[HexStr(key)] = value
+
+    async def __aenter__(self):
+        await self.rpc.start_pool()
+        return self
+
+    async def __aexit__(self, *args):
+        await self.rpc.close_pool()
+
+    async def next_nonce(self, address: str | HexStr) -> int:
+        address = HexStr(address)
+        if address in self.nonces:
+            self.nonces[address] += 1
+            return self.nonces[address]
+        else:
+            self.nonces[address] = await self.rpc.get_transaction_count(address)
+            return self.nonces[address]
+
+    async def fill_transaction(
+        self,
+        tx: dict | Transaction | list[dict] | list[Transaction]
+    ) -> dict | Transaction | list[dict] | list[Transaction]:
+        if isinstance(tx, list):
+            for sub_tx in tx:
+                sub_tx["nonce"] = await self.next_nonce(sub_tx["from"])
+        else:
+            tx["nonce"] = await self.next_nonce(tx["from"])
+        return tx
+
+
 class EthRPC:
-    def __init__(self, url: str, pool_size: int = 5) -> None:
+    def __init__(self, url: str, pool_size: int = 5, manage_transaction_nonces: bool = False) -> None:
         self._id = 0
         self._pool = WebsocketPool(url, pool_size)
+        self.manage_transaction_nonces = manage_transaction_nonces
+        self.nonce_manager = NonceManager(self)
 
     def _next_id(self) -> None:
         self._id += 1
@@ -619,6 +660,8 @@ class EthRPC:
         :return: Transaction hash (or zero hash if the transaction is not yet available)
         :type: 32 Byte Hex
         """
+        if self.manage_transaction_nonces:
+            transaction = self.nonce_manager.fill_transaction(transaction)
         return await self._send_message("eth_sendTransaction", [transaction], websocket)
 
     async def get_protocol_version(
