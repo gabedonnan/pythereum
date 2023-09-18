@@ -188,13 +188,16 @@ class NonceManager:
     async def fill_transaction(
         self,
         tx: dict | Transaction | list[dict] | list[Transaction]
-    ) -> dict | Transaction | list[dict] | list[Transaction]:
+    ) -> None:
+        """
+        This function mutates input dictionaries such that they are filled with the correct nonce values
+        """
         if isinstance(tx, list):
             for sub_tx in tx:
-                sub_tx["nonce"] = await self.next_nonce(sub_tx["from"])
+                # If elements in a list are references to the same list this will not work properly
+                sub_tx["nonce"] = HexStr(await self.next_nonce(sub_tx["from"]))
         else:
-            tx["nonce"] = await self.next_nonce(tx["from"])
-        return tx
+            tx["nonce"] = HexStr(await self.next_nonce(tx["from"]))
 
 
 class EthRPC:
@@ -661,7 +664,7 @@ class EthRPC:
         :type: 32 Byte Hex
         """
         if self.manage_transaction_nonces:
-            transaction = self.nonce_manager.fill_transaction(transaction)
+            await self.nonce_manager.fill_transaction(transaction)
         return await self._send_message("eth_sendTransaction", [transaction], websocket)
 
     async def get_protocol_version(
