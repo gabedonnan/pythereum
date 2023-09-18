@@ -190,7 +190,7 @@ class NonceManager:
         tx: dict | Transaction | list[dict] | list[Transaction]
     ) -> None:
         """
-        This function mutates input dictionaries such that they are filled with the correct nonce values
+        This function mutates input transaction dictionaries such that they are filled with the correct nonce values
         """
         if isinstance(tx, list):
             for sub_tx in tx:

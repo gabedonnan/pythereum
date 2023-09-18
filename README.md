@@ -170,7 +170,7 @@ Install poetry with the instructions [here.](https://python-poetry.org/docs/)
 ## Installation
 
 ### Poetry Installation
-The library currently requires python versions `>=3.11,<3.13`.
+The library currently requires python versions `>=3.11`.
 
 If you want to include this library for use in another project via Poetry
 you must simply add the following to your `pyproject.toml` file under `[tool.poetry.dependencies]`
