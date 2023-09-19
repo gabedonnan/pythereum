@@ -1,6 +1,7 @@
 import asyncio
 import statistics
 
+from math import inf
 from time import time
 from pythereum.rpc import EthRPC, BlockTag
 from pythereum.dclasses import Receipt
@@ -16,74 +17,68 @@ class GasStrategy:
         self.storage_time = None  # The time at which the most recent storage action was taken
 
     async def _get_latest_receipts(self, use_stored_results: bool) -> tuple[Receipt]:
+        """
+        Returns a tuple of the latest transaction receipts.
+        These are gotten by getting the latest block info and requesting transaction reciepts for each transaction.
+        To avoid doing this for every call, there is the option to use stored results from the most recent request.
+        """
         if use_stored_results:
             transaction_receipts = self.latest_receipts
         else:
             latest_block = await self.rpc.get_block_by_number(BlockTag.latest)
-            transaction_receipts = asyncio.gather(
+            transaction_receipts = await asyncio.gather(
                 *(self.rpc.get_transaction_receipt(transaction) for transaction in latest_block.transactions)
             )
             self.latest_receipts = transaction_receipts
             self.storage_time = time()
+        if len(transaction_receipts) == 0:
+            raise ERPCInvalidReturnException(f"Invalid vlue: {transaction_receipts} returned from _get_latest_receipts")
         return transaction_receipts
 
-    async def min_price(self, use_stored_results: bool = False) -> int:
+    async def min_price(self, attribute: str = "gas_used", use_stored_results: bool = False) -> int:
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
-        if len(transaction_receipts) == 0:
-            raise ERPCInvalidReturnException(f"Invalid vlue: {transaction_receipts} returned from _get_latest_receipts")
-        return min([x.gas_used for x in transaction_receipts])
+        return min([x.__getattribute__(attribute) for x in transaction_receipts])
 
-    async def max_price(self, use_stored_results: bool = False) -> int:
+    async def max_price(self, attribute: str = "gas_used", use_stored_results: bool = False) -> int:
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
-        if len(transaction_receipts) == 0:
-            raise ERPCInvalidReturnException(f"Invalid vlue: {transaction_receipts} returned from _get_latest_receipts")
-        return max([x.gas_used for x in transaction_receipts])
+        return max([x.__getattribute__(attribute) for x in transaction_receipts])
 
-    async def median_price(self, use_stored_results: bool = False) -> float:
+    async def median_price(self, attribute: str = "gas_used", use_stored_results: bool = False) -> float:
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
-        if len(transaction_receipts) == 0:
-            raise ERPCInvalidReturnException(f"Invalid vlue: {transaction_receipts} returned from _get_latest_receipts")
-        return statistics.median([x.gas_used for x in transaction_receipts])
+        return statistics.median([x.__getattribute__(attribute) for x in transaction_receipts])
 
-    async def mean_price(self, use_stored_results: bool = False) -> float:
+    async def mean_price(self, attribute: str = "gas_used", use_stored_results: bool = False) -> float:
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
-        if len(transaction_receipts) == 0:
-            raise ERPCInvalidReturnException(f"Invalid vlue: {transaction_receipts} returned from _get_latest_receipts")
-        return statistics.mean([x.gas_used for x in transaction_receipts])
+        return statistics.mean([x.__getattribute__(attribute) for x in transaction_receipts])
 
-    async def mode_price(self, use_stored_results: bool = False) -> int:
+    async def mode_price(self, attribute: str = "gas_used", use_stored_results: bool = False) -> int:
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
-        if len(transaction_receipts) == 0:
-            raise ERPCInvalidReturnException(f"Invalid vlue: {transaction_receipts} returned from _get_latest_receipts")
-        return statistics.mode([x.gas_used for x in transaction_receipts])
+        return statistics.mode([x.__getattribute__(attribute) for x in transaction_receipts])
 
-    async def upper_quartile_price(self, use_stored_results: bool = False) -> float:
+    async def upper_quartile_price(self, attribute: str = "gas_used", use_stored_results: bool = False) -> float:
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
-        if len(transaction_receipts) == 0:
-            raise ERPCInvalidReturnException(f"Invalid vlue: {transaction_receipts} returned from _get_latest_receipts")
-        return statistics.quantiles([x.gas_used for x in transaction_receipts], n=4)[2]
+        return statistics.quantiles([x.__getattribute__(attribute) for x in transaction_receipts], n=4)[2]
 
-    async def lower_quartile_price(self, use_stored_results: bool = False) -> float:
+    async def lower_quartile_price(self, attribute: str = "gas_used", use_stored_results: bool = False) -> float:
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
-        if len(transaction_receipts) == 0:
-            raise ERPCInvalidReturnException(f"Invalid vlue: {transaction_receipts} returned from _get_latest_receipts")
-        return statistics.quantiles([x.gas_used for x in transaction_receipts], n=4)[0]
+        return statistics.quantiles([x.__getattribute__(attribute) for x in transaction_receipts], n=4)[0]
 
-    async def percentile_price(self, percentile: int, use_stored_results: bool = False) -> float:
+    async def percentile_price(self, percentile: int, attribute: str = "gas_used", use_stored_results: bool = False) -> float:  # noqa
         """
         Gets the lower nth percentile, where 0 will be the lowest value and 98 will be the highest
         """
         percentile = min(max(percentile, 0), 98)
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
-        if len(transaction_receipts) == 0:
-            raise ERPCInvalidReturnException(f"Invalid vlue: {transaction_receipts} returned from _get_latest_receipts")
-        return statistics.quantiles([x.gas_used for x in transaction_receipts], n=100)[percentile]
+        return statistics.quantiles([x.__getattribute__(attribute) for x in transaction_receipts], n=100)[percentile]
 
     @property
     def storage_age(self):
         """
         The time elapsed since the most recent snapshot was taken
+        If no snapshots have been taken the return value will be infinity
         """
+        if self.storage_time is None:
+            return inf
         return time() - self.storage_time
 
 
