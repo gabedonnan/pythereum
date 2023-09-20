@@ -45,3 +45,9 @@ class ERPCBuilderException(ERPCBaseException):
     """
     Raised for exceptions related to builders and the BuilderRPC
     """
+
+
+class ERPCManagerException(ERPCBaseException):
+    """
+    Raised for exceptions related to manager classes such as nonce managers or gas managers
+    """

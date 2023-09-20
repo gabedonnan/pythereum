@@ -4,7 +4,8 @@ from pythereum.exceptions import (
     ERPCDecoderException,
     ERPCEncoderException,
     ERPCSubscriptionException,
-    ERPCBuilderException
+    ERPCBuilderException,
+    ERPCManagerException
 )
 
 
@@ -53,5 +54,12 @@ def test_ERPCSubscriptionException():
 def test_ERPCBuilderException():
     message = "Builder Error"
     exception = ERPCBuilderException(message)
+
+    assert str(exception) == message
+
+
+def test_ERPCManagerException():
+    message = "Manager Error"
+    exception = ERPCManagerException(message)
 
     assert str(exception) == message
