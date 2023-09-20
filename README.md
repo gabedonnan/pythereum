@@ -126,7 +126,7 @@ if __name__ == "__main__":
 # Example builder submission
 import asyncio
 from eth_account import Account
-from pythereum import BuilderRPC, TitanBuilder
+from pythereum import BuilderRPC, TitanBuilder, HexStr
 
 
 async def test_building():
@@ -144,10 +144,10 @@ async def test_building():
   }
   
   # Sign your transaction with your account's key
-  signed_tx = Account.sign_transaction(tx, acct.key)
+  signed_tx = Account.sign_transaction(tx, acct.key).rawTransaction
   
   async with BuilderRPC(TitanBuilder()) as brpc:
-    msg = await brpc.send_private_transaction(signed_tx)
+    msg = await brpc.send_private_transaction(HexStr(signed_tx))
     print(msg)
 
 
