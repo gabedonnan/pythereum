@@ -4,6 +4,7 @@ from pythereum.rpc import (
     BlockTag,
     EthDenomination,
     convert_eth,
+    NonceManager
 )
 
 from pythereum.common import HexStr
@@ -29,4 +30,14 @@ from pythereum.dclasses import (
     Transaction,
     Bundle,
     MEVBundle
+)
+
+from pythereum.exceptions import (
+    ERPCRequestException,
+    ERPCInvalidReturnException,
+    ERPCDecoderException,
+    ERPCEncoderException,
+    ERPCSubscriptionException,
+    ERPCBuilderException,
+    ERPCManagerException
 )
