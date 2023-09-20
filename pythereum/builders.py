@@ -291,7 +291,7 @@ class BuilderRPC:
                 "BuilderRPC session not started. Either context manage this class or call BuilderRPC.start_session()"
             )
 
-        return parse_results(msg)
+        return parse_results(msg, builder=builder.url)
 
     async def start_session(self):
         self.session = aiohttp.ClientSession()
