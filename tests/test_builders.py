@@ -47,7 +47,7 @@ async def test_flashbots_builder():
             await brpc.send_private_transaction(None)
         except ERPCRequestException as e:
             assert str(e) == ("Error 403: Invalid BuilderRPC request for url https://relay.flashbots.net of form ("
-                              "method=eth_sendPrivateRawTransaction, params=[[{'tx': None, 'preferences': None}]])")
+                              "method=eth_sendPrivateRawTransaction, params=[{'tx': None, 'preferences': None}])")
 
 
 @pytest.mark.asyncio
