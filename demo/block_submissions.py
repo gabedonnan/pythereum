@@ -1,7 +1,7 @@
 # Example builder submission
 import asyncio
 from eth_account import Account
-from pythereum import BuilderRPC, TitanBuilder, RsyncBuilder, HexStr, NonceManager
+from pythereum import BuilderRPC, TitanBuilder, RsyncBuilder, HexStr, NonceManager, Transaction
 from dotenv import dotenv_values
 
 erpc_url = dotenv_values("../.env")["TEST_WS"]  # Pulls variables from .env into a dictionary
@@ -12,15 +12,17 @@ async def building():
     acct = Account.create()
     # Create an arbitrary transaction
     async with NonceManager(erpc_url) as nm:
-        tx = {  # Adjust this transaction as you see fit!!
-            "from": f"{acct.address}",
-            "to": "0x5fC2E691E520bbd3499f409bb9602DBA94184672",
-            "value": 1,
-            "gas": 1,
-            "gasPrice": 1,
-            "chainId": 1
-        }
+        tx = Transaction(
+            from_address=acct.address,
+            to_address="0x5fC2E691E520bbd3499f409bb9602DBA94184672",
+            value=1,
+            max_priority_fee_per_gas=1,
+            max_fee_per_gas=1,
+            gas=1,
+            chain_id=1
+        )
         await nm.fill_transaction(tx)
+
     # Sign your transaction with your account's key
     signed_tx = Account.sign_transaction(tx, acct.key).rawTransaction
 

@@ -126,22 +126,25 @@ if __name__ == "__main__":
 # Example builder submission
 import asyncio
 from eth_account import Account
-from pythereum import BuilderRPC, TitanBuilder, HexStr
+from pythereum import BuilderRPC, TitanBuilder, HexStr, Transaction
 
 
 async def test_building():
   # Create new arbitrary account wallet
   acct = Account.create()
-  # Create an arbitrary transaction
-  tx = {
-    "from": f"{acct.address}",
-    "to": "0x5fC2E691E520bbd3499f409bb9602DBA94184672",
-    "value": 1,
-    "gas": 2000000,
-    "gasPrice": 234567897654321,
-    "nonce": 0,
-    "chainId": 1
-  }
+  # Create an arbitrary EIP-1559 transaction
+  # This transaction is an equivalence to a dictionary, 
+  # it simply provides a convenient constructor
+  tx = Transaction(
+    from_address=acct.address,
+    to_address="0x5fC2E691E520bbd3499f409bb9602DBA94184672",
+    value=1,
+    max_priority_fee_per_gas=1,
+    max_fee_per_gas=1,
+    gas=1,
+    chain_id=1,
+    nonce=0
+  )
   
   # Sign your transaction with your account's key
   signed_tx = Account.sign_transaction(tx, acct.key).rawTransaction

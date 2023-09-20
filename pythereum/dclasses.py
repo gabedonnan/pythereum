@@ -472,16 +472,35 @@ class Access:
 
 
 class Transaction(dict):
-    # Not actually a dataclass but a custom implementation was easiest here
+    """
+    from_address: Address from which fees should be sent. Transaction must be signed by private key from this account.
+
+    to_address: Address to which fees are sent
+
+    max_priority_fee_per_gas: The maximum price of the consumed gas to be included as a tip to the validator
+
+    max_fee_per_gas: The maximum fee per unit of gas willing to be paid for the transaction
+    (inclusive of baseFeePerGas and maxPriorityFeePerGas)
+
+    gas: Maximum gas allocated for execution of the transaction onchain (evm specifies the correct amount to use)
+
+    value: Value in wei sent from the from_address to to_address
+
+    data: Optional extra data
+
+    nonce: A sequentially incrementing counter uniquely identifying each transaction from each account
+    """
     def __init__(
             self,
             from_address: str | HexStr,
-            to_address: str | HexStr | None,
-            gas: int | HexStr | str | None,
-            gas_price: int | HexStr | str | None,
-            value: int | HexStr | str | None,
-            data: str | HexStr | None,
-            nonce: int | HexStr | str
+            to_address: str | HexStr | None = None,
+            max_priority_fee_per_gas: int | HexStr | str | None = None,
+            max_fee_per_gas: int | HexStr | str | None = None,
+            gas: int | HexStr | str | None = None,
+            value: int | HexStr | str | None = None,
+            data: str | HexStr | None = None,
+            nonce: int | HexStr | str | None = None,
+            chain_id: int | HexStr | str | None = None
     ):
         if from_address is not None:
             from_address = HexStr(from_address)
@@ -492,22 +511,28 @@ class Transaction(dict):
         if data is not None:
             data = HexStr(data)
 
-        if isinstance(gas, int):
-            gas = hex(gas)
+        if isinstance(max_priority_fee_per_gas, int):
+            max_priority_fee_per_gas = HexStr(max_priority_fee_per_gas)
 
-        if isinstance(gas_price, int):
-            gas_price = hex(gas_price)
+        if isinstance(max_fee_per_gas, int):
+            max_fee_per_gas = HexStr(max_fee_per_gas)
+
+        if isinstance(gas, int):
+            gas = HexStr(gas)
 
         if isinstance(value, int):
-            value = hex(value)
+            value = HexStr(value)
 
         if isinstance(nonce, int):
-            nonce = hex(nonce)
+            nonce = HexStr(nonce)
+
+        if isinstance(chain_id, int):
+            chain_id = HexStr(chain_id)
 
         super().__init__({
             key: val for key, val in zip(
-                ("from", "to", "gas", "gasPrice", "value", "data", "nonce"),
-                (from_address, to_address, gas, gas_price, value, data, nonce)
+                ("from", "to", "maxPriorityFeePerGas", "maxFeePerGas", "gas", "value", "data", "nonce", "chainId"),
+                (from_address, to_address, max_priority_fee_per_gas, max_fee_per_gas, gas, value, data, nonce, chain_id)
             ) if val is not None
         })
 
