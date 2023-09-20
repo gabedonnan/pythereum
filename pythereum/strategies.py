@@ -19,7 +19,7 @@ class GasStrategy:
     async def _get_latest_receipts(self, use_stored_results: bool) -> tuple[Receipt]:
         """
         Returns a tuple of the latest transaction receipts.
-        These are gotten by getting the latest block info and requesting transaction reciepts for each transaction.
+        These are gotten by getting the latest block info and requesting transaction receipts for each transaction.
         To avoid doing this for every call, there is the option to use stored results from the most recent request.
         """
         if use_stored_results:
@@ -35,35 +35,35 @@ class GasStrategy:
             raise ERPCInvalidReturnException(f"Invalid vlue: {transaction_receipts} returned from _get_latest_receipts")
         return transaction_receipts
 
-    async def min_price(self, attribute: str = "gas_used", use_stored_results: bool = False) -> int:
+    async def min_price(self, attribute: str = "effective_gas_price", use_stored_results: bool = False) -> int:
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
         return min([x.__getattribute__(attribute) for x in transaction_receipts])
 
-    async def max_price(self, attribute: str = "gas_used", use_stored_results: bool = False) -> int:
+    async def max_price(self, attribute: str = "effective_gas_price", use_stored_results: bool = False) -> int:
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
         return max([x.__getattribute__(attribute) for x in transaction_receipts])
 
-    async def median_price(self, attribute: str = "gas_used", use_stored_results: bool = False) -> float:
+    async def median_price(self, attribute: str = "effective_gas_price", use_stored_results: bool = False) -> float:
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
         return statistics.median([x.__getattribute__(attribute) for x in transaction_receipts])
 
-    async def mean_price(self, attribute: str = "gas_used", use_stored_results: bool = False) -> float:
+    async def mean_price(self, attribute: str = "effective_gas_price", use_stored_results: bool = False) -> float:
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
         return statistics.mean([x.__getattribute__(attribute) for x in transaction_receipts])
 
-    async def mode_price(self, attribute: str = "gas_used", use_stored_results: bool = False) -> int:
+    async def mode_price(self, attribute: str = "effective_gas_price", use_stored_results: bool = False) -> int:
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
         return statistics.mode([x.__getattribute__(attribute) for x in transaction_receipts])
 
-    async def upper_quartile_price(self, attribute: str = "gas_used", use_stored_results: bool = False) -> float:
+    async def upper_quartile_price(self, attribute: str = "effective_gas_price", use_stored_results: bool = False) -> float:
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
         return statistics.quantiles([x.__getattribute__(attribute) for x in transaction_receipts], n=4)[2]
 
-    async def lower_quartile_price(self, attribute: str = "gas_used", use_stored_results: bool = False) -> float:
+    async def lower_quartile_price(self, attribute: str = "effective_gas_price", use_stored_results: bool = False) -> float:
         transaction_receipts = await self._get_latest_receipts(use_stored_results)
         return statistics.quantiles([x.__getattribute__(attribute) for x in transaction_receipts], n=4)[0]
 
-    async def percentile_price(self, percentile: int, attribute: str = "gas_used", use_stored_results: bool = False) -> float:  # noqa
+    async def percentile_price(self, percentile: int, attribute: str = "effective_gas_price", use_stored_results: bool = False) -> float:  # noqa
         """
         Gets the lower nth percentile, where 0 will be the lowest value and 98 will be the highest
         """
