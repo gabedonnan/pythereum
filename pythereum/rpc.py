@@ -12,7 +12,7 @@ from pythereum.exceptions import (
 from pythereum.common import HexStr
 from typing import List, Any
 from pythereum.socket_pool import WebsocketPool
-from pythereum.dclasses import Block, Sync, Receipt, Log, Transaction, TransactionFull, Bundle
+from pythereum.dclasses import Block, Sync, Receipt, Log, Transaction, TransactionFull
 
 
 class EthDenomination(float, Enum):
