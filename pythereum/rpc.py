@@ -7,6 +7,7 @@ from pythereum.exceptions import (
     ERPCRequestException,
     ERPCInvalidReturnException,
     ERPCSubscriptionException,
+    ERPCManagerException
 )
 from pythereum.common import HexStr
 from typing import List, Any
@@ -83,7 +84,7 @@ class SubscriptionType(str, Enum):
     syncing = "syncing"
 
 
-def parse_results(res: str | dict, is_subscription: bool = False) -> Any:
+def parse_results(res: str | dict, is_subscription: bool = False, builder: str = None) -> Any:
     """
     Validates and parses the results of an RPC
     """
@@ -100,10 +101,11 @@ def parse_results(res: str | dict, is_subscription: bool = False) -> Any:
     if "result" not in res:
         # Error case as no result is found
         if "error" in res:
-            raise ERPCRequestException(res["error"]["code"], res["error"]["message"])
+            errmsg = res["error"]["message"] + ("" if builder is None else f" for builder {builder}")
+            raise ERPCRequestException(res["error"]["code"], errmsg)
         else:
             raise ERPCInvalidReturnException(
-                f"Invalid return value from ERPC, return format: {res}"
+                f"Invalid return value from RPC, return format: {res}"
             )
 
     return res["result"]
@@ -159,7 +161,15 @@ class Subscription:
 
 
 class NonceManager:
-    def __init__(self, rpc: "EthRPC"):
+    """
+    Manages the nonces of addresses for the purposes of constructing transactions,
+    requires an RPC connection in order to get starting transaction counts for each address.
+
+    Currently operates assuming no other sources are creating transactions from a given address.
+    """
+    def __init__(self, rpc: "EthRPC | str | None" = None):
+        if isinstance(rpc, str):
+            rpc = EthRPC(rpc, 1)
         self.rpc = rpc
         self.nonces = {}
 
@@ -170,7 +180,10 @@ class NonceManager:
         self.nonces[HexStr(key)] = value
 
     async def __aenter__(self):
-        await self.rpc.start_pool()
+        if self.rpc is not None:
+            await self.rpc.start_pool()
+        else:
+            raise ERPCManagerException("NonceManager was never given EthRPC or RPC Url instance")
         return self
 
     async def __aexit__(self, *args):
@@ -178,12 +191,11 @@ class NonceManager:
 
     async def next_nonce(self, address: str | HexStr) -> int:
         address = HexStr(address)
-        if address in self.nonces:
-            self.nonces[address] += 1
-            return self.nonces[address]
+        if self.rpc is not None and address not in self.nonces:
+            self.nonces[address] = await self.rpc.get_transaction_count(address, BlockTag.latest)
         else:
-            self.nonces[address] = await self.rpc.get_transaction_count(address)
-            return self.nonces[address]
+            self.nonces[address] += 1
+        return self.nonces[address]
 
     async def fill_transaction(
         self,
@@ -201,11 +213,20 @@ class NonceManager:
 
 
 class EthRPC:
+    """
+    A class managing communication with an Ethereum node via the Ethereum JSON RPC API.
+    """
     def __init__(self, url: str, pool_size: int = 5, manage_transaction_nonces: bool = False) -> None:
+        """
+        :param url: URL for the ethereum node to connect to
+        :param pool_size: The number of websocket connections opened for the WebsocketPool
+        :param manage_transaction_nonces: Boolean determining whether nonces for each transaction will be autofilled,
+        one websocket of the pool may be used for autofilling transactions.
+        """
         self._id = 0
         self._pool = WebsocketPool(url, pool_size)
         self.manage_transaction_nonces = manage_transaction_nonces
-        self.nonce_manager = NonceManager(self)
+        self.nonce_manager = NonceManager()
 
     def _next_id(self) -> None:
         self._id += 1
@@ -664,6 +685,9 @@ class EthRPC:
         :type: 32 Byte Hex
         """
         if self.manage_transaction_nonces:
+            if transaction["from"] not in self.nonce_manager.nonces:
+                # 1 must be subtracted from the current transaction count as it will be incremented for fill_transaction
+                self.nonce_manager["from"] = await self.get_transaction_count(transaction["from"], BlockTag.latest) - 1
             await self.nonce_manager.fill_transaction(transaction)
         return await self._send_message("eth_sendTransaction", [transaction], websocket)
 
