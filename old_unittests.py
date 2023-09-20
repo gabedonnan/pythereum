@@ -176,7 +176,7 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
         print(r)
 
     async def test_get_block_by_number(self):
-        r = await self.rpc.get_block_by_number(17578346, False)
+        r = await self.rpc.get_block_by_number(BlockTag.latest, True)
         print(r)
 
     async def test_get_syncing(self):

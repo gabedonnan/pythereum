@@ -9,8 +9,9 @@ Features include:
 - "eth_subscribe" functionality
 - Websocket pooling for high performance calls
 - Support for RPC batching, allowing multiple calls to the same function at once
-- Currency conversion for wei, so you don't have to rely on external libs like Web3.py
+- Currency conversion, with support for esoteric denomination names (e.g. lovelace)
 - Private transaction and Bundle support for communication directly with block builders
+- Automatic nonce management for transactions, with automatic gas management coming in the future
 
 ### Implemented RPC methods
 
@@ -26,12 +27,12 @@ The following builder classes are currently implemented:
 
 - Titan Builder
 - Rsync Builder
-- Beaver Builder (Using same parameters as rsync, may need adjustment)
 - Builder0x69
-- Flashbots Builder (additional robustness testing needed)
+- Flashbots Builder
+- Beaver Builder (Very poorly documented parameters online, may need adjustment)
 
-With support for creating custom builder classes by inheriting from the `Builder` class.
-An implementation of the Beaver Builder and support for [mevboost](mevboost.pics) coming in future versions.
+
+Each of these now have support for [mevboost](https://mevboost.pics) bundles.
 
 ### Example usage
 
@@ -185,7 +186,7 @@ pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 or 
 
 ```toml
-pythereum = "^1.1.0"
+pythereum = "^1.1.1"
 ```
 
 If you would like to install the library via pypi instead of via this git repository.

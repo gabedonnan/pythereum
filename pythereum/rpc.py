@@ -1081,9 +1081,7 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: Returns an integer filter ID
         """
-        param = self._object_formatter(
-            from_block=from_block, to_block=to_block, address=address, topics=topics
-        )
+        param = {"from": from_block, "to": to_block, "address": address, "topics": topics}
         msg = await self._send_message("eth_newFilter", [param], websocket)
         match msg:
             case None:
@@ -1216,9 +1214,7 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: Returns a list of log objects or nothing if no changes have occurred since last poll
         """
-        param = self._object_formatter(
-            from_block=from_block, to_block=to_block, address=address, topics=topics
-        )
+        param = {"from": from_block, "to": to_block, "address": address, "topics": topics}
         msg = await self._send_message("eth_getLogs", [param], websocket)
         match msg:
             case None:
