@@ -1,13 +1,17 @@
 from pythereum.rpc import (
     EthRPC,
+    convert_eth,
+    NonceManager,
+    GasManager
+)
+
+from pythereum.common import (
     SubscriptionType,
     BlockTag,
     EthDenomination,
-    convert_eth,
-    NonceManager
+    GasStrategy,
+    HexStr
 )
-
-from pythereum.common import HexStr
 
 from pythereum.builders import (
     BuilderRPC,

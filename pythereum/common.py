@@ -1,4 +1,68 @@
 import re
+from enum import Enum
+
+
+class GasStrategy(Enum):
+    min_price = 0
+    max_price = 1
+    median_price = 2
+    mean_price = 3
+    mode_price = 4
+    upper_quartile_price = 5
+    lower_quartile_price = 6
+    custom = 7  # Exists such that custom gas managers may be implemented
+
+
+class SubscriptionType(str, Enum):
+    new_heads = "newHeads"
+    logs = "logs"
+    new_pending_transactions = "newPendingTransactions"
+    syncing = "syncing"
+
+
+class BlockTag(str, Enum):
+    """Data type encapsulating all possible non-integer values for a DefaultBlock parameter
+    API Documentation at: https://ethereum.org/en/developers/docs/apis/json-rpc/#default-block
+    """
+
+    earliest = "earliest"  # Genesis block
+    latest = "latest"  # Last mined block
+    pending = "pending"  # Pending state/transactions
+    safe = "safe"  # Latest safe head block
+    finalized = "finalized"  # Latest finalized block
+
+
+DefaultBlock = int | BlockTag | str
+
+
+class EthDenomination(float, Enum):
+    """
+    An enumeration of all names of eth denominations and their corresponding wei values
+    """
+    wei = 1.0
+    kwei = 1e3
+    babbage = 1e3
+    femtoether = 1e3
+    mwei = 1e6
+    lovelace = 1e6
+    picoether = 1e6
+    gwei = 1e9
+    shannon = 1e9
+    nanoether = 1e9
+    nano = 1e9
+    szabo = 1e12
+    microether = 1e12
+    micro = 1e12
+    finney = 1e15
+    milliether = 1e15
+    milli = 1e15
+    ether = 1e18
+    eth = 1e18
+    kether = 1e21
+    grand = 1e21
+    mether = 1e24
+    gether = 1e27
+    tether = 1e30
 
 
 class HexStr(str):
