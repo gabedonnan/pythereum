@@ -208,7 +208,7 @@ class NonceManager:
             for sub_tx in tx:
                 # If elements in a list are references to the same list this will not work properly
                 sub_tx["nonce"] = HexStr(await self.next_nonce(sub_tx["from"]))
-        else:
+        elif tx is not None:
             tx["nonce"] = HexStr(await self.next_nonce(tx["from"]))
 
 

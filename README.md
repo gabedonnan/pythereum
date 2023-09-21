@@ -1,4 +1,4 @@
-# pythereum 
+# pythereum
 (formerly eth_rpc)
 ### A lightweight Ethereum RPC library for Python
 
@@ -15,7 +15,7 @@ Features include:
 
 ### Implemented RPC methods
 
-All methods listed in the [Ethereum JSON RPC API specification](https://ethereum.org/en/developers/docs/apis/json-rpc/) are completed as of version `1.0.5`, 
+All methods listed in the [Ethereum JSON RPC API specification](https://ethereum.org/en/developers/docs/apis/json-rpc/) are completed as of version `1.0.5`,
 alongside methods for subscriptions, and support for calling custom function names with custom parameters.
 
 ### Supported Builders
@@ -146,10 +146,10 @@ async def test_building():
     chain_id=1,
     nonce=0
   )
-  
+
   # Sign your transaction with your account's key
   signed_tx = Account.sign_transaction(tx, acct.key).rawTransaction
-  
+
   async with BuilderRPC(TitanBuilder()) as brpc:
     msg = await brpc.send_private_transaction(HexStr(signed_tx))
     print(msg)
@@ -183,7 +183,7 @@ you must simply add the following to your `pyproject.toml` file under `[tool.poe
 pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 ```
 
-or 
+or
 
 ```toml
 pythereum = "^1.1.1"
@@ -219,7 +219,7 @@ Instructions available at [this link.](https://book.getfoundry.sh/getting-starte
 
 Anvil is a blockchain testing application included with foundry.
 
-The following command will run an instance of anvil representing 
+The following command will run an instance of anvil representing
 the blockchain's status at block number ```EXAMPLE_BLOCK_NUM``` via url
 ```EXAMPLE_RPC_URL```.
 
