@@ -1,6 +1,6 @@
 import json
+import statistics
 from contextlib import asynccontextmanager
-from enum import Enum
 
 import websockets
 from pythereum.exceptions import (
@@ -9,40 +9,11 @@ from pythereum.exceptions import (
     ERPCSubscriptionException,
     ERPCManagerException
 )
-from pythereum.common import HexStr
-from typing import List, Any
+from pythereum.common import HexStr, EthDenomination, BlockTag, DefaultBlock, SubscriptionType, GasStrategy
+from typing import Any
+from math import inf
 from pythereum.socket_pool import WebsocketPool
 from pythereum.dclasses import Block, Sync, Receipt, Log, Transaction, TransactionFull
-
-
-class EthDenomination(float, Enum):
-    """
-    An enumeration of all names of eth denominations and their corresponding wei values
-    """
-    wei = 1.0
-    kwei = 1e3
-    babbage = 1e3
-    femtoether = 1e3
-    mwei = 1e6
-    lovelace = 1e6
-    picoether = 1e6
-    gwei = 1e9
-    shannon = 1e9
-    nanoether = 1e9
-    nano = 1e9
-    szabo = 1e12
-    microether = 1e12
-    micro = 1e12
-    finney = 1e15
-    milliether = 1e15
-    milli = 1e15
-    ether = 1e18
-    eth = 1e18
-    kether = 1e21
-    grand = 1e21
-    mether = 1e24
-    gether = 1e27
-    tether = 1e30
 
 
 def convert_eth(
@@ -60,28 +31,6 @@ def convert_eth(
         quantity = quantity.integer_value
 
     return (convert_from.value * quantity) / covert_to.value
-
-
-class BlockTag(str, Enum):
-    """Data type encapsulating all possible non-integer values for a DefaultBlock parameter
-    API Documentation at: https://ethereum.org/en/developers/docs/apis/json-rpc/#default-block
-    """
-
-    earliest = "earliest"  # Genesis block
-    latest = "latest"  # Last mined block
-    pending = "pending"  # Pending state/transactions
-    safe = "safe"  # Latest safe head block
-    finalized = "finalized"  # Latest finalized block
-
-
-DefaultBlock = int | BlockTag | str
-
-
-class SubscriptionType(str, Enum):
-    new_heads = "newHeads"
-    logs = "logs"
-    new_pending_transactions = "newPendingTransactions"
-    syncing = "syncing"
 
 
 def parse_results(res: str | dict, is_subscription: bool = False, builder: str = None) -> Any:
@@ -212,11 +161,118 @@ class NonceManager:
             tx["nonce"] = HexStr(await self.next_nonce(tx["from"]))
 
 
+class GasManager:
+    def __init__(
+        self,
+        rpc: "EthRPC | str | None" = None,
+        max_gas_price: int | None = None,
+        max_fee_price: int | None = None,
+        max_priority_price: int | None = None
+    ):
+        if isinstance(rpc, str):
+            rpc = EthRPC(rpc, 1)
+        self.rpc = rpc
+        self.latest_transactions = None
+        self.max_gas_price = max_gas_price if max_gas_price is not None else EthDenomination.tether
+        self.max_fee_price = max_fee_price if max_fee_price is not None else EthDenomination.tether
+        self.max_priority_price = max_priority_price if max_priority_price is not None else EthDenomination.tether
+
+    async def __aenter__(self):
+        if self.rpc is not None:
+            await self.rpc.start_pool()
+        else:
+            raise ERPCManagerException("NonceManager was never given EthRPC or RPC Url instance")
+        return self
+
+    async def __aexit__(self, *args):
+        await self.rpc.close_pool()
+
+    async def _get_latest_receipts(self, use_stored_results: bool = False) -> list[TransactionFull]:
+        """
+        Returns a tuple of the latest transaction receipts.
+        These are gotten by getting the latest block info and requesting transaction receipts for each transaction.
+        To avoid doing this for every call, there is the option to use stored results from the most recent request.
+        """
+        if use_stored_results:
+            transactions = self.latest_transactions
+        else:
+            latest_block = await self.rpc.get_block_by_number(BlockTag.latest, True)
+            transactions = latest_block.transactions
+            self.latest_transactions = transactions
+        if len(transactions) == 0:
+            raise ERPCInvalidReturnException(f"Invalid vlue: {transactions} returned from _get_latest_receipts")
+        return transactions
+
+    async def suggest(
+        self,
+        strategy: GasStrategy,
+        attribute: str,
+        use_stored_results: bool = False
+    ) -> float:
+        transactions = await self._get_latest_receipts(use_stored_results)
+        prices = [x.__getattribute__(attribute) for x in transactions if x.__getattribute__(attribute) is not None]
+        match strategy:
+            case GasStrategy.min_price:
+                res = min(prices)
+            case GasStrategy.max_price:
+                res = max(prices)
+            case GasStrategy.median_price:
+                res = statistics.median(prices)
+            case GasStrategy.mean_price:
+                res = statistics.mean(prices)
+            case GasStrategy.upper_quartile_price:
+                res = statistics.quantiles(prices, n=4)[2]
+            case GasStrategy.lower_quartile_price:
+                res = statistics.quantiles(prices, n=4)[0]
+            case _:
+                raise ERPCManagerException(f"Invalid strategy of type {strategy} spawned")
+        return round(res)
+
+    async def fill_transaction(
+        self,
+        tx: dict | Transaction | list[dict] | list[Transaction],
+        strategy: GasStrategy | dict[str, GasStrategy] = GasStrategy.mean_price,
+        use_stored: bool = False
+    ) -> None:
+        if isinstance(strategy, GasStrategy):  # Allows for separation of strategy types for each type
+            strategy = {"gas": strategy, "maxFeePerGas": strategy, "maxPriorityFeePerGas": strategy}
+        if isinstance(tx, list):
+            for sub_tx in tx:
+                sub_tx["gas"] = min(await self.suggest(strategy["gas"], "gas", use_stored), self.max_gas_price)
+                sub_tx["maxFeePerGas"] = min(
+                    await self.suggest(strategy["maxFeePerGas"], "max_fee_per_gas", True),
+                    self.max_fee_price
+                )
+                sub_tx["maxPriorityFeePerGas"] = min(
+                    await self.suggest(strategy["maxPriorityFeePerGas"], "max_priority_fee_per_gas", True),
+                    self.max_priority_price
+                )
+        elif tx is not None:
+            tx["gas"] = min(await self.suggest(strategy["gas"], "gas", use_stored), self.max_gas_price)
+            tx["maxFeePerGas"] = min(
+                await self.suggest(strategy["maxFeePerGas"], "max_fee_per_gas", True),
+                self.max_fee_price
+            )
+            tx["maxPriorityFeePerGas"] = min(
+                await self.suggest(strategy["maxPriorityFeePerGas"], "max_priority_fee_per_gas", True),
+                self.max_priority_price
+            )
+
+
 class EthRPC:
     """
     A class managing communication with an Ethereum node via the Ethereum JSON RPC API.
     """
-    def __init__(self, url: str, pool_size: int = 5, manage_transaction_nonces: bool = False) -> None:
+    def __init__(
+        self,
+        url: str,
+        pool_size: int = 5,
+        manage_transaction_nonces: bool = False,
+        gas_management_strategy: GasStrategy = None,
+        max_gas_price: int | None = None,
+        max_fee_price: int | None = None,
+        max_priority_price: int | None = None
+    ) -> None:
         """
         :param url: URL for the ethereum node to connect to
         :param pool_size: The number of websocket connections opened for the WebsocketPool
@@ -226,7 +282,13 @@ class EthRPC:
         self._id = 0
         self._pool = WebsocketPool(url, pool_size)
         self.manage_transaction_nonces = manage_transaction_nonces
+        self.gas_management_strategy = gas_management_strategy
         self.nonce_manager = NonceManager()
+        self.gas_manager = GasManager(
+            max_gas_price=max_gas_price,
+            max_fee_price=max_fee_price,
+            max_priority_price=max_priority_price
+        )
 
     def _next_id(self) -> None:
         self._id += 1
@@ -649,46 +711,20 @@ class EthRPC:
     async def send_transaction(
         self,
         transaction: dict | list[dict],
+        strategy: dict | GasStrategy = GasStrategy.mean_price,
         websocket: websockets.WebSocketClientProtocol | None = None,
     ):
         """
         Creates a new message call transaction or contract creation
-        :param transaction: Built transaction object, formed as a dict with the following keys
-            :key from: The address the transaction is sent from
-            :type: 20 Byte Hex Address
-
-            :key to: (OPTIONAL WHEN CREATING CONTRACT) The address the transaction is directed to
-            :type: 20 Byte Hex Address
-
-            :key gas: (OPTIONAL) Integer of gas provided for transaction execution
-            :type: Hex int
-                Note: Unused gas will be returned
-                Note: gasPrice key is used for older blocks on the blockchain instead of the following two
-
-            :key maxFeePerGas: (OPTIONAL) baseFeePerGas (determined by the network) + maxPriorityFeePerGas
-            :type: Hex int
-
-            :key maxPriorityFeePerGas: (OPTIONAL) Incentive fee you are willing to pay to ensure transaction execution
-            :type: Hex int
-
-            :key value: (OPTIONAL) Integer of the value sent with the transaction
-            :type: Hex int
-
-            :key data: Compiled contract code OR the hash of the invoked method signature with its encoded params
-            :type: Hash (Ethereum contract ABI)
-
-            :key nonce: (OPTIONAL) Integer of a nonce.
-            This allows overwriting your pending transactions with the same nonce
-            :type: Hex Int
-        :param websocket: An optional external websocket for calls to this function
-        :return: Transaction hash (or zero hash if the transaction is not yet available)
-        :type: 32 Byte Hex
         """
         if self.manage_transaction_nonces:
             if transaction["from"] not in self.nonce_manager.nonces:
                 # 1 must be subtracted from the current transaction count as it will be incremented for fill_transaction
                 self.nonce_manager["from"] = await self.get_transaction_count(transaction["from"], BlockTag.latest) - 1
             await self.nonce_manager.fill_transaction(transaction)
+        if self.gas_management_strategy is not None:
+            self.gas_manager.latest_transactions = (await self.get_block_by_number(BlockTag.latest, True)).transactions
+            await self.gas_manager.fill_transaction(transaction, strategy, True)
         return await self._send_message("eth_sendTransaction", [transaction], websocket)
 
     async def get_protocol_version(
@@ -746,7 +782,7 @@ class EthRPC:
 
     async def get_accounts(
         self, websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> List[str | HexStr]:
+    ) -> list[str | HexStr]:
         """
         Returns a list of addresses owned by client.
         """
