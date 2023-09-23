@@ -4,14 +4,14 @@
 
 Features include:
 - Ability to initiate remote procedure calls on a wide variety of ethereum functions
-  - More functions are added whenever possible to this list
-- Typed function outputs for easy manipulation of results
-- "eth_subscribe" functionality
 - Websocket pooling for high performance calls
 - Support for RPC batching, allowing multiple calls to the same function at once
+- "eth_subscribe" functionality
 - Currency conversion, with support for esoteric denomination names (e.g. lovelace)
 - Private transaction and Bundle support for communication directly with block builders
 - Automatic nonce management for transactions, with automatic gas management coming in the future
+- Typed function outputs for intuitive library use
+
 
 ### Implemented RPC methods
 
@@ -48,7 +48,7 @@ TEST_URL = "ws://127.0.0.1:8545"
 async def test_transaction_count():
   async with EthRPC(TEST_URL, pool_size=1) as erpc:
     # Gets the number of transactions sent from a given EOA address
-    r = await erpc.get_transaction_count("0xabcdefghijklmnopqrstuvwxyz1234567890")
+    r = await erpc.get_transaction_count("0x5fC2E691E520bbd3499f409bb9602DBA94184672")
     print(r)
 
 if __name__ == "__main__":
@@ -130,7 +130,7 @@ from eth_account import Account
 from pythereum import BuilderRPC, TitanBuilder, HexStr, Transaction
 
 
-async def test_building():
+async def test_builder_submission():
   # Create new arbitrary account wallet
   acct = Account.create()
   # Create an arbitrary EIP-1559 transaction
@@ -156,7 +156,7 @@ async def test_building():
 
 
 if __name__ == "__main__":
-  asyncio.run(test_building())
+  asyncio.run(test_builder_submission())
 ```
 
 More examples available in the [demo](https://github.com/gabedonnan/pythereum/tree/main/demo) folder.
@@ -223,10 +223,14 @@ The following command will run an instance of anvil representing
 the blockchain's status at block number ```EXAMPLE_BLOCK_NUM``` via url
 ```EXAMPLE_RPC_URL```.
 
-This is helpful for ensuring consistency in tests.
-
 ```bash
 anvil rpc-url EXAMPLE_RPC_URL@EXAMPLE_BLOCK_NUM
+```
+
+This is helpful for ensuring consistency in tests, or to simply have a simulated RPC client, run:
+
+```bash
+anvil
 ```
 
 ### Acknowledgements
