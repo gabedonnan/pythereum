@@ -1,5 +1,6 @@
 # Example builder submission
 import asyncio
+from time import time
 from eth_account import Account
 from pythereum import (
     BuilderRPC,
@@ -28,18 +29,23 @@ async def building():
         value=1,
         chain_id=1
     )
-    manager_rpc = EthRPC(erpc_url, 1)
-
-    # Fill the nonce value of the transaction automatically
-    async with NonceManager(manager_rpc) as nm:
-        await nm.fill_transaction(tx)
-
     # Define gas strategies for each facet of the GasManager
     gas_strategy = {
         "gas": GasStrategy.lower_quartile_price,
         "maxFeePerGas": GasStrategy.mean_price,
-        "maxPriorityFeePerGas": GasStrategy.min_price
+        "maxPriorityFeePerGas": GasStrategy.mean_price
     }
+    manager_rpc = EthRPC(erpc_url, 1)
+
+    # With statements allow for easy management of RPC websocket opening and closing, standard code is faster
+
+    # With statement example
+
+    t0 = time()
+    # Fill the nonce value of the transaction automatically
+    async with NonceManager(manager_rpc) as nm:
+        await nm.fill_transaction(tx)
+
     # Fill the transactions gas, priority fee, and fee prices in the transaction
     async with GasManager(
             manager_rpc,
@@ -48,6 +54,38 @@ async def building():
             max_fee_price=3 * EthDenomination.microether
     ) as gm:
         await gm.fill_transaction(tx, strategy=gas_strategy)
+    print(f"{tx} formed in {time() - t0} seconds taken with with statements (context managed)")
+    # Standard code example
+
+    t0 = time()
+    await manager_rpc.start_pool()
+    nm = NonceManager(manager_rpc)
+    gm = GasManager(
+            manager_rpc,
+            max_gas_price=EthDenomination.picoether,
+            max_priority_price=3 * EthDenomination.microether,
+            max_fee_price=3 * EthDenomination.microether
+    )
+    await nm.fill_transaction(tx)
+    await gm.fill_transaction(tx, strategy=gas_strategy)
+    await manager_rpc.close_pool()
+    print(f"{tx} formed in {time() - t0} seconds taken without with statements (not context managed)")
+
+    # Without websocket pool
+
+    t0 = time()
+    socketless_manager_rpc = EthRPC(erpc_url, use_socket_pool=False)
+    async with NonceManager(socketless_manager_rpc) as nm:
+        await nm.fill_transaction(tx)
+
+    async with GasManager(
+            manager_rpc,
+            max_gas_price=EthDenomination.picoether,
+            max_priority_price=3 * EthDenomination.microether,
+            max_fee_price=3 * EthDenomination.microether
+    ) as gm:
+        await gm.fill_transaction(tx)
+    print(f"{tx} formed in {time() - t0} seconds taken without with socket pool")
 
     # Sign your transaction with your account's key
     signed_tx = Account.sign_transaction(tx, acct.key).rawTransaction
