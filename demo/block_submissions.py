@@ -85,7 +85,7 @@ async def building():
             max_fee_price=3 * EthDenomination.microether
     ) as gm:
         await gm.fill_transaction(tx)
-    print(f"{tx} formed in {time() - t0} seconds taken without with socket pool")
+    print(f"{tx} formed in {time() - t0} seconds taken with aiohttp")
 
     # Sign your transaction with your account's key
     signed_tx = Account.sign_transaction(tx, acct.key).rawTransaction
