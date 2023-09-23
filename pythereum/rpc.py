@@ -2,6 +2,7 @@ import json
 import statistics
 from contextlib import asynccontextmanager
 
+import aiohttp
 import websockets
 from pythereum.exceptions import (
     ERPCRequestException,
@@ -293,7 +294,8 @@ class EthRPC:
             self._pool = WebsocketPool(url, pool_size)
         else:
             self._pool = None
-        self._url = url
+            self.session = aiohttp.ClientSession()
+        self._http_url = url.replace("wss://", "https://").replace("ws://", "http://")
         self.manage_transaction_nonces = manage_transaction_nonces
         self.gas_management_strategy = gas_management_strategy
         self.nonce_manager = NonceManager()
@@ -307,7 +309,7 @@ class EthRPC:
         self._id += 1
 
     async def __aenter__(self):
-        await self._pool.start()
+        await self.start_pool()
         return self
 
     async def __aexit__(self, *args):
@@ -419,6 +421,9 @@ class EthRPC:
         """Exposes the ability to start the ERPC's socket pool before the first method call"""
         if self._pool is not None:
             await self._pool.start()
+        else:
+            await self.session.close()
+            self.session = aiohttp.ClientSession()
 
     async def close_pool(self) -> None:
         """
@@ -426,6 +431,8 @@ class EthRPC:
         """
         if self._pool is not None:
             await self._pool.quit()
+        else:
+            await self.session.close()
 
     async def _send_message(
         self,
@@ -459,9 +466,18 @@ class EthRPC:
                     msg = await ws.recv()
             else:
                 # Creating new websocket connections
-                async with websockets.connect(self._url) as ws:
-                    await ws.send(built_msg)
-                    msg = await ws.recv()
+                async with self.session.post(
+                        url=self._http_url,
+                        data=built_msg,
+                        headers={"Content-Type": "application/json"}
+                ) as resp:
+                    if resp.status != 200:
+                        raise ERPCRequestException(
+                            resp.status,
+                            f"Invalid EthRPC request for url {self._http_url} of form {built_msg}"
+                        )
+
+                    msg = await resp.json()
         else:
             # Using a given websocket
             await websocket.send(built_msg)
