@@ -31,7 +31,7 @@ async def building():
     )
     # Define gas strategies for each facet of the GasManager
     gas_strategy = {
-        "gas": GasStrategy.lower_quartile_price,
+        "gas": GasStrategy.mode_price,
         "maxFeePerGas": GasStrategy.mean_price,
         "maxPriorityFeePerGas": GasStrategy.mean_price
     }
@@ -84,7 +84,7 @@ async def building():
             max_priority_price=3 * EthDenomination.microether,
             max_fee_price=3 * EthDenomination.microether
     ) as gm:
-        await gm.fill_transaction(tx)
+        await gm.fill_transaction(tx, strategy=gas_strategy)
     print(f"{tx} formed in {time() - t0} seconds taken with aiohttp")
 
     # Sign your transaction with your account's key
