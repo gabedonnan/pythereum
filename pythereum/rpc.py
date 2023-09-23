@@ -165,17 +165,17 @@ class GasManager:
     def __init__(
         self,
         rpc: "EthRPC | str | None" = None,
-        max_gas_price: int | None = None,
-        max_fee_price: int | None = None,
-        max_priority_price: int | None = None
+        max_gas_price: float | EthDenomination | None = None,
+        max_fee_price: float | EthDenomination | None = None,
+        max_priority_price: float | EthDenomination | None = None
     ):
         if isinstance(rpc, str):
             rpc = EthRPC(rpc, 1)
         self.rpc = rpc
         self.latest_transactions = None
-        self.max_gas_price = max_gas_price if max_gas_price is not None else EthDenomination.tether
-        self.max_fee_price = max_fee_price if max_fee_price is not None else EthDenomination.tether
-        self.max_priority_price = max_priority_price if max_priority_price is not None else EthDenomination.tether
+        self.max_gas_price = int(max_gas_price if max_gas_price is not None else EthDenomination.tether)
+        self.max_fee_price = int(max_fee_price if max_fee_price is not None else EthDenomination.tether)
+        self.max_priority_price = int(max_priority_price if max_priority_price is not None else EthDenomination.tether)
 
     async def __aenter__(self):
         if self.rpc is not None:
@@ -220,10 +220,14 @@ class GasManager:
                 res = statistics.median(prices)
             case GasStrategy.mean_price:
                 res = statistics.mean(prices)
+            case GasStrategy.mode_price:
+                res = statistics.mode(prices)
             case GasStrategy.upper_quartile_price:
                 res = statistics.quantiles(prices, n=4)[2]
             case GasStrategy.lower_quartile_price:
                 res = statistics.quantiles(prices, n=4)[0]
+            case GasStrategy.custom:
+                res = self.custom_pricing(prices)
             case _:
                 raise ERPCManagerException(f"Invalid strategy of type {strategy} spawned")
         return round(res)
@@ -257,6 +261,10 @@ class GasManager:
                 await self.suggest(strategy["maxPriorityFeePerGas"], "max_priority_fee_per_gas", True),
                 self.max_priority_price
             )
+
+    def custom_pricing(self, prices):
+        # Override this function when subclassing for custom pricing implementation
+        raise ERPCManagerException("Custom pricing strategy not defined for this class")
 
 
 class EthRPC:
