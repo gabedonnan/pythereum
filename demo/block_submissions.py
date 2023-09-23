@@ -79,7 +79,7 @@ async def building():
         await nm.fill_transaction(tx)
 
     async with GasManager(
-            manager_rpc,
+            socketless_manager_rpc,
             max_gas_price=EthDenomination.picoether,
             max_priority_price=3 * EthDenomination.microether,
             max_fee_price=3 * EthDenomination.microether
