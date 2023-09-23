@@ -275,6 +275,7 @@ class EthRPC:
         self,
         url: str,
         pool_size: int = 5,
+        use_socket_pool: bool = True,
         manage_transaction_nonces: bool = False,
         gas_management_strategy: GasStrategy = None,
         max_gas_price: int | None = None,
@@ -288,7 +289,11 @@ class EthRPC:
         one websocket of the pool may be used for autofilling transactions.
         """
         self._id = 0
-        self._pool = WebsocketPool(url, pool_size)
+        if use_socket_pool:
+            self._pool = WebsocketPool(url, pool_size)
+        else:
+            self._pool = None
+        self._url = url
         self.manage_transaction_nonces = manage_transaction_nonces
         self.gas_management_strategy = gas_management_strategy
         self.nonce_manager = NonceManager()
@@ -412,13 +417,15 @@ class EthRPC:
 
     async def start_pool(self) -> None:
         """Exposes the ability to start the ERPC's socket pool before the first method call"""
-        await self._pool.start()
+        if self._pool is not None:
+            await self._pool.start()
 
     async def close_pool(self) -> None:
         """
         Closes the socket pool, this is important to not leave hanging open connections
         """
-        await self._pool.quit()
+        if self._pool is not None:
+            await self._pool.quit()
 
     async def _send_message(
         self,
@@ -442,14 +449,22 @@ class EthRPC:
             if any(isinstance(param, tuple) for param in params)
             else self._build_json
         )
+        built_msg = json_builder(method, params)
         if websocket is None:
             # Gets a new websocket if one is not supplied to the function
-            async with self._pool.get_socket() as ws:
-                await ws.send(json_builder(method, params))
-                msg = await ws.recv()
+            if self._pool is not None:
+                # Using websocket pool
+                async with self._pool.get_socket() as ws:
+                    await ws.send(built_msg)
+                    msg = await ws.recv()
+            else:
+                # Creating new websocket connections
+                async with websockets.connect(self._url) as ws:
+                    await ws.send(built_msg)
+                    msg = await ws.recv()
         else:
-            # Sends a message with a given websocket
-            await websocket.send(json_builder(method, params))
+            # Using a given websocket
+            await websocket.send(built_msg)
             msg = await websocket.recv()
         return parse_results(msg, is_subscription)
 
