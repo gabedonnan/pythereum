@@ -2,7 +2,7 @@ import json
 import statistics
 from contextlib import asynccontextmanager
 
-import aiohttp
+from aiohttp import ClientSession
 import websockets
 from pythereum.exceptions import (
     ERPCRequestException,
@@ -12,7 +12,6 @@ from pythereum.exceptions import (
 )
 from pythereum.common import HexStr, EthDenomination, BlockTag, DefaultBlock, SubscriptionType, GasStrategy
 from typing import Any
-from math import inf
 from pythereum.socket_pool import WebsocketPool
 from pythereum.dclasses import Block, Sync, Receipt, Log, Transaction, TransactionFull
 
@@ -294,7 +293,7 @@ class EthRPC:
             self._pool = WebsocketPool(url, pool_size)
         else:
             self._pool = None
-            self.session = aiohttp.ClientSession()
+            self.session = ClientSession()
         self._http_url = url.replace("wss://", "https://").replace("ws://", "http://")
         self.manage_transaction_nonces = manage_transaction_nonces
         self.gas_management_strategy = gas_management_strategy
@@ -423,7 +422,7 @@ class EthRPC:
             await self._pool.start()
         else:
             await self.session.close()
-            self.session = aiohttp.ClientSession()
+            self.session = ClientSession()
 
     async def close_pool(self) -> None:
         """
@@ -474,7 +473,7 @@ class EthRPC:
                     if resp.status != 200:
                         raise ERPCRequestException(
                             resp.status,
-                            f"Invalid EthRPC request for url {self._http_url} of form {built_msg}"
+                            f"Invalid EthRPC aiohttp request for url {self._http_url} of form {built_msg}"
                         )
 
                     msg = await resp.json()
