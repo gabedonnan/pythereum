@@ -240,6 +240,7 @@ class GasManager:
     ) -> None:
         if isinstance(strategy, GasStrategy):  # Allows for separation of strategy types for each type
             strategy = {"gas": strategy, "maxFeePerGas": strategy, "maxPriorityFeePerGas": strategy}
+
         if isinstance(tx, list):
             for sub_tx in tx:
                 sub_tx["gas"] = min(await self.suggest(strategy["gas"], "gas", use_stored), self.max_gas_price)
@@ -277,7 +278,7 @@ class EthRPC:
         pool_size: int = 5,
         use_socket_pool: bool = True,
         manage_transaction_nonces: bool = False,
-        gas_management_strategy: GasStrategy = None,
+        gas_management_strategy: dict | GasStrategy = None,
         max_gas_price: int | None = None,
         max_fee_price: int | None = None,
         max_priority_price: int | None = None
@@ -285,8 +286,13 @@ class EthRPC:
         """
         :param url: URL for the ethereum node to connect to
         :param pool_size: The number of websocket connections opened for the WebsocketPool
+        :param use_socket_pool: Whether the socket pool should be used or AIOHTTP requests
         :param manage_transaction_nonces: Boolean determining whether nonces for each transaction will be autofilled,
         one websocket of the pool may be used for autofilling transactions.
+        :param gas_management_strategy: A dictionary of GasStrategy objects or single GasStrategy
+        :param max_gas_price: The maximum gas price for gas managed transactions
+        :param max_fee_price: The maximum gas fee price for managed transactions
+        :param max_priority_price: The maximum priority fee for managed transactions
         """
         self._id = 0
         if use_socket_pool:

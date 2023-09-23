@@ -71,7 +71,10 @@ async def building():
     await manager_rpc.close_pool()
     print(f"{tx} formed in {time() - t0} seconds taken without with statements (not context managed)")
 
-    # Without websocket pool
+    # Using AIOHTTP without a websocket pool
+    # This is fastest in this case because only 2 RPCs need to be made
+    # The websocket pool is more optimal for when many procedure calls are made,
+    # as it allows them to be executed in parallel
 
     t0 = time()
     socketless_manager_rpc = EthRPC(erpc_url, use_socket_pool=False)
