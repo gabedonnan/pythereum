@@ -9,7 +9,7 @@ Features include:
 - "eth_subscribe" functionality
 - Currency conversion, with support for esoteric denomination names (e.g. lovelace)
 - Private transaction and Bundle support for communication directly with block builders
-- Automatic nonce management for transactions, with automatic gas management coming in the future
+- Automatic nonce and gas management for transactions
 - Typed function outputs for intuitive library use
 
 
@@ -186,7 +186,7 @@ pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 or
 
 ```toml
-pythereum = "^1.1.1"
+pythereum = "^1.1.2"
 ```
 
 If you would like to install the library via pypi instead of via this git repository.

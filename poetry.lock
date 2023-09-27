@@ -467,13 +467,13 @@ cython = ["cython"]
 
 [[package]]
 name = "dataclasses-json"
-version = "0.6.0"
+version = "0.6.1"
 description = "Easily serialize dataclasses to and from JSON."
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "dataclasses_json-0.6.0-py3-none-any.whl", hash = "sha256:77cbc80041007c27db90abad79eeed9ea00d4627324b1208266379a6ebdc81e4"},
-    {file = "dataclasses_json-0.6.0.tar.gz", hash = "sha256:5bcd5c1d946a69ef94d8cbb726d87af1256f7ba0898809c7695d299ab9b45122"},
+    {file = "dataclasses_json-0.6.1-py3-none-any.whl", hash = "sha256:1bd8418a61fe3d588bb0079214d7fb71d44937da40742b787256fd53b26b6c80"},
+    {file = "dataclasses_json-0.6.1.tar.gz", hash = "sha256:a53c220c35134ce08211a1057fd0e5bf76dc5331627c6b241cacbc570a89faae"},
 ]
 
 [package.dependencies]
@@ -1334,4 +1334,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<4.0"
-content-hash = "074a90247f1206c82e77d59e4a08df07dfc04bd178f618e5594bc54e6b3b9f10"
+content-hash = "742e3ec0929a43a1f6254bb2a2428453c944e28ac19cef488ce112cc3feedef0"
