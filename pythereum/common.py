@@ -84,7 +84,7 @@ class HexStr(str):
         elif isinstance(value, int):
             formatted_value = hex(value)
         elif isinstance(value, bytes):
-            formatted_value = value.hex()
+            formatted_value = f"0x{value.hex()}"
         else:
             raise ValueError(
                 f"Unsupported type {type(value)} for HexStr. Must be str or int."
