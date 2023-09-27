@@ -15,21 +15,21 @@ class WebsocketPool:
         self._max_pool_size = pool_size
         self._sockets_used = 0
         self._sockets = Queue(maxsize=pool_size)
-        self._connected = False
+        self.connected = False
 
     async def start(self) -> None:
         """
         Initialises the correct number of connections
         Restarts the websocket pool if run while already connected
         """
-        if self._connected:
+        if self.connected:
             await self.quit()
         # Creates a number of sockets equal to the maximum pool size
         for _ in range(self._max_pool_size):
             ws = await websockets.connect(self._url)
             await self._sockets.put(ws)
         self._sockets_used = 0
-        self._connected = True
+        self.connected = True
 
     @asynccontextmanager
     async def get_socket(self) -> websockets.WebSocketClientProtocol:
@@ -38,7 +38,7 @@ class WebsocketPool:
         The websockets will be returned to the main pool upon exiting the with statement in which this should be called
         """
         # Ensures the batch size returned does not exceed the limit
-        if not self._connected:
+        if not self.connected:
             # Ensures that get_socket can be called without needing to explicitly call start() beforehand
             await self.start()
         socket = await self._sockets.get()
@@ -59,4 +59,4 @@ class WebsocketPool:
             await sock.close()
             self._sockets.task_done()
         self._sockets_used = 0
-        self._connected = False
+        self.connected = False
