@@ -121,6 +121,7 @@ class NonceManager:
             rpc = EthRPC(rpc, 1)
         self.rpc = rpc
         self.nonces = {}
+        self._close_pool = True
 
     def __getitem__(self, key):
         return self.nonces[HexStr(key)]
@@ -130,13 +131,17 @@ class NonceManager:
 
     async def __aenter__(self):
         if self.rpc is not None:
-            await self.rpc.start_pool()
+            if not self.rpc.pool_connected():
+                await self.rpc.start_pool()
+            else:
+                self._close_pool = False
         else:
             raise ERPCManagerException("NonceManager was never given EthRPC or RPC Url instance")
         return self
 
     async def __aexit__(self, *args):
-        await self.rpc.close_pool()
+        if self._close_pool:
+            await self.rpc.close_pool()
 
     async def next_nonce(self, address: str | HexStr) -> int:
         address = HexStr(address)
@@ -176,16 +181,21 @@ class GasManager:
         self.max_gas_price = int(max_gas_price if max_gas_price is not None else EthDenomination.tether)
         self.max_fee_price = int(max_fee_price if max_fee_price is not None else EthDenomination.tether)
         self.max_priority_price = int(max_priority_price if max_priority_price is not None else EthDenomination.tether)
+        self._close_pool = True
 
     async def __aenter__(self):
         if self.rpc is not None:
-            await self.rpc.start_pool()
+            if not self.rpc.pool_connected():
+                await self.rpc.start_pool()
+            else:
+                self._close_pool = False
         else:
             raise ERPCManagerException("NonceManager was never given EthRPC or RPC Url instance")
         return self
 
     async def __aexit__(self, *args):
-        await self.rpc.close_pool()
+        if self._close_pool:
+            await self.rpc.close_pool()
 
     async def _get_latest_receipts(self, use_stored_results: bool = False) -> list[TransactionFull]:
         """
@@ -421,6 +431,12 @@ class EthRPC:
             return [item for item in zip(*param_list)]
         else:
             return param_list
+
+    def pool_connected(self) -> bool:
+        if self._pool is None:
+            return False
+        else:
+            return self._pool.connected
 
     async def start_pool(self) -> None:
         """Exposes the ability to start the ERPC's socket pool before the first method call"""
