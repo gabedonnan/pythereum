@@ -186,7 +186,7 @@ pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 or
 
 ```toml
-pythereum = "^1.1.3"
+pythereum = "^1.1.4"
 ```
 
 If you would like to install the library via pypi instead of via this git repository.

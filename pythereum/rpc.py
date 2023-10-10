@@ -233,9 +233,15 @@ class GasManager:
             case GasStrategy.mode_price:
                 res = statistics.mode(prices)
             case GasStrategy.upper_quartile_price:
-                res = statistics.quantiles(prices, n=4)[2]
+                try:
+                    res = statistics.quantiles(prices, n=4)[2]
+                except statistics.StatisticsError:
+                    res = statistics.mean(prices)
             case GasStrategy.lower_quartile_price:
-                res = statistics.quantiles(prices, n=4)[0]
+                try:
+                    res = statistics.quantiles(prices, n=4)[0]
+                except statistics.StatisticsError:
+                    res = statistics.mean(prices)
             case GasStrategy.custom:
                 res = self.custom_pricing(prices)
             case _:

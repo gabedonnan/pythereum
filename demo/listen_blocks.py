@@ -26,9 +26,10 @@ async def listen_blocks(url):
 
             # Iterates through the transactions found in retrieved data
             for tx in block.transactions:
+                print(tx)
                 # Gets and prints the receipts for each transaction
-                r = await erpc.get_transaction_receipt(tx.hash)
-                print(r)
+                # r = await erpc.get_transaction_receipt(tx.hash)
+                # print(r)
     await erpc.close_pool()
 
 
