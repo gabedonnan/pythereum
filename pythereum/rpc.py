@@ -166,124 +166,6 @@ class NonceManager:
             tx["nonce"] = HexStr(await self.next_nonce(tx["from"]))
 
 
-class GasManager:
-    def __init__(
-        self,
-        rpc: "EthRPC | str | None" = None,
-        max_gas_price: float | EthDenomination | None = None,
-        max_fee_price: float | EthDenomination | None = None,
-        max_priority_price: float | EthDenomination | None = None
-    ):
-        if isinstance(rpc, str):
-            rpc = EthRPC(rpc, 1)
-        self.rpc = rpc
-        self.latest_transactions = None
-        self.max_gas_price = int(max_gas_price if max_gas_price is not None else EthDenomination.tether)
-        self.max_fee_price = int(max_fee_price if max_fee_price is not None else EthDenomination.tether)
-        self.max_priority_price = int(max_priority_price if max_priority_price is not None else EthDenomination.tether)
-        self._close_pool = True
-
-    async def __aenter__(self):
-        if self.rpc is not None:
-            if not self.rpc.pool_connected():
-                await self.rpc.start_pool()
-            else:
-                self._close_pool = False
-        else:
-            raise ERPCManagerException("NonceManager was never given EthRPC or RPC Url instance")
-        return self
-
-    async def __aexit__(self, *args):
-        if self._close_pool:
-            await self.rpc.close_pool()
-
-    async def _get_latest_receipts(self, use_stored_results: bool = False) -> list[TransactionFull]:
-        """
-        Returns a tuple of the latest transaction receipts.
-        These are gotten by getting the latest block info and requesting transaction receipts for each transaction.
-        To avoid doing this for every call, there is the option to use stored results from the most recent request.
-        """
-        if use_stored_results:
-            transactions = self.latest_transactions
-        else:
-            latest_block = await self.rpc.get_block_by_number(BlockTag.latest, True)
-            transactions = latest_block.transactions
-            self.latest_transactions = transactions
-        if len(transactions) == 0:
-            raise ERPCInvalidReturnException(f"Invalid vlue: {transactions} returned from _get_latest_receipts")
-        return transactions
-
-    async def suggest(
-        self,
-        strategy: GasStrategy,
-        attribute: str,
-        use_stored_results: bool = False
-    ) -> float:
-        transactions = await self._get_latest_receipts(use_stored_results)
-        prices = [x.__getattribute__(attribute) for x in transactions if x.__getattribute__(attribute) is not None]
-        match strategy:
-            case GasStrategy.min_price:
-                res = min(prices)
-            case GasStrategy.max_price:
-                res = max(prices)
-            case GasStrategy.median_price:
-                res = statistics.median(prices)
-            case GasStrategy.mean_price:
-                res = statistics.mean(prices)
-            case GasStrategy.mode_price:
-                res = statistics.mode(prices)
-            case GasStrategy.upper_quartile_price:
-                try:
-                    res = statistics.quantiles(prices, n=4)[2]
-                except statistics.StatisticsError:
-                    res = statistics.mean(prices)
-            case GasStrategy.lower_quartile_price:
-                try:
-                    res = statistics.quantiles(prices, n=4)[0]
-                except statistics.StatisticsError:
-                    res = statistics.mean(prices)
-            case GasStrategy.custom:
-                res = self.custom_pricing(prices)
-            case _:
-                raise ERPCManagerException(f"Invalid strategy of type {strategy} spawned")
-        return round(res)
-
-    async def fill_transaction(
-        self,
-        tx: dict | Transaction | list[dict] | list[Transaction],
-        strategy: GasStrategy | dict[str, GasStrategy] = GasStrategy.mean_price,
-        use_stored: bool = False
-    ) -> None:
-        if isinstance(strategy, GasStrategy):  # Allows for separation of strategy types for each type
-            strategy = {"gas": strategy, "maxFeePerGas": strategy, "maxPriorityFeePerGas": strategy}
-
-        if isinstance(tx, list):
-            for sub_tx in tx:
-                sub_tx["gas"] = min(await self.suggest(strategy["gas"], "gas", use_stored), self.max_gas_price)
-                sub_tx["maxFeePerGas"] = min(
-                    await self.suggest(strategy["maxFeePerGas"], "max_fee_per_gas", True),
-                    self.max_fee_price
-                )
-                sub_tx["maxPriorityFeePerGas"] = min(
-                    await self.suggest(strategy["maxPriorityFeePerGas"], "max_priority_fee_per_gas", True),
-                    self.max_priority_price
-                )
-        elif tx is not None:
-            tx["gas"] = min(await self.suggest(strategy["gas"], "gas", use_stored), self.max_gas_price)
-            tx["maxFeePerGas"] = min(
-                await self.suggest(strategy["maxFeePerGas"], "max_fee_per_gas", True),
-                self.max_fee_price
-            )
-            tx["maxPriorityFeePerGas"] = min(
-                await self.suggest(strategy["maxPriorityFeePerGas"], "max_priority_fee_per_gas", True),
-                self.max_priority_price
-            )
-
-    def custom_pricing(self, prices):
-        # Override this function when subclassing for custom pricing implementation
-        raise ERPCManagerException("Custom pricing strategy not defined for this class")
-
-
 class EthRPC:
     """
     A class managing communication with an Ethereum node via the Ethereum JSON RPC API.
@@ -293,22 +175,11 @@ class EthRPC:
         url: str,
         pool_size: int = 5,
         use_socket_pool: bool = True,
-        manage_transaction_nonces: bool = False,
-        gas_management_strategy: dict | GasStrategy = None,
-        max_gas_price: int | None = None,
-        max_fee_price: int | None = None,
-        max_priority_price: int | None = None
     ) -> None:
         """
         :param url: URL for the ethereum node to connect to
         :param pool_size: The number of websocket connections opened for the WebsocketPool
         :param use_socket_pool: Whether the socket pool should be used or AIOHTTP requests
-        :param manage_transaction_nonces: Boolean determining whether nonces for each transaction will be autofilled,
-        one websocket of the pool may be used for autofilling transactions.
-        :param gas_management_strategy: A dictionary of GasStrategy objects or single GasStrategy
-        :param max_gas_price: The maximum gas price for gas managed transactions
-        :param max_fee_price: The maximum gas fee price for managed transactions
-        :param max_priority_price: The maximum priority fee for managed transactions
         """
         self._id = 0
         if use_socket_pool:
@@ -317,14 +188,6 @@ class EthRPC:
             self._pool = None
             self.session = ClientSession()
         self._http_url = url.replace("wss://", "https://").replace("ws://", "http://")
-        self.manage_transaction_nonces = manage_transaction_nonces
-        self.gas_management_strategy = gas_management_strategy
-        self.nonce_manager = NonceManager()
-        self.gas_manager = GasManager(
-            max_gas_price=max_gas_price,
-            max_fee_price=max_fee_price,
-            max_priority_price=max_priority_price
-        )
 
     def _next_id(self) -> None:
         self._id += 1
@@ -783,14 +646,6 @@ class EthRPC:
         """
         Creates a new message call transaction or contract creation
         """
-        if self.manage_transaction_nonces:
-            if transaction["from"] not in self.nonce_manager.nonces:
-                # 1 must be subtracted from the current transaction count as it will be incremented for fill_transaction
-                self.nonce_manager["from"] = await self.get_transaction_count(transaction["from"], BlockTag.latest) - 1
-            await self.nonce_manager.fill_transaction(transaction)
-        if self.gas_management_strategy is not None:
-            self.gas_manager.latest_transactions = (await self.get_block_by_number(BlockTag.latest, True)).transactions
-            await self.gas_manager.fill_transaction(transaction, strategy, True)
         return await self._send_message("eth_sendTransaction", [transaction], websocket)
 
     async def get_protocol_version(

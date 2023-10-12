@@ -2,7 +2,6 @@ from pythereum.rpc import (
     EthRPC,
     convert_eth,
     NonceManager,
-    GasManager
 )
 
 from pythereum.common import (
