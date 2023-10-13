@@ -120,10 +120,12 @@ class InformedGasManager:
     ):
         self.rpc = rpc
         self.latest_transactions = None
-        self.max_gas_price = int(max_gas_price if max_gas_price is not None else EthDenomination.milli)
-        self.max_fee_price = int(max_fee_price if max_fee_price is not None else EthDenomination.milli)
-        self.max_priority_price = int(max_priority_price if max_priority_price is not None else EthDenomination.milli)
-        self.prices = {"gas": None, "maxFeePerGas": None, "maxPriorityFeePerGas": None}
+        self.prices = {"gas": 0, "maxFeePerGas": 0, "maxPriorityFeePerGas": 0}
+        self.max_prices = {
+            "gas": int(max_gas_price if max_gas_price is not None else EthDenomination.milli),
+            "maxFeePerGas": int(max_fee_price if max_fee_price is not None else EthDenomination.milli),
+            "maxPriorityFeePerGas": int(max_priority_price if max_priority_price is not None else EthDenomination.milli)
+        }
         self.fail_multiplier = fail_multiplier
         self.success_multiplier = success_multiplier
 
@@ -149,6 +151,36 @@ class InformedGasManager:
         self.prices["maxPriorityFeePerGas"] *= self.success_multiplier
         self.prices["maxFeePerGas"] = max(self.prices["maxFeePerGas"], self.prices["maxPriorityFeePerGas"])
 
+    def fill_transaction(
+        self,
+        tx: dict | Transaction | list[dict] | list[Transaction]
+    ):
+        if isinstance(tx, list):
+            for sub_tx in tx:
+                sub_tx["gas"] = min(
+                    self.prices["gas"], self.max_prices["gas"]
+                )
+
+                sub_tx["maxFeePerGas"] = min(
+                    self.prices["maxFeePerGas"], self.max_prices["maxFeePerGas"]
+                )
+
+                sub_tx["maxPriorityFeePerGas"] = min(
+                    self.prices["maxPriorityFeePerGas"], self.max_prices["maxPriorityFeePerGas"]
+                )
+        else:
+            tx["gas"] = min(
+                self.prices["gas"], self.max_prices["gas"]
+            )
+
+            tx["maxFeePerGas"] = min(
+                self.prices["maxFeePerGas"], self.max_prices["maxFeePerGas"]
+            )
+
+            tx["maxPriorityFeePerGas"] = min(
+                self.prices["maxPriorityFeePerGas"], self.max_prices["maxPriorityFeePerGas"]
+            )
+
 
 class GasManager:
     def __init__(
@@ -165,6 +197,7 @@ class GasManager:
         self.max_fee_price = int(max_fee_price if max_fee_price is not None else EthDenomination.milli)
         self.max_priority_price = int(max_priority_price if max_priority_price is not None else EthDenomination.milli)
         self.naive_latest_transactions = None
+        self.informed_tx_prices = {"gas": 0, "maxFeePerGas": 0, "maxPriorityFeePerGas": 0}
 
     @asynccontextmanager
     async def naive_manager(self):
@@ -190,14 +223,14 @@ class GasManager:
         informed = InformedGasManager(self.rpc, success_multiplier=success_multiplier, fail_multiplier=fail_multiplier)
         await informed._set_initial_price()
 
-        if initial_gas_price is not None:
-            informed.prices["gas"] = initial_gas_price
+        informed.prices["gas"] = initial_gas_price if initial_gas_price is not None \
+            else self.informed_tx_prices["gas"]
 
-        if initial_fee_price is not None:
-            informed.prices["maxFeePerGas"] = initial_fee_price
+        informed.prices["maxFeePerGas"] = initial_fee_price if initial_fee_price is not None \
+            else self.informed_tx_prices["maxFeePerGas"]
 
-        if initial_priority_fee_price is not None:
-            informed.prices["maxPriorityFeePerGas"] = initial_priority_fee_price
+        informed.prices["maxPriorityFeePerGas"] = initial_priority_fee_price if initial_priority_fee_price is not None \
+            else self.informed_tx_prices["maxPriorityFeePerGas"]
 
         connected = informed.rpc.pool_connected()
         try:
@@ -205,5 +238,8 @@ class GasManager:
                 await informed.rpc.start_pool()
             yield informed
         finally:
+            self.informed_tx_prices["gas"] = informed.prices["gas"]
+            self.informed_tx_prices["maxFeePerGas"] = informed.prices["maxFeePerGas"]
+            self.informed_tx_prices["maxPriorityFeePerGas"] = informed.prices["maxPriorityFeePerGas"]
             if not connected:
                 await informed.rpc.close_pool()
