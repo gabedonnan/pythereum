@@ -136,9 +136,9 @@ class InformedGasManager:
         if len(transactions) == 0:
             raise ERPCInvalidReturnException(f"Invalid vlue: {transactions} returned from _get_latest_receipts")
         for key, attribute in zip(self.prices.keys(), ("gas", "max_fee_per_gas", "max_priority_fee_per_gas")):
-            self.prices[key] = statistics.mean(
+            self.prices[key] = round(statistics.mean(
                 [x.__getattribute__(attribute) for x in transactions if x.__getattribute__(attribute) is not None]
-            )
+            ))
 
     def gas_fail(self):
         self.prices["gas"] *= self.fail_multiplier
@@ -219,18 +219,24 @@ class GasManager:
             initial_gas_price: int = None,
             initial_fee_price: int = None,
             initial_priority_fee_price: int = None
-    ):
+    ) -> InformedGasManager:
         informed = InformedGasManager(self.rpc, success_multiplier=success_multiplier, fail_multiplier=fail_multiplier)
         await informed._set_initial_price()
 
-        informed.prices["gas"] = initial_gas_price if initial_gas_price is not None \
-            else self.informed_tx_prices["gas"]
+        if initial_gas_price is not None:
+            informed.prices["gas"] = initial_gas_price
+        elif self.informed_tx_prices["gas"] != 0:
+            informed.prices["gas"] = self.informed_tx_prices["gas"]
 
-        informed.prices["maxFeePerGas"] = initial_fee_price if initial_fee_price is not None \
-            else self.informed_tx_prices["maxFeePerGas"]
+        if initial_fee_price is not None:
+            informed.prices["maxFeePerGas"] = initial_fee_price
+        elif self.informed_tx_prices["maxFeePerGas"] != 0:
+            informed.prices["maxFeePerGas"] = self.informed_tx_prices["maxFeePerGas"]
 
-        informed.prices["maxPriorityFeePerGas"] = initial_priority_fee_price if initial_priority_fee_price is not None \
-            else self.informed_tx_prices["maxPriorityFeePerGas"]
+        if initial_priority_fee_price is not None:
+            informed.prices["maxPriorityFeePerGas"] = initial_priority_fee_price
+        elif self.informed_tx_prices["maxPriorityFeePerGas"] != 0:
+            informed.prices["maxPriorityFeePerGas"] = self.informed_tx_prices["maxPriorityFeePerGas"]
 
         connected = informed.rpc.pool_connected()
         try:
