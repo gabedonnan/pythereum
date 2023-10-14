@@ -9,6 +9,7 @@ from pythereum.rpc import (
     convert_eth,
     EthDenomination,
 )
+from pprint import pprint
 
 # I store the links I use for testing in my .env file under the name "TEST_WS"
 from dotenv import dotenv_values
@@ -256,6 +257,16 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
     async def test_with(self):
         async with EthRPC(ANVIL_URL, 1) as rpc:
             await rpc.get_net_version()
+
+    async def test_aio(self):
+        async with EthRPC(url=ANVIL_URL, use_socket_pool=False) as rpc:
+            print(await rpc.get_net_version())
+
+        async with EthRPC(url=TEST_URL, use_socket_pool=False) as rpc:
+            pprint(await rpc.get_transaction_receipt("0x2cb90011f55f1a870034e245d30e111f1345d5745e8118a82d59888c062708a2"))
+
+        async with EthRPC(url=TEST_URL, use_socket_pool=False) as rpc:
+            pprint(await rpc.get_transaction_receipt("0xdccdfc9ffb71ddcf080a2c8215059313ffbc7eef5e9b04536bd33632006f95a8"))
 
 
 if __name__ == "__main__":
