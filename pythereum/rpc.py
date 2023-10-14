@@ -2,6 +2,7 @@ import json
 import statistics
 from contextlib import asynccontextmanager
 
+import aiohttp
 from aiohttp import ClientSession
 import websockets
 from pythereum.exceptions import (
@@ -312,7 +313,8 @@ class EthRPC:
         if self._pool is not None:
             await self._pool.start()
         else:
-            await self.session.close()
+            if not self.session.closed:
+                await self.session.close()
             self.session = ClientSession()
 
     async def close_pool(self) -> None:
@@ -355,24 +357,26 @@ class EthRPC:
                     await ws.send(built_msg)
                     msg = await ws.recv()
             else:
-                # Creating new websocket connections
-                async with self.session.post(
-                        url=self._http_url,
-                        data=built_msg,
-                        headers={"Content-Type": "application/json"}
-                ) as resp:
-                    if resp.status != 200:
-                        raise ERPCRequestException(
-                            resp.status,
-                            f"Invalid EthRPC aiohttp request for url {self._http_url} of form {built_msg}"
-                        )
-
-                    msg = await resp.json()
+                msg = await self._send_message_aio(built_msg)
         else:
             # Using a given websocket
             await websocket.send(built_msg)
             msg = await websocket.recv()
         return parse_results(msg, is_subscription)
+
+    async def _send_message_aio(self, built_msg: dict) -> dict:
+        async with self.session.post(
+            url=self._http_url,
+            data=built_msg,
+            headers={"Content-Type": "application/json"}
+        ) as resp:
+            if resp.status != 200:
+                raise ERPCRequestException(
+                    resp.status,
+                    f"Invalid EthRPC aiohttp request for url {self._http_url} of form {built_msg}"
+                )
+            msg = await resp.json()
+        return msg
 
     @asynccontextmanager
     async def subscribe(self, method: SubscriptionType) -> Subscription:
