@@ -221,14 +221,11 @@ async def test_management():
   )
   
   manager_rpc = EthRPC(TEST_URL, pool_size=2)
-  
   await manager_rpc.start_pool()
-  
   gm = GasManager(manager_rpc)
   
   async with gm.informed_manager() as im:
       im.fill_transaction(tx)
-  
   async with NonceManager(manager_rpc) as nm:
       await nm.fill_transaction(tx)
 
@@ -239,15 +236,11 @@ async def test_management():
   
   # Wait some time for transaction to be executed so we can get its receipt
   await asyncio.sleep(3)
-
   tx_receipt = await manager_rpc.get_transaction_receipt(tx_result)
 
-  # Informing the informed manager about the result of transaction
-  # Giving it information like this means the next time gm.informed_manager()
-  # Fills a transaction, it will update its pricing accordingly.
+  # This means the next time gm.informed_manager() fills a tx, its price will update
   # An execution success will mean the maxPriorityFeePerGas value of tx will
-  # be modified by im.success_multiplier, or alternatively if the transaction fails
-  # it will be modified by im.fail_multiplier
+  # be modified by im.success_multiplier, else it will be modified by im.fail_multiplier
   async with gm.informed_manager() as im:
     if tx_receipt is not None:
       if tx_receipt.status == 1:
@@ -256,6 +249,12 @@ async def test_management():
       else:
         # Tell the gas manager that the transaction failed
         im.execution_failure()
+    # Fill the next transaction with updated values
+    im.fill_transaction(tx)  
+  
+  print(tx)  
+  
+  await manager_rpc.close_pool()
 
 if __name__ == "__main__":
     asyncio.run(test_management())
