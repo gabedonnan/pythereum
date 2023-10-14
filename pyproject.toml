@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pythereum"
-version = "1.1.4"
+version = "1.1.5"
 description = "A lightweight Ethereum JSON RPC library written in python"
 authors = ["gabedonnan <47415809+gabedonnan@users.noreply.github.com>"]
 readme = "README.md"
@@ -14,7 +14,7 @@ pytest = "^7.4.2"
 pytest-asyncio = "^0.21.1"
 aiohttp = "^3.8.6"
 eth-account = "^0.9.0"
-eth-utils = "^2.2.1"
+eth-utils = "^2.2.2"
 
 [build-system]
 requires = ["poetry-core"]

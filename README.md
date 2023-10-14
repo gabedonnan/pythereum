@@ -34,9 +34,51 @@ The following builder classes are currently implemented:
 
 Each of these now have support for [mevboost](https://mevboost.pics) bundles.
 
-### Example usage
+# Getting started
 
-#### Basic single function call
+## Poetry
+
+This project and its dependencies are managed by python poetry,
+which will automatically manage the versions of each library / python version
+upon which this project depends.
+
+Install poetry with the instructions [here.](https://python-poetry.org/docs/)
+
+## Installation
+
+### Poetry Installation
+The library currently requires python versions `>=3.11`.
+
+If you want to include this library for use in another project via Poetry
+you must simply add the following to your `pyproject.toml` file under `[tool.poetry.dependencies]`
+
+```toml
+pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
+```
+
+or
+
+```toml
+pythereum = "^1.1.5"
+```
+
+If you would like to install the library via pypi instead of via this git repository.
+This git repository will always be the most up to date but the releases on pypi should
+be more thoroughly tested.
+
+### Pip / PyPi installation
+
+The library is now available via pip!! (I had to change the whole project name to get it there)
+
+It can be installed with the following command, or downloaded [here](https://pypi.org/project/pythereum/):
+
+```commandline
+python3 -m pip install pythereum
+```
+
+## Example usage
+
+### Basic single function call
 
 ```python
 # Example simple function
@@ -55,7 +97,7 @@ if __name__ == "__main__":
   asyncio.run(test_transaction_count())
 ```
 
-#### Example subscription
+### Example subscription
 
 ```python
 # Example subscription
@@ -82,7 +124,7 @@ if __name__ == "__main__":
   asyncio.run(test_subscription(SubscriptionType.new_heads))
 ```
 
-#### Example batch call
+### Example batch call
 
 ```python
 # Example batch call
@@ -111,7 +153,7 @@ if __name__ == "__main__":
   asyncio.run(test_batching())
 ```
 
-#### Example currency conversion
+### Example currency conversion
 
 ```python
 >>> from pythereum import EthDenomination, convert_eth
@@ -121,7 +163,7 @@ if __name__ == "__main__":
 1e-09
 ```
 
-#### Example builder submission
+### Example builder submission
 
 ```python
 # Example builder submission
@@ -159,50 +201,67 @@ if __name__ == "__main__":
   asyncio.run(test_builder_submission())
 ```
 
+### Example Gas and Nonce management
+
+```python
+import asyncio
+from eth_account import Account
+from pythereum import GasManager, NonceManager, Transaction, EthRPC
+
+TEST_URL = "ws://127.0.0.1:8545"
+
+async def test_management():
+  acct = Account.create()
+
+  tx = Transaction(
+    from_address=acct.address,
+    to_address="0x5fC2E691E520bbd3499f409bb9602DBA94184672",
+    value=1,
+    chain_id=1
+  )
+  
+  manager_rpc = EthRPC(TEST_URL, pool_size=2)
+  
+  await manager_rpc.start_pool()
+  
+  gm = GasManager(manager_rpc)
+  
+  async with gm.informed_manager() as im:
+      im.fill_transaction(tx)
+  
+  async with NonceManager(manager_rpc) as nm:
+      await nm.fill_transaction(tx)
+
+  signed_tx = Account.sign_transaction(tx, acct.key).rawTransaction
+
+  tx_result = await manager_rpc.send_raw_transaction(signed_tx)
+  print(tx_result)
+  
+  # Wait some time for transaction to be executed so we can get its receipt
+  await asyncio.sleep(3)
+
+  tx_receipt = await manager_rpc.get_transaction_receipt(tx_result)
+
+  # Informing the informed manager about the result of transaction
+  # Giving it information like this means the next time gm.informed_manager()
+  # Fills a transaction, it will update its pricing accordingly.
+  # An execution success will mean the maxPriorityFeePerGas value of tx will
+  # be modified by im.success_multiplier, or alternatively if the transaction fails
+  # it will be modified by im.fail_multiplier
+  async with gm.informed_manager() as im:
+    if tx_receipt is not None:
+      if tx_receipt.status == 1:
+        # Tell the gas manager that the transaction succeeded
+        im.execution_success()
+      else:
+        # Tell the gas manager that the transaction failed
+        im.execution_failure()
+
+if __name__ == "__main__":
+    asyncio.run(test_management())
+```
+
 More examples available in the [demo](https://github.com/gabedonnan/pythereum/tree/main/demo) folder.
-
-# Getting started
-
-## Poetry
-
-This project and its dependencies are managed by python poetry,
-which will automatically manage the versions of each library / python version
-upon which this project depends.
-
-Install poetry with the instructions [here.](https://python-poetry.org/docs/)
-
-## Installation
-
-### Poetry Installation
-The library currently requires python versions `>=3.11`.
-
-If you want to include this library for use in another project via Poetry
-you must simply add the following to your `pyproject.toml` file under `[tool.poetry.dependencies]`
-
-```toml
-pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
-```
-
-or
-
-```toml
-pythereum = "^1.1.4"
-```
-
-If you would like to install the library via pypi instead of via this git repository.
-This git repository will always be the most up to date but the releases on pypi should
-be more thoroughly tested.
-
-### Pip / PyPi installation
-
-The library is now available via pip!! (I had to change the whole project name to get it there)
-
-It can be installed with the following command, or downloaded [here](https://pypi.org/project/pythereum/):
-
-```commandline
-python3 -m pip install pythereum
-```
-
 
 ## Testing your programs
 
