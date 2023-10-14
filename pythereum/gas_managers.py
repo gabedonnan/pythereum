@@ -57,11 +57,13 @@ class NaiveGasManager:
             case GasStrategy.mode_price:
                 res = statistics.mode(prices)
             case GasStrategy.upper_quartile_price:
+                # Quantiles require enough data points or they will crash
                 try:
                     res = statistics.quantiles(prices, n=4)[2]
                 except statistics.StatisticsError:
                     res = statistics.mean(prices)
             case GasStrategy.lower_quartile_price:
+                # Quantiles require enough data points or they will crash
                 try:
                     res = statistics.quantiles(prices, n=4)[0]
                 except statistics.StatisticsError:
@@ -83,21 +85,31 @@ class NaiveGasManager:
 
         if isinstance(tx, list):
             for sub_tx in tx:
-                sub_tx["gas"] = min(await self.suggest(strategy["gas"], "gas", use_stored), self.max_gas_price)
+                sub_tx["gas"] = min(
+                    await self.suggest(strategy["gas"], "gas", use_stored),
+                    self.max_gas_price
+                )
+
                 sub_tx["maxFeePerGas"] = min(
                     await self.suggest(strategy["maxFeePerGas"], "max_fee_per_gas", True),
                     self.max_fee_price
                 )
+
                 sub_tx["maxPriorityFeePerGas"] = min(
                     await self.suggest(strategy["maxPriorityFeePerGas"], "max_priority_fee_per_gas", True),
                     self.max_priority_price
                 )
         elif tx is not None:
-            tx["gas"] = min(await self.suggest(strategy["gas"], "gas", use_stored), self.max_gas_price)
+            tx["gas"] = min(
+                await self.suggest(strategy["gas"], "gas", use_stored),
+                self.max_gas_price
+            )
+
             tx["maxFeePerGas"] = min(
                 await self.suggest(strategy["maxFeePerGas"], "max_fee_per_gas", True),
                 self.max_fee_price
             )
+
             tx["maxPriorityFeePerGas"] = min(
                 await self.suggest(strategy["maxPriorityFeePerGas"], "max_priority_fee_per_gas", True),
                 self.max_priority_price
@@ -109,6 +121,19 @@ class NaiveGasManager:
 
 
 class InformedGasManager:
+    """
+    This InformedGasManager can fill transactions by calling
+
+    im.fill_transaction(tx)
+
+    Note that this is not asynchronous like other transaction filling methods, as it relies on no external info
+
+    To tell the gas manager the status of a transaction call one of the following functions:
+
+    im.gas_fail()  # For when a transaction has failed due to gas too low
+    im.execution_fail() # For when a transaction has failed due to an execution reversion
+    im.execution_success() # For when a transaction has succeeded in execution
+    """
     def __init__(
             self,
             rpc: EthRPC = None,
@@ -141,14 +166,14 @@ class InformedGasManager:
             ))
 
     def gas_fail(self):
-        self.prices["gas"] *= self.fail_multiplier
+        self.prices["gas"] = int(self.fail_multiplier * self.prices["gas"])
 
     def execution_fail(self):
-        self.prices["maxPriorityFeePerGas"] *= self.fail_multiplier
+        self.prices["maxPriorityFeePerGas"] = int(self.fail_multiplier * self.prices["maxPriorityFeePerGas"])
         self.prices["maxFeePerGas"] = max(self.prices["maxFeePerGas"], self.prices["maxPriorityFeePerGas"])
 
     def execution_success(self):
-        self.prices["maxPriorityFeePerGas"] *= self.success_multiplier
+        self.prices["maxPriorityFeePerGas"] = int(self.success_multiplier * self.prices["maxPriorityFeePerGas"])
         self.prices["maxFeePerGas"] = max(self.prices["maxFeePerGas"], self.prices["maxPriorityFeePerGas"])
 
     def fill_transaction(
@@ -183,6 +208,13 @@ class InformedGasManager:
 
 
 class GasManager:
+    """
+    Class which allows access to different kinds of gas management strategies and stores their data.
+
+    Accepts an EthRPC instance or URL to be used for its gas management strategies
+    It is recommended to start the pool for a given EthRPC instance before using a gas management strategy,
+    otherwise the program will slow down as the pool will be opened and then closed
+    """
     def __init__(
         self,
         rpc: "EthRPC | str | None" = None,
@@ -199,15 +231,43 @@ class GasManager:
         self.naive_latest_transactions = None
         self.informed_tx_prices = {"gas": 0, "maxFeePerGas": 0, "maxPriorityFeePerGas": 0}
 
+    def __str__(self):
+        return f"GasManager(rpc={self.rpc.__str__()})"
+
+    def __repr__(self):
+        return f"GasManager(rpc={self.rpc.__repr__()})"
+
+    def clear_informed_info(self):
+        self.informed_tx_prices["gas"] = 0
+        self.informed_tx_prices["maxFeePerGas"] = 0
+        self.informed_tx_prices["maxPriorityFeePerGas"] = 0
+
+    def clear_naive_info(self):
+        self.naive_latest_transactions = None
+
+    def clear_info(self):
+        self.clear_naive_info()
+        self.clear_informed_info()
+
     @asynccontextmanager
-    async def naive_manager(self):
+    async def naive_manager(self) -> NaiveGasManager:
+        """
+        Creates, yields and manages a NaiveGasManager object.
+
+        This NaiveGasManager can fill transactions by calling
+
+        await nm.fill_transaction(tx, strategy=GasStrategy object)
+        """
         naive = NaiveGasManager(self.rpc)
         connected = self.rpc.pool_connected()
+        if self.naive_latest_transactions is not None:
+            naive.latest_transactions = self.naive_latest_transactions
         try:
             if not connected:
                 await naive.rpc.start_pool()
             yield naive
         finally:
+            self.naive_latest_transactions = naive.latest_transactions
             if not connected:
                 await naive.rpc.close_pool()
 
@@ -220,6 +280,21 @@ class GasManager:
             initial_fee_price: int = None,
             initial_priority_fee_price: int = None
     ) -> InformedGasManager:
+        """
+        Creates, yields and manages an InformedGasManager object.
+
+        This InformedGasManager can fill transactions by calling
+
+        im.fill_transaction(tx)
+
+        Note that this is not asynchronous like other transaction filling methods, as it relies on no external info
+
+        To tell the gas manager the status of a transaction call one of the following functions:
+
+        im.gas_fail()  # For when a transaction has failed due to gas too low
+        im.execution_fail() # For when a transaction has failed due to an execution reversion
+        im.execution_success() # For when a transaction has succeeded in execution
+        """
         informed = InformedGasManager(self.rpc, success_multiplier=success_multiplier, fail_multiplier=fail_multiplier)
         await informed._set_initial_price()
 
