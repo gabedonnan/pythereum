@@ -8,6 +8,15 @@ from pythereum.dclasses import TransactionFull, Transaction
 
 
 class NaiveGasManager:
+    """
+    This NaiveGasManager can fill transactions by calling:
+
+    await nm.fill_transaction(tx, strategy=GasStrategy object)
+
+    strategy can be replaced with dict of form:
+
+    {"gas": GasStrategy object, "maxFeePerGas": GasStrategy object, "maxPriorityFeePerGas": GasStrategy object}
+    """
     def __init__(
             self,
             rpc: EthRPC = None,
@@ -238,14 +247,23 @@ class GasManager:
         return f"GasManager(rpc={self.rpc.__repr__()})"
 
     def clear_informed_info(self):
+        """
+        Clears stored info about informed_manager from the GasManager object
+        """
         self.informed_tx_prices["gas"] = 0
         self.informed_tx_prices["maxFeePerGas"] = 0
         self.informed_tx_prices["maxPriorityFeePerGas"] = 0
 
     def clear_naive_info(self):
+        """
+        Clears stored info about naive_manager from GasManager object
+        """
         self.naive_latest_transactions = None
 
     def clear_info(self):
+        """
+        Clears all stored information in the GasManager object
+        """
         self.clear_naive_info()
         self.clear_informed_info()
 
@@ -257,6 +275,9 @@ class GasManager:
         This NaiveGasManager can fill transactions by calling
 
         await nm.fill_transaction(tx, strategy=GasStrategy object)
+
+        strategy can be replaced with dict of form:
+        {"gas": GasStrategy object, "maxFeePerGas": GasStrategy object, "maxPriorityFeePerGas": GasStrategy object}
         """
         naive = NaiveGasManager(self.rpc)
         connected = self.rpc.pool_connected()
