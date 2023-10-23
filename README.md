@@ -2,6 +2,8 @@
 (formerly eth_rpc)
 ### A lightweight Ethereum RPC library for Python
 
+#### Up to 80 times faster than Web3.py!
+
 Features include:
 - Ability to initiate remote procedure calls on a wide variety of ethereum functions
 - Websocket pooling for high performance calls
@@ -11,7 +13,6 @@ Features include:
 - Private transaction and Bundle support for communication directly with block builders
 - Automatic nonce and gas management for transactions
 - Typed function outputs for intuitive library use
-
 
 ### Implemented RPC methods
 
@@ -260,7 +261,7 @@ if __name__ == "__main__":
     asyncio.run(test_management())
 ```
 
-More examples available in the [demo](https://github.com/gabedonnan/pythereum/tree/main/demo) folder.
+More examples available in the [demo](https://github.com/gabedonnan/pythereum/tree/main/demo) folder, including performance comparisons to Web3.py.
 
 ## Testing your programs
 
