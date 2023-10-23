@@ -342,12 +342,12 @@ class EthRPC:
         """
         params = self._batch_format(*params)
         # json_builder is determined by whether a call is determined to be a batch or singular
-        json_builder = (
-            self._build_batch_json
+        built_msg = (
+            self._build_batch_json(method, params)
             if any(isinstance(param, tuple) for param in params)
-            else self._build_json
+            else self._build_json(method, params)
         )
-        built_msg = json_builder(method, params)
+
         if websocket is None:
             # Gets a new websocket if one is not supplied to the function
             if self._pool is not None:
@@ -829,9 +829,9 @@ class EthRPC:
                 return [HexStr(result) for result in msg]
 
     async def sign_transaction(
-            self,
-            tx: TransactionFull | dict | list[TransactionFull] | list[dict],
-            websocket: websockets.WebSocketClientProtocol | None = None
+        self,
+        tx: TransactionFull | dict | list[TransactionFull] | list[dict],
+        websocket: websockets.WebSocketClientProtocol | None = None
     ) -> HexStr | list[HexStr]:
         """
         Signs a transaction that can be submitted to the network at a later time using with eth_sendRawTransaction.
@@ -1184,8 +1184,8 @@ class EthRPC:
     # Web3 functions
 
     async def get_client_version(
-            self,
-            websocket: websockets.WebSocketClientProtocol | None = None
+        self,
+        websocket: websockets.WebSocketClientProtocol | None = None
     ) -> str:
         """
         Returns the current client version
@@ -1193,9 +1193,9 @@ class EthRPC:
         return await self._send_message("web3_clientVersion", [], websocket)
 
     async def sha3(
-            self,
-            data: str | HexStr | list[str] | list[HexStr],
-            websocket: websockets.WebSocketClientProtocol | None = None
+        self,
+        data: str | HexStr | list[str] | list[HexStr],
+        websocket: websockets.WebSocketClientProtocol | None = None
     ) -> HexStr | list[HexStr]:
         """
         Returns Keccak-256 of the given data
@@ -1215,8 +1215,8 @@ class EthRPC:
     # Net functions
 
     async def get_net_version(
-            self,
-            websocket: websockets.WebSocketClientProtocol | None = None
+        self,
+        websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
         """
         Returns the network version ID
@@ -1229,8 +1229,8 @@ class EthRPC:
                 return int(msg)
 
     async def get_net_listening(
-            self,
-            websocket: websockets.WebSocketClientProtocol | None = None
+        self,
+        websocket: websockets.WebSocketClientProtocol | None = None
     ) -> bool:
         """
         Returns whether a client is actively listening for network connections
@@ -1238,8 +1238,8 @@ class EthRPC:
         return await self._send_message("net_listening", [], websocket)
 
     async def get_net_peer_count(
-            self,
-            websocket: websockets.WebSocketClientProtocol | None = None
+        self,
+        websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
         """
         Returns the number of peers connected to the client
