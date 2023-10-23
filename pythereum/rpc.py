@@ -1,8 +1,7 @@
+import asyncio
 import json
-import statistics
 from contextlib import asynccontextmanager
 
-import aiohttp
 from aiohttp import ClientSession
 import websockets
 from pythereum.exceptions import (
@@ -11,7 +10,7 @@ from pythereum.exceptions import (
     ERPCSubscriptionException,
     ERPCManagerException
 )
-from pythereum.common import HexStr, EthDenomination, BlockTag, DefaultBlock, SubscriptionType, GasStrategy
+from pythereum.common import HexStr, EthDenomination, BlockTag, DefaultBlock, SubscriptionType
 from typing import Any
 from pythereum.socket_pool import WebsocketPool
 from pythereum.dclasses import Block, Sync, Receipt, Log, Transaction, TransactionFull
@@ -115,7 +114,7 @@ class NonceManager:
     Manages the nonces of addresses for the purposes of constructing transactions,
     requires an RPC connection in order to get starting transaction counts for each address.
 
-    Currently operates assuming no other sources are creating transactions from a given address.
+    This currently operates assuming no other sources are creating transactions from a given address.
     """
     def __init__(self, rpc: "EthRPC | str | None" = None):
         if isinstance(rpc, str):
@@ -364,7 +363,7 @@ class EthRPC:
             msg = await websocket.recv()
         return parse_results(msg, is_subscription)
 
-    async def _send_message_aio(self, built_msg: dict) -> dict:
+    async def _send_message_aio(self, built_msg: str) -> dict:
         async with self.session.post(
             url=self._http_url,
             data=built_msg,
@@ -565,36 +564,13 @@ class EthRPC:
 
     async def call(
         self,
-        transaction: dict | list[dict],
+        transaction: dict | Transaction | list[dict] | list[Transaction],
         block_specifier: DefaultBlock | list[DefaultBlock] = BlockTag.latest,
         websocket: websockets.WebSocketClientProtocol | None = None,
     ):
         """
         Executes a message call immediately without creating a transaction on the blockchain, useful for tests
-        :param transaction: Full transaction call object, represented as a dict
-            :key from: (OPTIONAL) The address a transaction is sent from
-            :type: 20 Byte hex number
-
-            :key to: The address a transaction is sent to
-            :type: 20 Byte hex number
-
-            :key gas: (OPTIONAL) Integer of gas provided for transaction execution
-            :type: Hex int
-                Note: eth_call consumes 0 gas but this may sometimes be necessary for other executions
-                Note: gasPrice key is used for older blocks on the blockchain instead of the following two
-
-            :key maxFeePerGas: (OPTIONAL) baseFeePerGas (determined by the network) + maxPriorityFeePerGas
-            :type: Hex int
-
-            :key maxPriorityFeePerGas: (OPTIONAL) Incentive fee you are willing to pay to ensure transaction execution
-            :type: Hex int
-
-            :key value: (OPTIONAL) Integer of the value sent with the transaction
-            :type: Hex int
-
-            :key data: (OPTIONAL) Hash of the method signature and encoded parameters
-            :type: Hash (Ethereum contract ABI)
-
+        :param transaction: Transaction call object, represented as a dict or Transaction object
         :param block_specifier: A specifier, either int or tag, delineating the block number to execute the transaction
         :param websocket: An optional external websocket for calls to this function
         :return: Hex value of the executed contract
@@ -608,14 +584,29 @@ class EthRPC:
     async def get_transaction_receipt(
         self,
         tx_hash: str | HexStr | list[str] | list[HexStr],
+        retries: int = 0,
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> Receipt | list[Receipt]:
         """
         Gets the receipt of a transaction given its hash, the definition of a receipt can be seen in dclasses.py
+
+        :param tx_hash: Hash of the transaction from which the receipt should be derived
+        :param retries: (Optional) The maximum number of retries to attempt until receipt has been generated
+        :param websocket: (Optional) external websocket for calls to this function
+        :return: Transaction receipt object or list of transaction receipts
         """
         msg = await self._send_message(
             "eth_getTransactionReceipt", [tx_hash], websocket
         )
+
+        # Retry getting transaction receipt until either it is found or retries are exhausted
+        while msg is None and retries > 0:
+            await asyncio.sleep(1)
+            msg = await self._send_message(
+                "eth_getTransactionReceipt", [tx_hash], websocket
+            )
+            retries -= 1
+
         match msg:
             case None:
                 return msg
@@ -644,7 +635,6 @@ class EthRPC:
     async def send_transaction(
         self,
         transaction: dict | list[dict],
-        strategy: dict | GasStrategy = GasStrategy.mean_price,
         websocket: websockets.WebSocketClientProtocol | None = None,
     ):
         """
@@ -974,7 +964,7 @@ class EthRPC:
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> Block | list[Block]:
         """
-        Returns information about a uncle of a block by hash and uncle index position.
+        Returns information about an uncle of a block by hash and uncle index position.
 
         :param data: A hash delineating the block number to get
         :param index: The index position(s) of the uncle(s) for the given block(s)
@@ -999,7 +989,7 @@ class EthRPC:
         websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> Block | list[Block]:
         """
-        Returns information about a uncle of a block by number and uncle index position.
+        Returns information about an uncle of a block by number and uncle index position.
 
         :param block_specifier: A specifier, either int or tag, (or list thereof) delineating the block number(s) to get
         :param index: The index position(s) of the uncle(s) for the given block(s)
@@ -1208,9 +1198,9 @@ class EthRPC:
             websocket: websockets.WebSocketClientProtocol | None = None
     ) -> HexStr | list[HexStr]:
         """
-        Returns Keccac-256 of the given data
+        Returns Keccak-256 of the given data
 
-        :param data: A string of data for keccac conversion
+        :param data: A string of data for keccak conversion
         :param websocket: An optional external websocket for calls to this function
         """
         msg = await self._send_message("web3_sha3", [data], websocket)
