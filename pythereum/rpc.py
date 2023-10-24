@@ -383,11 +383,19 @@ class EthRPC:
             headers={"Content-Type": "application/json"},
         ) as resp:
             if resp.status != 200:
-                raise ERPCRequestException(
-                    resp.status,
-                    f"Invalid EthRPC aiohttp request for url {self._http_url} of form {built_msg}",
-                )
-            msg = await resp.json()
+                async with self.session.post(
+                    url=self._http_url,
+                    json=built_msg
+                ) as backup_resp:
+                    if backup_resp.status != 200:
+                        raise ERPCRequestException(
+                            resp.status,
+                            f"Invalid EthRPC aiohttp request for url {self._http_url} of form {built_msg}",
+                        )
+                    else:
+                        msg = await backup_resp.json()
+            else:
+                msg = await resp.json()
         return msg
 
     @asynccontextmanager
