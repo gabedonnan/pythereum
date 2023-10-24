@@ -55,7 +55,8 @@ class Builder(ABC):
     def format_bundle(self, bundle: dict | Bundle) -> dict:
         return {key: bundle[key] for key in bundle.keys() & self.bundle_params}
 
-    def format_mev_bundle(self, bundle: MEVBundle) -> list[dict]:
+    @staticmethod
+    def format_mev_bundle(bundle: MEVBundle) -> list[dict]:
         return [bundle]
 
     def get_header(self, data: Any = None) -> Any:
