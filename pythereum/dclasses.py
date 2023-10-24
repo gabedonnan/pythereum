@@ -67,7 +67,6 @@ def hex_list_encoder(hex_obj_list: list[HexStr]) -> list[str] | None:
 
 
 def transaction_decoder(transaction_hex: dict | str) -> "TransactionFull | HexStr":
-
     if isinstance(transaction_hex, dict):
         return TransactionFull.from_dict(transaction_hex, infer_missing=True)
     else:
@@ -76,7 +75,6 @@ def transaction_decoder(transaction_hex: dict | str) -> "TransactionFull | HexSt
 
 def transaction_encoder(transaction_obj: "HexStr | TransactionFull") -> str | dict:
     if isinstance(transaction_obj, TransactionFull):
-
         return transaction_obj.to_dict()
     else:
         return hex_encoder(transaction_obj)
@@ -448,12 +446,8 @@ class TransactionFull:
     v: int | None = field(
         metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
-    r: HexStr | None = field(
-      metadata=config(decoder=hex_decoder, encoder=hex_encoder)
-    )
-    s: HexStr | None = field(
-      metadata=config(decoder=hex_decoder, encoder=hex_encoder)
-    )
+    r: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
+    s: HexStr | None = field(metadata=config(decoder=hex_decoder, encoder=hex_encoder))
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -490,17 +484,18 @@ class Transaction(dict):
 
     nonce: A sequentially incrementing counter uniquely identifying each transaction from each account
     """
+
     def __init__(
-            self,
-            from_address: str | HexStr,
-            to_address: str | HexStr | None = None,
-            max_priority_fee_per_gas: int | HexStr | str | None = None,
-            max_fee_per_gas: int | HexStr | str | None = None,
-            gas: int | HexStr | str | None = None,
-            value: int | HexStr | str | None = None,
-            data: str | HexStr | None = None,
-            nonce: int | HexStr | str | None = None,
-            chain_id: int | HexStr | str | None = None
+        self,
+        from_address: str | HexStr,
+        to_address: str | HexStr | None = None,
+        max_priority_fee_per_gas: int | HexStr | str | None = None,
+        max_fee_per_gas: int | HexStr | str | None = None,
+        gas: int | HexStr | str | None = None,
+        value: int | HexStr | str | None = None,
+        data: str | HexStr | None = None,
+        nonce: int | HexStr | str | None = None,
+        chain_id: int | HexStr | str | None = None,
     ):
         if from_address is not None:
             from_address = HexStr(from_address)
@@ -529,28 +524,52 @@ class Transaction(dict):
         if isinstance(chain_id, int):
             chain_id = HexStr(chain_id)
 
-        super().__init__({
-            key: val for key, val in zip(
-                ("from", "to", "maxPriorityFeePerGas", "maxFeePerGas", "gas", "value", "data", "nonce", "chainId"),
-                (from_address, to_address, max_priority_fee_per_gas, max_fee_per_gas, gas, value, data, nonce, chain_id)
-            ) if val is not None
-        })
+        super().__init__(
+            {
+                key: val
+                for key, val in zip(
+                    (
+                        "from",
+                        "to",
+                        "maxPriorityFeePerGas",
+                        "maxFeePerGas",
+                        "gas",
+                        "value",
+                        "data",
+                        "nonce",
+                        "chainId",
+                    ),
+                    (
+                        from_address,
+                        to_address,
+                        max_priority_fee_per_gas,
+                        max_fee_per_gas,
+                        gas,
+                        value,
+                        data,
+                        nonce,
+                        chain_id,
+                    ),
+                )
+                if val is not None
+            }
+        )
 
 
 class Bundle(dict):
     def __init__(
-            self,
-            txs: list[str] | list[HexStr],
-            block_number: str | HexStr | None = None,
-            min_timestamp: int | HexStr | str | None = None,
-            max_timestamp: int | HexStr | str | None = None,
-            reverting_tx_hashes: list[str] | list[HexStr] | None = None,
-            uuid: str | HexStr | None = None,
-            replacement_uuid: str | HexStr | None = None,
-            refund_percent: int | HexStr | str | None = None,
-            refund_index: int | HexStr | str | None = None,
-            refund_recipient: str | HexStr | None = None,
-            refund_tx_hashes: list[str] | list[HexStr] | None = None
+        self,
+        txs: list[str] | list[HexStr],
+        block_number: str | HexStr | None = None,
+        min_timestamp: int | HexStr | str | None = None,
+        max_timestamp: int | HexStr | str | None = None,
+        reverting_tx_hashes: list[str] | list[HexStr] | None = None,
+        uuid: str | HexStr | None = None,
+        replacement_uuid: str | HexStr | None = None,
+        refund_percent: int | HexStr | str | None = None,
+        refund_index: int | HexStr | str | None = None,
+        refund_recipient: str | HexStr | None = None,
+        refund_tx_hashes: list[str] | list[HexStr] | None = None,
     ):
         res = {"txs": txs}
 
@@ -589,16 +608,16 @@ class Bundle(dict):
 
 class MEVBundle(dict):
     def __init__(
-            self,
-            version: str = "v0.1",
-            block: HexStr | int | str = 0,
-            max_block: HexStr | int | str | None = None,
-            flashbots_hashes: list[HexStr] | list[str] | None = None,
-            transactions: list[HexStr] | list[str] | None = None,
-            transactions_can_revert: bool | list[bool] = False,
-            extra_mev_bundles: list[dict] | None = None,
-            refund_addresses: list[str] | None = None,
-            refund_percentages: list[int] | None = None
+        self,
+        version: str = "v0.1",
+        block: HexStr | int | str = 0,
+        max_block: HexStr | int | str | None = None,
+        flashbots_hashes: list[HexStr] | list[str] | None = None,
+        transactions: list[HexStr] | list[str] | None = None,
+        transactions_can_revert: bool | list[bool] = False,
+        extra_mev_bundles: list[dict] | None = None,
+        refund_addresses: list[str] | None = None,
+        refund_percentages: list[int] | None = None,
     ):
         """
         :param version: (OPTIONAL) MEVBoost protocol version to use
@@ -621,18 +640,21 @@ class MEVBundle(dict):
             refund_percentages = [100]
 
         if isinstance(transactions_can_revert, bool):
-            transactions_can_revert = [transactions_can_revert for _ in range(len(transactions))]
+            transactions_can_revert = [
+                transactions_can_revert for _ in range(len(transactions))
+            ]
 
-        res = {
-            "version": version,
-            "inclusion": {"block": block},
-            "body": []
-        }
+        res = {"version": version, "inclusion": {"block": block}, "body": []}
         if flashbots_hashes is not None:
             res["body"].extend([{"hash": f_hash} for f_hash in flashbots_hashes])
 
         if transactions is not None:
-            res["body"].extend([{"tx": tx, "canRevert": rvt} for tx, rvt in zip(transactions, transactions_can_revert)])
+            res["body"].extend(
+                [
+                    {"tx": tx, "canRevert": rvt}
+                    for tx, rvt in zip(transactions, transactions_can_revert)
+                ]
+            )
 
         if extra_mev_bundles is not None:
             res["body"].extend([{"bundle": bd} for bd in extra_mev_bundles])
@@ -641,11 +663,13 @@ class MEVBundle(dict):
             res["inclusion"]["maxBlock"] = max_block
 
         if refund_addresses is not None:
-            res["validity"] = {"refundConfig": [
-                    {
-                        "address": r_address,
-                        "percent": r_percent
-                    } for r_address, r_percent in zip(refund_addresses, refund_percentages)
-            ]}
+            res["validity"] = {
+                "refundConfig": [
+                    {"address": r_address, "percent": r_percent}
+                    for r_address, r_percent in zip(
+                        refund_addresses, refund_percentages
+                    )
+                ]
+            }
 
         super().__init__(res)

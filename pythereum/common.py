@@ -39,6 +39,7 @@ class EthDenomination(float, Enum):
     """
     An enumeration of all names of eth denominations and their corresponding wei values
     """
+
     wei = 1.0
     kwei = 1e3
     babbage = 1e3

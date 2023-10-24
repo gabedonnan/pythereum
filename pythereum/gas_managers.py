@@ -17,20 +17,31 @@ class NaiveGasManager:
 
     {"gas": GasStrategy object, "maxFeePerGas": GasStrategy object, "maxPriorityFeePerGas": GasStrategy object}
     """
+
     def __init__(
-            self,
-            rpc: EthRPC = None,
-            max_gas_price: float | EthDenomination | None = None,
-            max_fee_price: float | EthDenomination | None = None,
-            max_priority_price: float | EthDenomination | None = None
+        self,
+        rpc: EthRPC = None,
+        max_gas_price: float | EthDenomination | None = None,
+        max_fee_price: float | EthDenomination | None = None,
+        max_priority_price: float | EthDenomination | None = None,
     ):
         self.rpc = rpc
         self.latest_transactions = None
-        self.max_gas_price = int(max_gas_price if max_gas_price is not None else EthDenomination.milli)
-        self.max_fee_price = int(max_fee_price if max_fee_price is not None else EthDenomination.milli)
-        self.max_priority_price = int(max_priority_price if max_priority_price is not None else EthDenomination.milli)
+        self.max_gas_price = int(
+            max_gas_price if max_gas_price is not None else EthDenomination.milli
+        )
+        self.max_fee_price = int(
+            max_fee_price if max_fee_price is not None else EthDenomination.milli
+        )
+        self.max_priority_price = int(
+            max_priority_price
+            if max_priority_price is not None
+            else EthDenomination.milli
+        )
 
-    async def _get_latest_receipts(self, use_stored_results: bool = False) -> list[TransactionFull]:
+    async def _get_latest_receipts(
+        self, use_stored_results: bool = False
+    ) -> list[TransactionFull]:
         """
         Returns a tuple of the latest transaction receipts.
         These are gotten by getting the latest block info and requesting transaction receipts for each transaction.
@@ -43,17 +54,20 @@ class NaiveGasManager:
             transactions = latest_block.transactions
             self.latest_transactions = transactions
         if len(transactions) == 0:
-            raise ERPCInvalidReturnException(f"Invalid vlue: {transactions} returned from _get_latest_receipts")
+            raise ERPCInvalidReturnException(
+                f"Invalid vlue: {transactions} returned from _get_latest_receipts"
+            )
         return transactions
 
     async def suggest(
-        self,
-        strategy: GasStrategy,
-        attribute: str,
-        use_stored_results: bool = False
+        self, strategy: GasStrategy, attribute: str, use_stored_results: bool = False
     ) -> float:
         transactions = await self._get_latest_receipts(use_stored_results)
-        prices = [x.__getattribute__(attribute) for x in transactions if x.__getattribute__(attribute) is not None]
+        prices = [
+            x.__getattribute__(attribute)
+            for x in transactions
+            if x.__getattribute__(attribute) is not None
+        ]
         match strategy:
             case GasStrategy.min_price:
                 res = min(prices)
@@ -87,41 +101,55 @@ class NaiveGasManager:
         self,
         tx: dict | Transaction | list[dict] | list[Transaction],
         strategy: GasStrategy | dict[str, GasStrategy] = GasStrategy.mean_price,
-        use_stored: bool = False
+        use_stored: bool = False,
     ) -> None:
-        if isinstance(strategy, GasStrategy):  # Allows for separation of strategy types for each type
-            strategy = {"gas": strategy, "maxFeePerGas": strategy, "maxPriorityFeePerGas": strategy}
+        if isinstance(
+            strategy, GasStrategy
+        ):  # Allows for separation of strategy types for each type
+            strategy = {
+                "gas": strategy,
+                "maxFeePerGas": strategy,
+                "maxPriorityFeePerGas": strategy,
+            }
 
         if isinstance(tx, list):
             for sub_tx in tx:
                 sub_tx["gas"] = min(
                     await self.suggest(strategy["gas"], "gas", use_stored),
-                    self.max_gas_price
+                    self.max_gas_price,
                 )
 
                 sub_tx["maxFeePerGas"] = min(
-                    await self.suggest(strategy["maxFeePerGas"], "max_fee_per_gas", True),
-                    self.max_fee_price
+                    await self.suggest(
+                        strategy["maxFeePerGas"], "max_fee_per_gas", True
+                    ),
+                    self.max_fee_price,
                 )
 
                 sub_tx["maxPriorityFeePerGas"] = min(
-                    await self.suggest(strategy["maxPriorityFeePerGas"], "max_priority_fee_per_gas", True),
-                    self.max_priority_price
+                    await self.suggest(
+                        strategy["maxPriorityFeePerGas"],
+                        "max_priority_fee_per_gas",
+                        True,
+                    ),
+                    self.max_priority_price,
                 )
         elif tx is not None:
             tx["gas"] = min(
                 await self.suggest(strategy["gas"], "gas", use_stored),
-                self.max_gas_price
+                self.max_gas_price,
             )
 
             tx["maxFeePerGas"] = min(
                 await self.suggest(strategy["maxFeePerGas"], "max_fee_per_gas", True),
-                self.max_fee_price
+                self.max_fee_price,
             )
 
             tx["maxPriorityFeePerGas"] = min(
-                await self.suggest(strategy["maxPriorityFeePerGas"], "max_priority_fee_per_gas", True),
-                self.max_priority_price
+                await self.suggest(
+                    strategy["maxPriorityFeePerGas"], "max_priority_fee_per_gas", True
+                ),
+                self.max_priority_price,
             )
 
     def custom_pricing(self, prices):
@@ -143,22 +171,31 @@ class InformedGasManager:
     im.execution_fail() # For when a transaction has failed due to an execution reversion
     im.execution_success() # For when a transaction has succeeded in execution
     """
+
     def __init__(
-            self,
-            rpc: EthRPC = None,
-            max_gas_price: float | EthDenomination | None = None,
-            max_fee_price: float | EthDenomination | None = None,
-            max_priority_price: float | EthDenomination | None = None,
-            fail_multiplier: float = 1.25,
-            success_multiplier: float = 0.95
+        self,
+        rpc: EthRPC = None,
+        max_gas_price: float | EthDenomination | None = None,
+        max_fee_price: float | EthDenomination | None = None,
+        max_priority_price: float | EthDenomination | None = None,
+        fail_multiplier: float = 1.25,
+        success_multiplier: float = 0.95,
     ):
         self.rpc = rpc
         self.latest_transactions = None
         self.prices = {"gas": 0, "maxFeePerGas": 0, "maxPriorityFeePerGas": 0}
         self.max_prices = {
-            "gas": int(max_gas_price if max_gas_price is not None else EthDenomination.milli),
-            "maxFeePerGas": int(max_fee_price if max_fee_price is not None else EthDenomination.milli),
-            "maxPriorityFeePerGas": int(max_priority_price if max_priority_price is not None else EthDenomination.milli)
+            "gas": int(
+                max_gas_price if max_gas_price is not None else EthDenomination.milli
+            ),
+            "maxFeePerGas": int(
+                max_fee_price if max_fee_price is not None else EthDenomination.milli
+            ),
+            "maxPriorityFeePerGas": int(
+                max_priority_price
+                if max_priority_price is not None
+                else EthDenomination.milli
+            ),
         }
         self.fail_multiplier = fail_multiplier
         self.success_multiplier = success_multiplier
@@ -168,51 +205,64 @@ class InformedGasManager:
         transactions = latest_block.transactions
         self.latest_transactions = transactions
         if len(transactions) == 0:
-            raise ERPCInvalidReturnException(f"Invalid vlue: {transactions} returned from _get_latest_receipts")
-        for key, attribute in zip(self.prices.keys(), ("gas", "max_fee_per_gas", "max_priority_fee_per_gas")):
-            self.prices[key] = round(statistics.mean(
-                [x.__getattribute__(attribute) for x in transactions if x.__getattribute__(attribute) is not None]
-            ))
+            raise ERPCInvalidReturnException(
+                f"Invalid vlue: {transactions} returned from _get_latest_receipts"
+            )
+        for key, attribute in zip(
+            self.prices.keys(), ("gas", "max_fee_per_gas", "max_priority_fee_per_gas")
+        ):
+            self.prices[key] = round(
+                statistics.mean(
+                    [
+                        x.__getattribute__(attribute)
+                        for x in transactions
+                        if x.__getattribute__(attribute) is not None
+                    ]
+                )
+            )
 
     def gas_fail(self):
         self.prices["gas"] = int(self.fail_multiplier * self.prices["gas"])
 
     def execution_fail(self):
-        self.prices["maxPriorityFeePerGas"] = int(self.fail_multiplier * self.prices["maxPriorityFeePerGas"])
-        self.prices["maxFeePerGas"] = max(self.prices["maxFeePerGas"], self.prices["maxPriorityFeePerGas"])
+        self.prices["maxPriorityFeePerGas"] = int(
+            self.fail_multiplier * self.prices["maxPriorityFeePerGas"]
+        )
+        self.prices["maxFeePerGas"] = max(
+            self.prices["maxFeePerGas"], self.prices["maxPriorityFeePerGas"]
+        )
 
     def execution_success(self):
-        self.prices["maxPriorityFeePerGas"] = int(self.success_multiplier * self.prices["maxPriorityFeePerGas"])
-        self.prices["maxFeePerGas"] = max(self.prices["maxFeePerGas"], self.prices["maxPriorityFeePerGas"])
+        self.prices["maxPriorityFeePerGas"] = int(
+            self.success_multiplier * self.prices["maxPriorityFeePerGas"]
+        )
+        self.prices["maxFeePerGas"] = max(
+            self.prices["maxFeePerGas"], self.prices["maxPriorityFeePerGas"]
+        )
 
-    def fill_transaction(
-        self,
-        tx: dict | Transaction | list[dict] | list[Transaction]
-    ):
+    def fill_transaction(self, tx: dict | Transaction | list[dict] | list[Transaction]):
         if isinstance(tx, list):
             for sub_tx in tx:
-                sub_tx["gas"] = min(
-                    self.prices["gas"], self.max_prices["gas"]
-                )
+                sub_tx["gas"] = min(self.prices["gas"], self.max_prices["gas"])
 
                 sub_tx["maxFeePerGas"] = min(
                     self.prices["maxFeePerGas"], self.max_prices["maxFeePerGas"]
                 )
 
                 sub_tx["maxPriorityFeePerGas"] = min(
-                    self.prices["maxPriorityFeePerGas"], self.max_prices["maxPriorityFeePerGas"]
+                    self.prices["maxPriorityFeePerGas"],
+                    self.max_prices["maxPriorityFeePerGas"],
                 )
         else:
-            tx["gas"] = min(
-                self.prices["gas"], self.max_prices["gas"]
-            )
+            tx["gas"] = min(self.prices["gas"], self.max_prices["gas"])
 
             tx["maxFeePerGas"] = min(
                 self.prices["maxFeePerGas"], self.max_prices["maxFeePerGas"]
             )
 
             tx["maxPriorityFeePerGas"] = min(
-                self.prices["maxPriorityFeePerGas"], self.max_prices["maxPriorityFeePerGas"]
+                self.prices["maxPriorityFeePerGas"],
+                self.max_prices["maxPriorityFeePerGas"],
             )
 
 
@@ -224,21 +274,34 @@ class GasManager:
     It is recommended to start the pool for a given EthRPC instance before using a gas management strategy,
     otherwise the program will slow down as the pool will be opened and then closed
     """
+
     def __init__(
         self,
         rpc: "EthRPC | str | None" = None,
         max_gas_price: float | EthDenomination | None = None,
         max_fee_price: float | EthDenomination | None = None,
-        max_priority_price: float | EthDenomination | None = None
+        max_priority_price: float | EthDenomination | None = None,
     ):
         if isinstance(rpc, str):
             rpc = EthRPC(rpc, 1)
         self.rpc = rpc
-        self.max_gas_price = int(max_gas_price if max_gas_price is not None else EthDenomination.milli)
-        self.max_fee_price = int(max_fee_price if max_fee_price is not None else EthDenomination.milli)
-        self.max_priority_price = int(max_priority_price if max_priority_price is not None else EthDenomination.milli)
+        self.max_gas_price = int(
+            max_gas_price if max_gas_price is not None else EthDenomination.milli
+        )
+        self.max_fee_price = int(
+            max_fee_price if max_fee_price is not None else EthDenomination.milli
+        )
+        self.max_priority_price = int(
+            max_priority_price
+            if max_priority_price is not None
+            else EthDenomination.milli
+        )
         self.naive_latest_transactions = None
-        self.informed_tx_prices = {"gas": 0, "maxFeePerGas": 0, "maxPriorityFeePerGas": 0}
+        self.informed_tx_prices = {
+            "gas": 0,
+            "maxFeePerGas": 0,
+            "maxPriorityFeePerGas": 0,
+        }
 
     def __str__(self):
         return f"GasManager(rpc={self.rpc.__str__()})"
@@ -294,12 +357,12 @@ class GasManager:
 
     @asynccontextmanager
     async def informed_manager(
-            self,
-            success_multiplier: float = 0.95,
-            fail_multiplier: float = 1.25,
-            initial_gas_price: int = None,
-            initial_fee_price: int = None,
-            initial_priority_fee_price: int = None
+        self,
+        success_multiplier: float = 0.95,
+        fail_multiplier: float = 1.25,
+        initial_gas_price: int = None,
+        initial_fee_price: int = None,
+        initial_priority_fee_price: int = None,
     ) -> InformedGasManager:
         """
         Creates, yields and manages an InformedGasManager object.
@@ -316,7 +379,11 @@ class GasManager:
         im.execution_fail() # For when a transaction has failed due to an execution reversion
         im.execution_success() # For when a transaction has succeeded in execution
         """
-        informed = InformedGasManager(self.rpc, success_multiplier=success_multiplier, fail_multiplier=fail_multiplier)
+        informed = InformedGasManager(
+            self.rpc,
+            success_multiplier=success_multiplier,
+            fail_multiplier=fail_multiplier,
+        )
         await informed._set_initial_price()
 
         if initial_gas_price is not None:
@@ -332,7 +399,9 @@ class GasManager:
         if initial_priority_fee_price is not None:
             informed.prices["maxPriorityFeePerGas"] = initial_priority_fee_price
         elif self.informed_tx_prices["maxPriorityFeePerGas"] != 0:
-            informed.prices["maxPriorityFeePerGas"] = self.informed_tx_prices["maxPriorityFeePerGas"]
+            informed.prices["maxPriorityFeePerGas"] = self.informed_tx_prices[
+                "maxPriorityFeePerGas"
+            ]
 
         connected = informed.rpc.pool_connected()
         try:
@@ -342,6 +411,8 @@ class GasManager:
         finally:
             self.informed_tx_prices["gas"] = informed.prices["gas"]
             self.informed_tx_prices["maxFeePerGas"] = informed.prices["maxFeePerGas"]
-            self.informed_tx_prices["maxPriorityFeePerGas"] = informed.prices["maxPriorityFeePerGas"]
+            self.informed_tx_prices["maxPriorityFeePerGas"] = informed.prices[
+                "maxPriorityFeePerGas"
+            ]
             if not connected:
                 await informed.rpc.close_pool()

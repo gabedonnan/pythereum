@@ -9,7 +9,7 @@ from pythereum.common import (
     BlockTag,
     EthDenomination,
     GasStrategy,
-    HexStr
+    HexStr,
 )
 
 from pythereum.builders import (
@@ -20,7 +20,7 @@ from pythereum.builders import (
     TitanBuilder,
     RsyncBuilder,
     FlashbotsBuilder,
-    ALL_BUILDERS
+    ALL_BUILDERS,
 )
 
 from pythereum.dclasses import (
@@ -32,7 +32,7 @@ from pythereum.dclasses import (
     Access,
     Transaction,
     Bundle,
-    MEVBundle
+    MEVBundle,
 )
 
 from pythereum.exceptions import (
@@ -42,7 +42,7 @@ from pythereum.exceptions import (
     ERPCEncoderException,
     ERPCSubscriptionException,
     ERPCBuilderException,
-    ERPCManagerException
+    ERPCManagerException,
 )
 
 from pythereum.gas_managers import GasManager

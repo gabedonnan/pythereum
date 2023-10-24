@@ -2,6 +2,7 @@ class ERPCBaseException(Exception):
     """
     Base exception class for Ethereum RPC interactions.
     """
+
     def __init__(self, message: str):
         self.message = message
         super().__init__(self.message)
@@ -11,6 +12,7 @@ class ERPCRequestException(ERPCBaseException):
     """
     Raised when an error is returned from the Ethereum RPC.
     """
+
     def __init__(self, code: int, message: str = "Generic ERPC Error"):
         self.code = code  # Error code, e.g., HTTP error code or custom ERPC code
         full_message = f"Error {code}: {message}"

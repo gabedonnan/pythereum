@@ -8,9 +8,15 @@ from pythereum.exceptions import (
     ERPCRequestException,
     ERPCInvalidReturnException,
     ERPCSubscriptionException,
-    ERPCManagerException
+    ERPCManagerException,
 )
-from pythereum.common import HexStr, EthDenomination, BlockTag, DefaultBlock, SubscriptionType
+from pythereum.common import (
+    HexStr,
+    EthDenomination,
+    BlockTag,
+    DefaultBlock,
+    SubscriptionType,
+)
 from typing import Any
 from pythereum.socket_pool import WebsocketPool
 from pythereum.dclasses import Block, Sync, Receipt, Log, Transaction, TransactionFull
@@ -33,7 +39,9 @@ def convert_eth(
     return (convert_from.value * quantity) / covert_to.value
 
 
-def parse_results(res: str | dict, is_subscription: bool = False, builder: str = None) -> Any:
+def parse_results(
+    res: str | dict, is_subscription: bool = False, builder: str = None
+) -> Any:
     """
     Validates and parses the results of an RPC
     """
@@ -50,7 +58,9 @@ def parse_results(res: str | dict, is_subscription: bool = False, builder: str =
     if "result" not in res:
         # Error case as no result is found
         if "error" in res:
-            errmsg = res["error"]["message"] + ("" if builder is None else f" for builder {builder}")
+            errmsg = res["error"]["message"] + (
+                "" if builder is None else f" for builder {builder}"
+            )
             raise ERPCRequestException(res["error"]["code"], errmsg)
         else:
             raise ERPCInvalidReturnException(
@@ -116,6 +126,7 @@ class NonceManager:
 
     This currently operates assuming no other sources are creating transactions from a given address.
     """
+
     def __init__(self, rpc: "EthRPC | str | None" = None):
         if isinstance(rpc, str):
             rpc = EthRPC(rpc, 1)
@@ -136,7 +147,9 @@ class NonceManager:
             else:
                 self._close_pool = False
         else:
-            raise ERPCManagerException("NonceManager was never given EthRPC or RPC Url instance")
+            raise ERPCManagerException(
+                "NonceManager was never given EthRPC or RPC Url instance"
+            )
         return self
 
     async def __aexit__(self, *args):
@@ -146,14 +159,15 @@ class NonceManager:
     async def next_nonce(self, address: str | HexStr) -> int:
         address = HexStr(address)
         if self.rpc is not None and address not in self.nonces:
-            self.nonces[address] = await self.rpc.get_transaction_count(address, BlockTag.latest)
+            self.nonces[address] = await self.rpc.get_transaction_count(
+                address, BlockTag.latest
+            )
         else:
             self.nonces[address] += 1
         return self.nonces[address]
 
     async def fill_transaction(
-        self,
-        tx: dict | Transaction | list[dict] | list[Transaction]
+        self, tx: dict | Transaction | list[dict] | list[Transaction]
     ) -> None:
         """
         This function mutates input transaction dictionaries such that they are filled with the correct nonce values
@@ -170,6 +184,7 @@ class EthRPC:
     """
     A class managing communication with an Ethereum node via the Ethereum JSON RPC API.
     """
+
     def __init__(
         self,
         url: str,
@@ -214,15 +229,13 @@ class EthRPC:
         """
         Converts a given set of filter options into either a dictionary or list of dictionaries to be passed to the RPC
         """
-        if all(isinstance(param, list) for param in (from_block, to_block, address, topics)):
+        if all(
+            isinstance(param, list) for param in (from_block, to_block, address, topics)
+        ):
             # Detects whether a set of filter options is batched
             return [
-                {
-                    "fromBlock": f,
-                    "toBlock": t,
-                    "address": a,
-                    "topics": tpc
-                } for (f, t, a, tpc) in zip(from_block, to_block, address, topics)
+                {"fromBlock": f, "toBlock": t, "address": a, "topics": tpc}
+                for (f, t, a, tpc) in zip(from_block, to_block, address, topics)
             ]
         else:
             # Non-batched object return
@@ -230,7 +243,7 @@ class EthRPC:
                 "fromBlock": from_block,
                 "toBlock": to_block,
                 "address": address,
-                "topics": topics
+                "topics": topics,
             }
 
     @staticmethod
@@ -367,12 +380,12 @@ class EthRPC:
         async with self.session.post(
             url=self._http_url,
             data=built_msg,
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": "application/json"},
         ) as resp:
             if resp.status != 200:
                 raise ERPCRequestException(
                     resp.status,
-                    f"Invalid EthRPC aiohttp request for url {self._http_url} of form {built_msg}"
+                    f"Invalid EthRPC aiohttp request for url {self._http_url} of form {built_msg}",
                 )
             msg = await resp.json()
         return msg
@@ -831,7 +844,7 @@ class EthRPC:
     async def sign_transaction(
         self,
         tx: TransactionFull | dict | list[TransactionFull] | list[dict],
-        websocket: websockets.WebSocketClientProtocol | None = None
+        websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> HexStr | list[HexStr]:
         """
         Signs a transaction that can be submitted to the network at a later time using with eth_sendRawTransaction.
@@ -897,7 +910,8 @@ class EthRPC:
                 return TransactionFull.from_dict(msg, infer_missing=True)
             case _:
                 return [
-                    TransactionFull.from_dict(result, infer_missing=True) for result in msg
+                    TransactionFull.from_dict(result, infer_missing=True)
+                    for result in msg
                 ]
 
     async def get_transaction_by_block_hash_and_index(
@@ -924,7 +938,8 @@ class EthRPC:
                 return TransactionFull.from_dict(msg, infer_missing=True)
             case _:
                 return [
-                    TransactionFull.from_dict(result, infer_missing=True) for result in msg
+                    TransactionFull.from_dict(result, infer_missing=True)
+                    for result in msg
                 ]
 
     async def get_transaction_by_block_number_and_index(
@@ -954,7 +969,8 @@ class EthRPC:
                 return TransactionFull.from_dict(msg, infer_missing=True)
             case _:
                 return [
-                    TransactionFull.from_dict(result, infer_missing=True) for result in msg
+                    TransactionFull.from_dict(result, infer_missing=True)
+                    for result in msg
                 ]
 
     async def get_uncle_by_block_hash_and_index(
@@ -1032,7 +1048,12 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: Returns an integer filter ID
         """
-        param = {"from": from_block, "to": to_block, "address": address, "topics": topics}
+        param = {
+            "from": from_block,
+            "to": to_block,
+            "address": address,
+            "topics": topics,
+        }
         msg = await self._send_message("eth_newFilter", [param], websocket)
         match msg:
             case None:
@@ -1165,7 +1186,12 @@ class EthRPC:
         :param websocket: An optional external websocket for calls to this function
         :return: Returns a list of log objects or nothing if no changes have occurred since last poll
         """
-        param = {"from": from_block, "to": to_block, "address": address, "topics": topics}
+        param = {
+            "from": from_block,
+            "to": to_block,
+            "address": address,
+            "topics": topics,
+        }
         msg = await self._send_message("eth_getLogs", [param], websocket)
         match msg:
             case None:
@@ -1184,8 +1210,7 @@ class EthRPC:
     # Web3 functions
 
     async def get_client_version(
-        self,
-        websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> str:
         """
         Returns the current client version
@@ -1195,7 +1220,7 @@ class EthRPC:
     async def sha3(
         self,
         data: str | HexStr | list[str] | list[HexStr],
-        websocket: websockets.WebSocketClientProtocol | None = None
+        websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> HexStr | list[HexStr]:
         """
         Returns Keccak-256 of the given data
@@ -1210,13 +1235,14 @@ class EthRPC:
             case list():
                 return [HexStr(result) for result in msg]
             case _:
-                raise ERPCInvalidReturnException(f"Unexpected return of form {msg} in sha3")
+                raise ERPCInvalidReturnException(
+                    f"Unexpected return of form {msg} in sha3"
+                )
 
     # Net functions
 
     async def get_net_version(
-        self,
-        websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
         """
         Returns the network version ID
@@ -1229,8 +1255,7 @@ class EthRPC:
                 return int(msg)
 
     async def get_net_listening(
-        self,
-        websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> bool:
         """
         Returns whether a client is actively listening for network connections
@@ -1238,8 +1263,7 @@ class EthRPC:
         return await self._send_message("net_listening", [], websocket)
 
     async def get_net_peer_count(
-        self,
-        websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
         """
         Returns the number of peers connected to the client

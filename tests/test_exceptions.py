@@ -5,7 +5,7 @@ from pythereum.exceptions import (
     ERPCEncoderException,
     ERPCSubscriptionException,
     ERPCBuilderException,
-    ERPCManagerException
+    ERPCManagerException,
 )
 
 

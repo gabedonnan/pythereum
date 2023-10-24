@@ -21,7 +21,10 @@ async def test_titan_builder():
         try:
             print(await brpc.send_private_transaction(None))
         except ERPCRequestException as e:
-            assert str(e) == "Error -32600: json: cannot unmarshal array into Go value of type ipc.RpcTransaction"
+            assert (
+                str(e)
+                == "Error -32600: json: cannot unmarshal array into Go value of type ipc.RpcTransaction"
+            )
 
 
 @pytest.mark.asyncio
@@ -36,8 +39,10 @@ async def test_0x69_builder():
         try:
             await brpc.send_private_transaction(None)
         except ERPCRequestException as e:
-            assert str(e) == ("Error -32602: invalid argument 0: json: cannot unmarshal non-string into Go value of "
-                              "type hexutil.Bytes")
+            assert str(e) == (
+                "Error -32602: invalid argument 0: json: cannot unmarshal non-string into Go value of "
+                "type hexutil.Bytes"
+            )
 
 
 @pytest.mark.asyncio
@@ -46,13 +51,17 @@ async def test_flashbots_builder():
         try:
             await brpc.send_private_transaction(None)
         except ERPCRequestException as e:
-            assert str(e) == ("Error 403: Invalid BuilderRPC request for url https://relay.flashbots.net of form ("
-                              "method=eth_sendPrivateRawTransaction, params=[{'tx': None, 'preferences': None}])")
+            assert str(e) == (
+                "Error 403: Invalid BuilderRPC request for url https://relay.flashbots.net of form ("
+                "method=eth_sendPrivateRawTransaction, params=[{'tx': None, 'preferences': None}])"
+            )
 
 
 @pytest.mark.asyncio
 async def test_all_builders():
-    async with pye.BuilderRPC(pye.ALL_BUILDERS, private_key=Account.create().key) as brpc:
+    async with pye.BuilderRPC(
+        pye.ALL_BUILDERS, private_key=Account.create().key
+    ) as brpc:
         try:
             await brpc.send_private_transaction(None)
         except ERPCRequestException as e:

@@ -12,11 +12,13 @@ from pythereum import (
     GasManager,
     GasStrategy,
     EthRPC,
-    EthDenomination
+    EthDenomination,
 )
 from dotenv import dotenv_values
 
-erpc_url = dotenv_values("../.env")["TEST_WS"]  # Pulls variables from .env into a dictionary
+erpc_url = dotenv_values("../.env")[
+    "TEST_WS"
+]  # Pulls variables from .env into a dictionary
 
 
 async def building():
@@ -27,13 +29,13 @@ async def building():
         from_address=acct.address,
         to_address="0x5fC2E691E520bbd3499f409bb9602DBA94184672",
         value=1,
-        chain_id=1
+        chain_id=1,
     )
     # Define gas strategies for each facet of the GasManager
     gas_strategy = {
         "gas": GasStrategy.mode_price,
         "maxFeePerGas": GasStrategy.mean_price,
-        "maxPriorityFeePerGas": GasStrategy.mean_price
+        "maxPriorityFeePerGas": GasStrategy.mean_price,
     }
     manager_rpc = EthRPC(erpc_url, 2)
 
@@ -52,7 +54,9 @@ async def building():
 
     signed_tx = Account.sign_transaction(tx, acct.key).rawTransaction
 
-    async with BuilderRPC([TitanBuilder(), RsyncBuilder()], private_key=acct.key) as brpc:
+    async with BuilderRPC(
+        [TitanBuilder(), RsyncBuilder()], private_key=acct.key
+    ) as brpc:
         msg = await brpc.send_private_transaction(HexStr(signed_tx))
         print(msg)
 
@@ -96,6 +100,7 @@ async def building():
     print(tx)
 
     await manager_rpc.close_pool()
+
 
 if __name__ == "__main__":
     asyncio.run(building())
