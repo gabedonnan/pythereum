@@ -259,22 +259,28 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
             await rpc.get_net_version()
 
     async def test_aio(self):
+        async with EthRPC("http://127.0.0.1:8545", use_socket_pool=False) as erpc:
+            async with asyncio.TaskGroup() as tg:
+                for i in range(80):
+                    tg.create_task(erpc.get_block_by_number(i, True))
+                    tg.create_task(erpc.get_block_number())
+
         async with EthRPC(url=ANVIL_URL, use_socket_pool=False) as rpc:
             print(await rpc.get_net_version())
 
-        async with EthRPC(url=TEST_URL, use_socket_pool=False) as rpc:
-            pprint(
-                await rpc.get_transaction_receipt(
-                    "0x2cb90011f55f1a870034e245d30e111f1345d5745e8118a82d59888c062708a2"
-                )
-            )
-
-        async with EthRPC(url=TEST_URL, use_socket_pool=False) as rpc:
-            pprint(
-                await rpc.get_transaction_receipt(
-                    "0xdccdfc9ffb71ddcf080a2c8215059313ffbc7eef5e9b04536bd33632006f95a8"
-                )
-            )
+        # async with EthRPC(url=TEST_URL, use_socket_pool=False) as rpc:
+        #     pprint(
+        #         await rpc.get_transaction_receipt(
+        #             "0x2cb90011f55f1a870034e245d30e111f1345d5745e8118a82d59888c062708a2"
+        #         )
+        #     )
+        #
+        # async with EthRPC(url=TEST_URL, use_socket_pool=False) as rpc:
+        #     pprint(
+        #         await rpc.get_transaction_receipt(
+        #             "0xdccdfc9ffb71ddcf080a2c8215059313ffbc7eef5e9b04536bd33632006f95a8"
+        #         )
+        #     )
 
 
 if __name__ == "__main__":
