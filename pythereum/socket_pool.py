@@ -1,3 +1,4 @@
+import asyncio
 from asyncio import Queue
 import websockets
 from contextlib import asynccontextmanager
@@ -25,9 +26,8 @@ class WebsocketPool:
         if self.connected:
             await self.quit()
         # Creates a number of sockets equal to the maximum pool size
-        for _ in range(self._max_pool_size):
-            ws = await websockets.connect(self._url)
-            await self._sockets.put(ws)
+        sockets = await asyncio.gather(*(websockets.connect(self._url) for i in range(self._max_pool_size)))
+        await asyncio.gather(*(self._sockets.put(socket) for socket in sockets))
         self._sockets_used = 0
         self.connected = True
 
