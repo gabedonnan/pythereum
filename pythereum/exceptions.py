@@ -15,7 +15,7 @@ class ERPCRequestException(ERPCBaseException):
 
     def __init__(self, code: int, message: str = "Generic ERPC Error"):
         self.code = code  # Error code, e.g., HTTP error code or custom ERPC code
-        full_message = f"Error {code}: {message}"
+        full_message = f"Error {code}: {message}\nPlease consult your endpoint's documentation for info on error codes."
         super().__init__(full_message)
 
 
