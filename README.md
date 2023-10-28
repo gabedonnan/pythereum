@@ -77,6 +77,12 @@ It can be installed with the following command, or downloaded [here](https://pyp
 python3 -m pip install pythereum
 ```
 
+### Documentation
+
+Brief documentation available on [readthedocs.](https://pythereum.readthedocs.io/en/latest/genindex.html)
+
+More information and guides will be added to documentation over time.
+
 ## Example usage
 
 ### Basic single function call
