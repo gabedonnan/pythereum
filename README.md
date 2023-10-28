@@ -2,7 +2,7 @@
 (formerly eth_rpc)
 ### A lightweight Ethereum RPC library for Python
 
-#### Up to 80 times faster than Web3.py!
+#### Over four times faster than Web3.py, with more functionality!
 
 Features include:
 - Ability to initiate remote procedure calls on a wide variety of ethereum functions
