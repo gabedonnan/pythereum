@@ -1,7 +1,6 @@
-import asyncio
-from asyncio import Queue
-import websockets
+from asyncio import Queue, gather
 from contextlib import asynccontextmanager
+from websockets import connect, WebSocketClientProtocol
 
 
 class WebsocketPool:
@@ -26,13 +25,13 @@ class WebsocketPool:
         if self.connected:
             await self.quit()
         # Creates a number of sockets equal to the maximum pool size
-        sockets = await asyncio.gather(*(websockets.connect(self._url) for i in range(self._max_pool_size)))
-        await asyncio.gather(*(self._sockets.put(socket) for socket in sockets))
+        sockets = await gather(*(connect(self._url) for _ in range(self._max_pool_size)))
+        await gather(*(self._sockets.put(socket) for socket in sockets))
         self._sockets_used = 0
         self.connected = True
 
     @asynccontextmanager
-    async def get_socket(self) -> websockets.WebSocketClientProtocol:
+    async def get_socket(self) -> WebSocketClientProtocol:
         """
         :return: Returns a list of websockets to use
         The websockets will be returned to the main pool upon exiting the with statement in which this should be called

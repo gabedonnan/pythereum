@@ -1,27 +1,29 @@
 import asyncio
 import json
+import aiohttp
+
 from abc import ABC
 from typing import Any
-import aiohttp
 
 from eth_account import Account, messages
 from eth_utils import keccak
-from pythereum.rpc import parse_results
+
 from pythereum.common import HexStr
 from pythereum.dclasses import Bundle, MEVBundle
 from pythereum.exceptions import ERPCBuilderException, ERPCRequestException
+from pythereum.rpc import parse_results
 
 
 class Builder(ABC):
     def __init__(
-        self,
-        url: str,
-        private_transaction_method: str = "eth_sendPrivateTransaction",
-        bundle_method: str = "eth_sendBundle",
-        cancel_bundle_method: str = "eth_cancelBundle",
-        mev_bundle_method: str = "mev_sendBundle",
-        bundle_params: set = None,
-        private_key: str = None,
+            self,
+            url: str,
+            private_transaction_method: str = "eth_sendPrivateTransaction",
+            bundle_method: str = "eth_sendBundle",
+            cancel_bundle_method: str = "eth_cancelBundle",
+            mev_bundle_method: str = "mev_sendBundle",
+            bundle_params: set = None,
+            private_key: str = None,
     ):
         if bundle_params is None:
             bundle_params = {
@@ -46,9 +48,9 @@ class Builder(ABC):
         super().__init__()
 
     def format_private_transaction(
-        self,
-        tx: str | HexStr | list[str] | list[HexStr],
-        max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
+            self,
+            tx: str | HexStr | list[str] | list[HexStr],
+            max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
     ) -> list[Any]:
         return [tx, max_block_number]
 
@@ -66,7 +68,7 @@ class Builder(ABC):
         payload = messages.encode_defunct(keccak(text=payload))
         return {
             "X-Flashbots-Signature": f"{Account.from_key(self.private_key.hex_bytes).address}:"
-            f"{Account.sign_message(payload, self.private_key.hex_bytes).signature.hex()}"
+                                     f"{Account.sign_message(payload, self.private_key.hex_bytes).signature.hex()}"
         }
 
 
@@ -93,9 +95,9 @@ class TitanBuilder(Builder):
         )
 
     def format_private_transaction(
-        self,
-        tx: str | HexStr | list[str] | list[HexStr],
-        max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
+            self,
+            tx: str | HexStr | list[str] | list[HexStr],
+            max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
     ) -> list[dict]:
         res = {"tx": tx}
         if max_block_number is not None:
@@ -126,9 +128,9 @@ class BeaverBuilder(Builder):
         )
 
     def format_private_transaction(
-        self,
-        tx: str | HexStr | list[str] | list[HexStr],
-        max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
+            self,
+            tx: str | HexStr | list[str] | list[HexStr],
+            max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
     ) -> list[Any]:
         return [tx]
 
@@ -156,9 +158,9 @@ class RsyncBuilder(Builder):
         )
 
     def format_private_transaction(
-        self,
-        tx: str | HexStr | list[str] | list[HexStr],
-        max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
+            self,
+            tx: str | HexStr | list[str] | list[HexStr],
+            max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
     ) -> list[Any]:
         return [tx]
 
@@ -185,9 +187,9 @@ class Builder0x69(Builder):
         )
 
     def format_private_transaction(
-        self,
-        tx: str | HexStr | list[str] | list[HexStr],
-        max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
+            self,
+            tx: str | HexStr | list[str] | list[HexStr],
+            max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
     ) -> list[Any]:
         return [tx]
 
@@ -212,7 +214,7 @@ class FlashbotsBuilder(Builder):
         )
 
     def format_private_transaction(
-        self, tx: str | HexStr | list[str] | list[HexStr], preferences: dict = None
+            self, tx: str | HexStr | list[str] | list[HexStr], preferences: dict = None
     ) -> list[Any]:
         return [{"tx": tx, "preferences": preferences}]
 
@@ -220,7 +222,7 @@ class FlashbotsBuilder(Builder):
         payload = messages.encode_defunct(keccak(text=payload))
         return {
             "X-Flashbots-Signature": f"{Account.from_key(self.private_key.hex_bytes).address}:"
-            f"{Account.sign_message(payload, self.private_key.hex_bytes).signature.hex()}"
+                                     f"{Account.sign_message(payload, self.private_key.hex_bytes).signature.hex()}"
         }
 
 
@@ -230,14 +232,14 @@ class BuilderRPC:
     """
 
     def __init__(
-        self,
-        builders: Builder | list[Builder],
-        private_key: str
-        | bytes
-        | HexStr
-        | list[str]
-        | list[bytes]
-        | list[HexStr] = None,
+            self,
+            builders: Builder | list[Builder],
+            private_key: str
+                         | bytes
+                         | HexStr
+                         | list[str]
+                         | list[bytes]
+                         | list[HexStr] = None,
     ):
         if not isinstance(builders, list):
             builders = [builders]
@@ -255,7 +257,7 @@ class BuilderRPC:
         self._id += 1
 
     def _build_json(
-        self, method: str, params: list[Any], increment: bool = True
+            self, method: str, params: list[Any], increment: bool = True
     ) -> dict:
         """
         :param method: ethereum RPC method
@@ -270,11 +272,11 @@ class BuilderRPC:
         return res
 
     async def _send_message(
-        self,
-        builder: Builder,
-        method: str | list[str],
-        params: list[Any],
-        use_flashbots_signature: bool = False,
+            self,
+            builder: Builder,
+            method: str | list[str],
+            params: list[Any],
+            use_flashbots_signature: bool = False,
     ):
         if self.session is not None:
             constructed_json = self._build_json(method, params)
@@ -284,7 +286,7 @@ class BuilderRPC:
                 else builder.get_header(json.dumps(constructed_json))
             )
             async with self.session.post(
-                builder.url, json=constructed_json, headers=header_data
+                    builder.url, json=constructed_json, headers=header_data
             ) as resp:
                 if resp.status != 200:
                     raise ERPCRequestException(
@@ -308,9 +310,9 @@ class BuilderRPC:
         await self.session.close()
 
     async def send_private_transaction(
-        self,
-        tx: str | HexStr,
-        extra_info: Any = None,
+            self,
+            tx: str | HexStr,
+            extra_info: Any = None,
     ) -> Any:
         tx_methods = [builder.private_transaction_method for builder in self.builders]
         tx = [
@@ -325,8 +327,8 @@ class BuilderRPC:
         )
 
     async def send_bundle(
-        self,
-        bundle: Bundle,
+            self,
+            bundle: Bundle,
     ) -> Any:
         tx_methods = [builder.bundle_method for builder in self.builders]
         tx = [builder.format_bundle(bundle) for builder in self.builders]
@@ -338,8 +340,8 @@ class BuilderRPC:
         )
 
     async def cancel_bundle(
-        self,
-        replacement_uuids: str | HexStr,
+            self,
+            replacement_uuids: str | HexStr,
     ):
         cancel_methods = [builder.cancel_bundle_method for builder in self.builders]
         replacement_uuids = [replacement_uuids for _ in self.builders]
@@ -347,8 +349,8 @@ class BuilderRPC:
             *(
                 self._send_message(builder, method, uuid)
                 for builder, method, uuid in zip(
-                    self.builders, cancel_methods, replacement_uuids
-                )
+                self.builders, cancel_methods, replacement_uuids
+            )
             )
         )
 
