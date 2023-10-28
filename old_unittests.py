@@ -33,7 +33,6 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
 
         # It is important to start the websocket pool before task groups
         # This is due to different tasks trying to start the pool simultaneously when run
-        await rpc.start_pool()
         t0 = time()
         async with asyncio.TaskGroup() as tg:
             r1 = tg.create_task(rpc.get_block_number())
@@ -259,7 +258,7 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
             await rpc.get_net_version()
 
     async def test_aio(self):
-        async with EthRPC("http://127.0.0.1:8545", use_socket_pool=False) as erpc:
+        async with EthRPC(TEST_URL, use_socket_pool=False) as erpc:
             async with asyncio.TaskGroup() as tg:
                 for i in range(80):
                     tg.create_task(erpc.get_block_by_number(i, True))
