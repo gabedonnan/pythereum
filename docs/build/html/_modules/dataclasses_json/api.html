@@ -1,0 +1,251 @@
+
+<!DOCTYPE html>
+
+<html lang="python">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>dataclasses_json.api &#8212; Pythereum 1.1.6 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for dataclasses_json.api</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">abc</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Type</span><span class="p">,</span> <span class="n">TypeVar</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">overload</span>
+
+<span class="kn">from</span> <span class="nn">dataclasses_json.cfg</span> <span class="kn">import</span> <span class="n">config</span><span class="p">,</span> <span class="n">LetterCase</span>
+<span class="kn">from</span> <span class="nn">dataclasses_json.core</span> <span class="kn">import</span> <span class="p">(</span><span class="n">Json</span><span class="p">,</span> <span class="n">_ExtendedEncoder</span><span class="p">,</span> <span class="n">_asdict</span><span class="p">,</span>
+                                   <span class="n">_decode_dataclass</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dataclasses_json.mm</span> <span class="kn">import</span> <span class="p">(</span><span class="n">JsonData</span><span class="p">,</span> <span class="n">SchemaType</span><span class="p">,</span> <span class="n">build_schema</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dataclasses_json.undefined</span> <span class="kn">import</span> <span class="n">Undefined</span>
+<span class="kn">from</span> <span class="nn">dataclasses_json.utils</span> <span class="kn">import</span> <span class="p">(</span><span class="n">_handle_undefined_parameters_safe</span><span class="p">,</span>
+                                    <span class="n">_undefined_parameter_action_safe</span><span class="p">)</span>
+
+<span class="n">A</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="s2">&quot;DataClassJsonMixin&quot;</span><span class="p">)</span>
+<span class="n">T</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">)</span>
+<span class="n">Fields</span> <span class="o">=</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span>
+
+
+<span class="k">class</span> <span class="nc">DataClassJsonMixin</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    DataClassJsonMixin is an ABC that functions as a Mixin.</span>
+
+<span class="sd">    As with other ABCs, it should not be instantiated directly.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dataclass_json_config</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                <span class="o">*</span><span class="p">,</span>
+                <span class="n">skipkeys</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="n">ensure_ascii</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="n">check_circular</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="n">allow_nan</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="n">indent</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">separators</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">default</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">sort_keys</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">kw</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">encode_json</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                          <span class="bp">cls</span><span class="o">=</span><span class="n">_ExtendedEncoder</span><span class="p">,</span>
+                          <span class="n">skipkeys</span><span class="o">=</span><span class="n">skipkeys</span><span class="p">,</span>
+                          <span class="n">ensure_ascii</span><span class="o">=</span><span class="n">ensure_ascii</span><span class="p">,</span>
+                          <span class="n">check_circular</span><span class="o">=</span><span class="n">check_circular</span><span class="p">,</span>
+                          <span class="n">allow_nan</span><span class="o">=</span><span class="n">allow_nan</span><span class="p">,</span>
+                          <span class="n">indent</span><span class="o">=</span><span class="n">indent</span><span class="p">,</span>
+                          <span class="n">separators</span><span class="o">=</span><span class="n">separators</span><span class="p">,</span>
+                          <span class="n">default</span><span class="o">=</span><span class="n">default</span><span class="p">,</span>
+                          <span class="n">sort_keys</span><span class="o">=</span><span class="n">sort_keys</span><span class="p">,</span>
+                          <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">A</span><span class="p">],</span>
+                  <span class="n">s</span><span class="p">:</span> <span class="n">JsonData</span><span class="p">,</span>
+                  <span class="o">*</span><span class="p">,</span>
+                  <span class="n">parse_float</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                  <span class="n">parse_int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                  <span class="n">parse_constant</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                  <span class="n">infer_missing</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                  <span class="o">**</span><span class="n">kw</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">A</span><span class="p">:</span>
+        <span class="n">kvs</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">s</span><span class="p">,</span>
+                         <span class="n">parse_float</span><span class="o">=</span><span class="n">parse_float</span><span class="p">,</span>
+                         <span class="n">parse_int</span><span class="o">=</span><span class="n">parse_int</span><span class="p">,</span>
+                         <span class="n">parse_constant</span><span class="o">=</span><span class="n">parse_constant</span><span class="p">,</span>
+                         <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">kvs</span><span class="p">,</span> <span class="n">infer_missing</span><span class="o">=</span><span class="n">infer_missing</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">A</span><span class="p">],</span>
+                  <span class="n">kvs</span><span class="p">:</span> <span class="n">Json</span><span class="p">,</span>
+                  <span class="o">*</span><span class="p">,</span>
+                  <span class="n">infer_missing</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">A</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_decode_dataclass</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">kvs</span><span class="p">,</span> <span class="n">infer_missing</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encode_json</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Json</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">_asdict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encode_json</span><span class="o">=</span><span class="n">encode_json</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">A</span><span class="p">],</span>
+               <span class="o">*</span><span class="p">,</span>
+               <span class="n">infer_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+               <span class="n">only</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">exclude</span><span class="o">=</span><span class="p">(),</span>
+               <span class="n">many</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+               <span class="n">context</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">load_only</span><span class="o">=</span><span class="p">(),</span>
+               <span class="n">dump_only</span><span class="o">=</span><span class="p">(),</span>
+               <span class="n">partial</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+               <span class="n">unknown</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;SchemaType[A]&quot;</span><span class="p">:</span>
+        <span class="n">Schema</span> <span class="o">=</span> <span class="n">build_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">DataClassJsonMixin</span><span class="p">,</span> <span class="n">infer_missing</span><span class="p">,</span> <span class="n">partial</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">unknown</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">undefined_parameter_action</span> <span class="o">=</span> <span class="n">_undefined_parameter_action_safe</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">undefined_parameter_action</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># We can just make use of the same-named mm keywords</span>
+                <span class="n">unknown</span> <span class="o">=</span> <span class="n">undefined_parameter_action</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">Schema</span><span class="p">(</span><span class="n">only</span><span class="o">=</span><span class="n">only</span><span class="p">,</span>
+                      <span class="n">exclude</span><span class="o">=</span><span class="n">exclude</span><span class="p">,</span>
+                      <span class="n">many</span><span class="o">=</span><span class="n">many</span><span class="p">,</span>
+                      <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">,</span>
+                      <span class="n">load_only</span><span class="o">=</span><span class="n">load_only</span><span class="p">,</span>
+                      <span class="n">dump_only</span><span class="o">=</span><span class="n">dump_only</span><span class="p">,</span>
+                      <span class="n">partial</span><span class="o">=</span><span class="n">partial</span><span class="p">,</span>
+                      <span class="n">unknown</span><span class="o">=</span><span class="n">unknown</span><span class="p">)</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span> <span class="nf">dataclass_json</span><span class="p">(</span><span class="n">_cls</span><span class="p">:</span> <span class="kc">None</span> <span class="o">=</span> <span class="o">...</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">letter_case</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LetterCase</span><span class="p">]</span> <span class="o">=</span> <span class="o">...</span><span class="p">,</span>
+                   <span class="n">undefined</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Undefined</span><span class="p">]]</span> <span class="o">=</span> <span class="o">...</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">]],</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">]]:</span> <span class="o">...</span>
+
+
+<span class="nd">@overload</span>
+<span class="k">def</span> <span class="nf">dataclass_json</span><span class="p">(</span><span class="n">_cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">letter_case</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LetterCase</span><span class="p">]</span> <span class="o">=</span> <span class="o">...</span><span class="p">,</span>
+                   <span class="n">undefined</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Undefined</span><span class="p">]]</span> <span class="o">=</span> <span class="o">...</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="k">def</span> <span class="nf">dataclass_json</span><span class="p">(</span><span class="n">_cls</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">letter_case</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LetterCase</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">undefined</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Undefined</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">]],</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">]],</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Based on the code in the `dataclasses` module to handle optional-parens</span>
+<span class="sd">    decorators. See example below:</span>
+
+<span class="sd">    @dataclass_json</span>
+<span class="sd">    @dataclass_json(letter_case=LetterCase.CAMEL)</span>
+<span class="sd">    class Example:</span>
+<span class="sd">        ...</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">wrap</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">_process_class</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">letter_case</span><span class="p">,</span> <span class="n">undefined</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">_cls</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">wrap</span>
+    <span class="k">return</span> <span class="n">wrap</span><span class="p">(</span><span class="n">_cls</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_process_class</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="n">letter_case</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">LetterCase</span><span class="p">],</span>
+                   <span class="n">undefined</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Undefined</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="n">letter_case</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">undefined</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">dataclass_json_config</span> <span class="o">=</span> <span class="n">config</span><span class="p">(</span><span class="n">letter_case</span><span class="o">=</span><span class="n">letter_case</span><span class="p">,</span>  <span class="c1"># type: ignore[attr-defined]</span>
+                                           <span class="n">undefined</span><span class="o">=</span><span class="n">undefined</span><span class="p">)[</span><span class="s1">&#39;dataclasses_json&#39;</span><span class="p">]</span>
+
+    <span class="bp">cls</span><span class="o">.</span><span class="n">to_json</span> <span class="o">=</span> <span class="n">DataClassJsonMixin</span><span class="o">.</span><span class="n">to_json</span>  <span class="c1"># type: ignore[attr-defined]</span>
+    <span class="c1"># unwrap and rewrap classmethod to tag it to cls rather than the literal</span>
+    <span class="c1"># DataClassJsonMixin ABC</span>
+    <span class="bp">cls</span><span class="o">.</span><span class="n">from_json</span> <span class="o">=</span> <span class="nb">classmethod</span><span class="p">(</span><span class="n">DataClassJsonMixin</span><span class="o">.</span><span class="n">from_json</span><span class="o">.</span><span class="vm">__func__</span><span class="p">)</span>  <span class="c1"># type: ignore[attr-defined]</span>
+    <span class="bp">cls</span><span class="o">.</span><span class="n">to_dict</span> <span class="o">=</span> <span class="n">DataClassJsonMixin</span><span class="o">.</span><span class="n">to_dict</span>  <span class="c1"># type: ignore[attr-defined]</span>
+    <span class="bp">cls</span><span class="o">.</span><span class="n">from_dict</span> <span class="o">=</span> <span class="nb">classmethod</span><span class="p">(</span><span class="n">DataClassJsonMixin</span><span class="o">.</span><span class="n">from_dict</span><span class="o">.</span><span class="vm">__func__</span><span class="p">)</span>  <span class="c1"># type: ignore[attr-defined]</span>
+    <span class="bp">cls</span><span class="o">.</span><span class="n">schema</span> <span class="o">=</span> <span class="nb">classmethod</span><span class="p">(</span><span class="n">DataClassJsonMixin</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="vm">__func__</span><span class="p">)</span>  <span class="c1"># type: ignore[attr-defined]</span>
+
+    <span class="bp">cls</span><span class="o">.</span><span class="fm">__init__</span> <span class="o">=</span> <span class="n">_handle_undefined_parameters_safe</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">kvs</span><span class="o">=</span><span class="p">(),</span>  <span class="c1"># type: ignore[attr-defined,method-assign]</span>
+                                                     <span class="n">usage</span><span class="o">=</span><span class="s2">&quot;init&quot;</span><span class="p">)</span>
+    <span class="c1"># register cls as a virtual subclass of DataClassJsonMixin</span>
+    <span class="n">DataClassJsonMixin</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">cls</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Pythereum</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Gabriel Donnan.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

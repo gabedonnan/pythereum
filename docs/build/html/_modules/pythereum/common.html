@@ -1,0 +1,228 @@
+
+<!DOCTYPE html>
+
+<html lang="python">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pythereum.common &#8212; Pythereum 1.1.6 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for pythereum.common</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+
+
+<div class="viewcode-block" id="GasStrategy"><a class="viewcode-back" href="../../pythereum.html#pythereum.common.GasStrategy">[docs]</a><span class="k">class</span> <span class="nc">GasStrategy</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">min_price</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">max_price</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">median_price</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">mean_price</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="n">mode_price</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">upper_quartile_price</span> <span class="o">=</span> <span class="mi">5</span>
+    <span class="n">lower_quartile_price</span> <span class="o">=</span> <span class="mi">6</span>
+    <span class="n">custom</span> <span class="o">=</span> <span class="mi">7</span>  <span class="c1"># Exists such that custom gas managers may be implemented</span></div>
+
+
+<div class="viewcode-block" id="SubscriptionType"><a class="viewcode-back" href="../../pythereum.html#pythereum.common.SubscriptionType">[docs]</a><span class="k">class</span> <span class="nc">SubscriptionType</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+    <span class="n">new_heads</span> <span class="o">=</span> <span class="s2">&quot;newHeads&quot;</span>
+    <span class="n">logs</span> <span class="o">=</span> <span class="s2">&quot;logs&quot;</span>
+    <span class="n">new_pending_transactions</span> <span class="o">=</span> <span class="s2">&quot;newPendingTransactions&quot;</span>
+    <span class="n">syncing</span> <span class="o">=</span> <span class="s2">&quot;syncing&quot;</span></div>
+
+
+<div class="viewcode-block" id="BlockTag"><a class="viewcode-back" href="../../pythereum.html#pythereum.common.BlockTag">[docs]</a><span class="k">class</span> <span class="nc">BlockTag</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Data type encapsulating all possible non-integer values for a DefaultBlock parameter</span>
+<span class="sd">    API Documentation at: https://ethereum.org/en/developers/docs/apis/json-rpc/#default-block</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">earliest</span> <span class="o">=</span> <span class="s2">&quot;earliest&quot;</span>  <span class="c1"># Genesis block</span>
+    <span class="n">latest</span> <span class="o">=</span> <span class="s2">&quot;latest&quot;</span>  <span class="c1"># Last mined block</span>
+    <span class="n">pending</span> <span class="o">=</span> <span class="s2">&quot;pending&quot;</span>  <span class="c1"># Pending state/transactions</span>
+    <span class="n">safe</span> <span class="o">=</span> <span class="s2">&quot;safe&quot;</span>  <span class="c1"># Latest safe head block</span>
+    <span class="n">finalized</span> <span class="o">=</span> <span class="s2">&quot;finalized&quot;</span>  <span class="c1"># Latest finalized block</span></div>
+
+
+<span class="n">DefaultBlock</span> <span class="o">=</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">BlockTag</span> <span class="o">|</span> <span class="nb">str</span>
+
+
+<div class="viewcode-block" id="EthDenomination"><a class="viewcode-back" href="../../pythereum.html#pythereum.common.EthDenomination">[docs]</a><span class="k">class</span> <span class="nc">EthDenomination</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    An enumeration of all names of eth denominations and their corresponding wei values</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">wei</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="n">kwei</span> <span class="o">=</span> <span class="mf">1e3</span>
+    <span class="n">babbage</span> <span class="o">=</span> <span class="mf">1e3</span>
+    <span class="n">femtoether</span> <span class="o">=</span> <span class="mf">1e3</span>
+    <span class="n">mwei</span> <span class="o">=</span> <span class="mf">1e6</span>
+    <span class="n">lovelace</span> <span class="o">=</span> <span class="mf">1e6</span>
+    <span class="n">picoether</span> <span class="o">=</span> <span class="mf">1e6</span>
+    <span class="n">gwei</span> <span class="o">=</span> <span class="mf">1e9</span>
+    <span class="n">shannon</span> <span class="o">=</span> <span class="mf">1e9</span>
+    <span class="n">nanoether</span> <span class="o">=</span> <span class="mf">1e9</span>
+    <span class="n">nano</span> <span class="o">=</span> <span class="mf">1e9</span>
+    <span class="n">szabo</span> <span class="o">=</span> <span class="mf">1e12</span>
+    <span class="n">microether</span> <span class="o">=</span> <span class="mf">1e12</span>
+    <span class="n">micro</span> <span class="o">=</span> <span class="mf">1e12</span>
+    <span class="n">finney</span> <span class="o">=</span> <span class="mf">1e15</span>
+    <span class="n">milliether</span> <span class="o">=</span> <span class="mf">1e15</span>
+    <span class="n">milli</span> <span class="o">=</span> <span class="mf">1e15</span>
+    <span class="n">ether</span> <span class="o">=</span> <span class="mf">1e18</span>
+    <span class="n">eth</span> <span class="o">=</span> <span class="mf">1e18</span>
+    <span class="n">kether</span> <span class="o">=</span> <span class="mf">1e21</span>
+    <span class="n">grand</span> <span class="o">=</span> <span class="mf">1e21</span>
+    <span class="n">mether</span> <span class="o">=</span> <span class="mf">1e24</span>
+    <span class="n">gether</span> <span class="o">=</span> <span class="mf">1e27</span>
+    <span class="n">tether</span> <span class="o">=</span> <span class="mf">1e30</span></div>
+
+
+<div class="viewcode-block" id="HexStr"><a class="viewcode-back" href="../../pythereum.html#pythereum.common.HexStr">[docs]</a><span class="k">class</span> <span class="nc">HexStr</span><span class="p">(</span><span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Data type representing a base16 hexadecimal number.</span>
+<span class="sd">    Extends the functionality of the default string type to support hex operations and functionality.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">    - integer_value: returns integer representing the base10 form of the hexadecimal number.</span>
+<span class="sd">    - raw_hex: returns string representing the hexadecimal number without 0x prefix.</span>
+<span class="sd">    - hex_bytes: returns bytes object representing the conversion of the value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">HEX_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^0x[0-9a-fA-F]+$&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">formatted_value</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_format_string_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">formatted_value</span> <span class="o">=</span> <span class="nb">hex</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+            <span class="n">formatted_value</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_format_string_value</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">hex</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Unsupported type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="si">}</span><span class="s2"> for HexStr. Must be str or int.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">formatted_value</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_format_string_value</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Formats a string value to be a proper hex string with a &quot;0x&quot; prefix.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">HexStr</span><span class="o">.</span><span class="n">HEX_PATTERN</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">value</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">&quot;0x&quot;</span><span class="p">,</span> <span class="s2">&quot;0X&quot;</span><span class="p">)):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;0x</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="n">HexStr</span><span class="o">.</span><span class="n">HEX_PATTERN</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">value</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2"> is not a valid hex string&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__int__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;HexStr(</span><span class="si">{</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">()</span><span class="si">}</span><span class="s2">)&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__bytes__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># If odd length, pad with zero to make byte conversion valid</span>
+        <span class="k">return</span> <span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">raw_hex</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;0</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">raw_hex</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">hex_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__bytes__</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">raw_hex</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">integer_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__int__</span><span class="p">()</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Pythereum</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Gabriel Donnan.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
