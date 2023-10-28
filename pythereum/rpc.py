@@ -385,7 +385,8 @@ class EthRPC:
             if resp.status != 200:
                 async with self.session.post(
                     url=self._http_url,
-                    json=built_msg
+                    json=json.loads(built_msg),
+                    headers={"Content-Type": "application/json"},
                 ) as backup_resp:
                     if backup_resp.status != 200:
                         raise ERPCRequestException(
