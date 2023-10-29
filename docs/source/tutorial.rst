@@ -285,7 +285,7 @@ Let's improve our previous transaction by automatically managing values!
   :linenos:
 
   import asyncio
-  from pythereum import EthRPC, Transaction
+  from pythereum import EthRPC, Transaction, GasManager, NonceManager
 
   async def my_first_transaction():
     # Create an arbitrary account wallet
