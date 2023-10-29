@@ -5,6 +5,7 @@ The Basics
 ----------
 
 At it's core Pythereum provides functionality to interact efficiently with Ethereum nodes via the Ethereum JSON RPC API.
+This is primarily done with the EthRPC class, and that will be the focus of this section of the tutorial.
 
 In order to get started we need an `Ethereum endpoint <https://ethereum.org/en/developers/docs/nodes-and-clients/>`_ to connect to, for which you will need a connection URL.
 This URL can use the following prefixes for fast websocketed functionality:
@@ -12,16 +13,16 @@ This URL can use the following prefixes for fast websocketed functionality:
 * wss://
 * ws://
 
-For http connection you can also use:
+For http connection you can also use, be aware HTTP connections will not be able to make use of websocket pooling:
 
 * https://
 * http://
 
-For this tutorial I will be using a personal node I connect to which will be referred to as "ENDPOINT_URL".
+For this tutorial I will be using a personal node I connect to via websockets which will be referred to as "ENDPOINT_URL".
 
 Much of Pythereum's functionality is asynchronous, which means we will need the library asyncio to run our code.
 
-For our first block of code let's try and get the number of the most recent block.
+For our first block of code let's try and get the number of the most recent block in the chain.
 
 .. code-block:: python
   :linenos:
@@ -68,7 +69,7 @@ Maybe instead of the block number we wanted to get the full block information on
 
   import asyncio
 
-  # We add BlockTag to our imports, which is an Enumeration specifying special inputs for get_block_by_number
+  # We add BlockTag to our imports, which is an Enumeration for block number special cases such as the "latest" block
   # In this case we use BlockTag.latest to specify the most recent block
   from pythereum import EthRPC, BlockTag
 
@@ -185,3 +186,144 @@ Let's see how we would take advantage of multiple sockets to send multiple remot
   if __name__ == "__main__":
     asyncio.run(my_first_rpc_connection())
 
+This provides a speedup of up to n times where n is:
+
+* min(number of functions you are calling, number of sockets in the pool)
+
+This running multiple remote procedure calls at once can also be done using asyncio.gather as follows:
+
+.. code-block:: python
+  :linenos:
+
+  res = await asyncio.gather(
+    rpc.get_block_by_number(BlockTag.latest, True),
+    rpc.get_transaction_count_by_number(BlockTag.latest, True),
+    rpc.get_gas_price()
+  )
+
+Let's take a look at another useful thing Pythereum introduces.
+
+Subscriptions
+-------------
+
+Most modern Ethereum nodes support connections via websockets along which a "subscription" can be made.
+
+These subscriptions will continuously output data as it becomes available, such as the headers of all new blocks that are created.
+
+Here is a brief example of how to create a continuous subscription:
+
+.. code-block:: python
+  :linenos:
+
+  import asyncio
+  from pythereum import EthRPC, SubscriptionType
+  from pprint import pprint
+
+  async def my_first_subscription():
+    async with EthRPC(ENDPOINT_URL, pool_size=1) as rpc:
+      # Declare a subscription to constantly receive data about new block headers
+      async with rpc.subscribe(SubscriptionType.new_heads) as sc:
+        # Whenever new headers are created this loop will receive the result
+        async for header in sc.recv():
+          pprint(header)
+
+  if __name__ == "__main__":
+    asyncio.run(my_first_subscription())
+
+This is useful for getting live data on the goings-on of transactions on the chain.
+This has particular applications in automated traders paying attention to market data, or for getting the right prices to pay for gas.
+
+A brief example of a subscription in use is available in the `demo folder. <https://github.com/gabedonnan/pythereum/blob/main/demo/listen_blocks.py>`_
+
+Transactions
+------------
+
+One primary use of the blockchain is sending transactions between accounts, with data and amounts of eth attached.
+
+With Pythereum this is made as simple as possible, especially when combined with the eth_account library.
+We use transactions as defined in EIP-1559, for the greatest level of efficiency.
+
+.. code-block:: python
+  :linenos:
+
+  import asyncio
+  from pythereum import EthRPC, Transaction
+
+  async def my_first_transaction():
+    # Create an arbitrary account wallet
+    acct = Account.create()
+    # Create an arbitrary transaction (most likely will not work, simply an example of fields a transaction has)
+    tx = Transaction(
+        from_address=acct.address,
+        to_address="0x5fC2E691E520bbd3499f409bb9602DBA94184672",
+        value=1,
+        chain_id=1,
+        nonce=1,
+        max_fee_per_gas=1
+        gas=1
+        max_priority_fee_per_gas=1
+    )
+
+    signed_tx = acct.sign_transaction(tx).rawTransaction
+
+    async with EthRPC(ENDPOINT_URL, pool_size=1) as rpc:
+      await rpc.send_raw_transaction(signed_tx)
+
+  if __name__ == "__main__":
+    asyncio.run(my_first_transaction())
+
+This creation of transactions is all well and good but it would be great if we could automate some of it.
+
+With Pythereum's `NonceManager <https://pythereum.readthedocs.io/en/latest/pythereum.html#pythereum.rpc.NonceManager>`_ and `GasManager <https://pythereum.readthedocs.io/en/latest/pythereum.html#pythereum.gas_managers.GasManager>`_ classes that can be done very simply, and with a high degree of control!
+
+Gas and Nonce Management
+------------------------
+
+Let's improve our previous transaction by automatically managing values!
+
+.. code-block:: python
+  :linenos:
+
+  import asyncio
+  from pythereum import EthRPC, Transaction
+
+  async def my_first_transaction():
+    # Create an arbitrary account wallet
+    acct = Account.create()
+    # Create an arbitrary transaction (most likely will not work, simply an example of fields a transaction has)
+    tx = Transaction(
+        from_address=acct.address,
+        to_address="0x5fC2E691E520bbd3499f409bb9602DBA94184672",
+        value=1,
+        chain_id=1,
+    )
+
+    manager_rpc = EthRPC(ENDPOINT_URL, pool_size=2)
+
+    # Manually start the pool of our manager RPC for use in our gas and nonce managers
+    await manager_rpc.start_pool()
+
+    # Gas and Nonce managers need an RPC connection to get block context information
+    gm = GasManager(manager_rpc)
+
+    # Gas managers have multiple possible strategies, we will simply be using naive managers here
+    # Fills gas, max_fee_per_gas, max_priority_fee_per_gas values in the transaction
+    # This is done by taking the average of those values from the previous block (though different strategies can be specified)
+    async with gm.naive_manager() as nvm:
+      nvm.fill_transaction(tx)
+
+    # Gets the nonce of the given account, for new accounts this will be 0
+    async with NonceManager(manager_rpc) as nm:
+      await nm.fill_transaction(tx)
+
+    signed_tx = acct.sign_transaction(tx).rawTransaction
+
+    await manager_rpc.send_raw_transaction(signed_tx)
+
+    # The pool should be closed at the end when EthRPC not used in an "async with" statement
+    await manager_rpc.close_pool()
+
+  if __name__ == "__main__":
+    asyncio.run(my_first_transaction())
+
+Now we can automatically fill our transactions without having to calculate these values ourselves!
