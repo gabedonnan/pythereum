@@ -10,6 +10,7 @@ Welcome to Pythereum's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   tutorial
    modules
 
 
