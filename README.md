@@ -79,7 +79,7 @@ python3 -m pip install pythereum
 
 ### Documentation
 
-Brief documentation available on [readthedocs.](https://pythereum.readthedocs.io/en/latest/genindex.html)
+Brief documentation available on [readthedocs.](https://pythereum.readthedocs.io/en/latest/index.html)
 
 More information and guides will be added to documentation over time.
 
