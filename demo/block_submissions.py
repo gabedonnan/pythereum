@@ -31,12 +31,6 @@ async def building():
         value=1,
         chain_id=1,
     )
-    # Define gas strategies for each facet of the GasManager
-    gas_strategy = {
-        "gas": GasStrategy.mode_price,
-        "maxFeePerGas": GasStrategy.mean_price,
-        "maxPriorityFeePerGas": GasStrategy.mean_price,
-    }
     manager_rpc = EthRPC(erpc_url, 2)
 
     # Works differently to NonceManager, in that it manages multiple strategies
