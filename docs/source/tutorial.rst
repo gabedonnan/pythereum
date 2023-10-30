@@ -1,8 +1,9 @@
+========
 Tutorial
 ========
 
 The Basics
-----------
+==========
 
 At it's core Pythereum provides functionality to interact efficiently with Ethereum nodes via the Ethereum JSON RPC API.
 This is primarily done with the EthRPC class, and that will be the focus of this section of the tutorial.
@@ -105,7 +106,7 @@ which contains block information in a convenient container.
 So far we have been doing things that Web3.py can do relatively simply, let's move on to something that Pythereum introduces:
 
 Batch RPC calls
----------------
+===============
 
 Instead of getting block information on just the most recent block, let's get info on 10 blocks, using only one call!
 
@@ -141,7 +142,7 @@ This batch calling syntax we have used here is valid for any EthRPC function tha
 (i.e. not get_block_number. There is no reason to batch functions of this type as the same data will be returned for each call)
 
 Taking advantage of Websocket Pooling
--------------------------------------
+=====================================
 
 So far we have not been taking advantage of Pythereum's websocket pool.
 This pool is here to provide a massive speedup over Web3.py and other Ethereum RPC libraries.
@@ -204,7 +205,7 @@ This running multiple remote procedure calls at once can also be done using asyn
 Let's take a look at another useful thing Pythereum introduces.
 
 Subscriptions
--------------
+=============
 
 Most modern Ethereum nodes support connections via websockets along which a "subscription" can be made.
 
@@ -236,7 +237,7 @@ This has particular applications in automated traders paying attention to market
 A brief example of a subscription in use is available in the `demo folder. <https://github.com/gabedonnan/pythereum/blob/main/demo/listen_blocks.py>`_
 
 Transactions
-------------
+============
 
 One primary use of the blockchain is sending transactions between accounts, with data and amounts of eth attached.
 
@@ -247,6 +248,7 @@ We use transactions as defined in EIP-1559, for the greatest level of efficiency
   :linenos:
 
   import asyncio
+  from eth_account import Account
   from pythereum import EthRPC, Transaction
 
   async def my_first_transaction():
@@ -277,7 +279,7 @@ This creation of transactions is all well and good but it would be great if we c
 With Pythereum's `NonceManager <https://pythereum.readthedocs.io/en/latest/pythereum.html#pythereum.rpc.NonceManager>`_ and `GasManager <https://pythereum.readthedocs.io/en/latest/pythereum.html#pythereum.gas_managers.GasManager>`_ classes that can be done very simply, and with a high degree of control!
 
 Gas and Nonce Management
-------------------------
+========================
 
 Let's improve our previous transaction by automatically managing values!
 
@@ -285,6 +287,7 @@ Let's improve our previous transaction by automatically managing values!
   :linenos:
 
   import asyncio
+  from eth_account import Account
   from pythereum import EthRPC, Transaction, GasManager, NonceManager
 
   async def my_first_transaction():
@@ -310,7 +313,7 @@ Let's improve our previous transaction by automatically managing values!
     # Fills gas, max_fee_per_gas, max_priority_fee_per_gas values in the transaction
     # This is done by taking the average of those values from the previous block (though different strategies can be specified)
     async with gm.naive_manager() as nvm:
-      nvm.fill_transaction(tx)
+      await nvm.fill_transaction(tx)
 
     # Gets the nonce of the given account, for new accounts this will be 0
     async with NonceManager(manager_rpc) as nm:
@@ -327,3 +330,100 @@ Let's improve our previous transaction by automatically managing values!
     asyncio.run(my_first_transaction())
 
 Now we can automatically fill our transactions without having to calculate these values ourselves!
+
+Gas Managers
+------------
+
+Currently, there are two types of GasManager, the `informed_manager <https://pythereum.readthedocs.io/en/latest/pythereum.html#pythereum.gas_managers.GasManager.informed_manager>`_
+and the `naive_manager. <https://pythereum.readthedocs.io/en/latest/pythereum.html#pythereum.gas_managers.GasManager.naive_manager>`_
+
+The naive gas manager fills transactions using strategies from a given `GasStrategy <https://pythereum.readthedocs.io/en/latest/pythereum.html#pythereum.common.GasStrategy>`_
+object or dictionary of GasStrategy objects.
+
+The available strategies are as follows:
+
+* mean_price - Price is filled with mean of previous block prices
+* median_price - Price filled with median of previous block prices
+* mode_price - Price filled with modal value of previous block prices
+* max_price - Price filled with max price of previous block
+* min_price - Price filled with min price of previous block
+* upper_quartile_price - Price filled with upper quartile value of previous block
+* lower_quartile_price - Price filled with lower quartile value of previous block
+
+We can use either one global strategy for all 3 gas price values (gas, maxFeePerGas, maxPriorityFeePerGas)
+or we can use separate strategies.
+
+The syntax is as follows:
+
+.. code-block:: python
+  :linenos:
+
+  # With single strategy
+  async with gm.naive_manager() as nvm:
+    await nvm.fill_transaction(tx, strategy=GasStrategy.lower_quartile_price)
+
+  # With separate strategies
+  strategy_dict = {
+    "gas": GasStrategy.max_price,
+    "maxFeePerGas": GasStrategy.lower_quartile_price,
+    "maxPriorityFeePerGas": GasStrategy.mean_price,
+  }
+  async with gm.naive_manager() as nvm:
+    await nvm.fill_transaction(tx, strategy=strategy_dict)
+
+As is evident from the name, this gas management strategy is naive, not learning from previous transactions.
+
+If we want to price our gas based on previous transaction results, we should instead use informed_manager.
+
+Pricing gas in this way is important in long term operation where many transactions are made.
+This is because when a transaction succeeds we can lower our gas prices to save eth,
+and when a transaction fails we can up gas prices to ensure execution.
+
+Below is an example of how an informed manager is used.
+
+.. code-block:: python
+  :linenos:
+
+  # Generic setup code similar to before
+  ...
+
+  # Fill our transaction with initial values in similar way to naive manager
+  async with gm.informed_manager() as im:
+    im.fill_transaction(tx)
+
+  # Sign and submit our transaction
+  signed_tx = acct.sign_transaction(tx).rawTransaction
+  tx_hash = await manager_rpc.send_raw_transaction(signed_tx)
+
+  # Find out whether transaction succeeded by getting transaction receipt
+  tx_result = await manager_rpc.get_transaction_receipt(tx_hash, retries=3)
+
+  # Open up our informed manager again, this time with a success multiplier and failure multiplier
+  async with gm.informed_manager(
+    success_multiplier=0.9,
+    fail_multiplier=1.3
+  ) as im:
+    if tx_result.status == 0:
+      # Tell the gas manager that the execution failed
+      # This way next time the price of maxPriorityFeePerGas will be multiplied by the fail multiplier
+      # This should help guarantee success of execution
+      # If this does not work the tx may have failed because gas was too low, in which case use im.gas_fail()
+      im.execution_fail()
+    else:
+      # Lowers priority fee by success multiplier such that next time transactions may be cheaper
+      im.execution_success()
+
+  # The next time we need to fill a transaction using this same gas manager instance
+  # The informed manager will have adjusted prices accordingly
+
+These gas management types both have their own use cases, and it is up to the user which one suits them best.
+
+The Nonce Manager
+-----------------
+
+The nonce manager works somewhat differently to GasManager objects in that there are no NonceManager sub strategies.
+
+The nonce manager gets the number of transactions an account has sent, and uses that to determine the current nonce to apply to a transaction to send.
+
+The syntax for this is visible in earlier examples.
+
