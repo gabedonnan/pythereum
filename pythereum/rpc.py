@@ -1275,6 +1275,34 @@ class EthRPC:
             case _:
                 return int(msg, 16)
 
+    # OpenEthereum parity functions
+
+    async def parity_get_mempool(
+        self, websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> TransactionFull | list[TransactionFull]:
+        msg = await self._send_message("parity_pendingTransactions", [], websocket)
+        match msg:
+            case None:
+                return msg
+            case dict():
+                return TransactionFull.from_dict(msg)
+            case _:
+                return [TransactionFull.from_dict(result) for result in msg]
+
+    # Geth functions
+
+    async def geth_get_mempool(
+        self, websocket: websockets.WebSocketClientProtocol | None = None
+    ) -> TransactionFull | list[TransactionFull]:
+        msg = await self._send_message("txpool_content", [], websocket)
+        match msg:
+            case None:
+                return msg
+            case dict():
+                return TransactionFull.from_dict(msg)
+            case _:
+                return [TransactionFull.from_dict(result) for result in msg]
+
     # Generic sending
 
     async def send_raw(
