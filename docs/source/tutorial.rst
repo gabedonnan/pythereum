@@ -149,7 +149,7 @@ This pool is here to provide a massive speedup over Web3.py and other Ethereum R
 
 The pool is stored as an asynchronous queue of connections to your endpoint, each of which can communicate with it at the same time.
 
-This essentially parallelizes your calls for you by taking advantage of asyncio.
+Pythereum uses this to essentially parallelize your calls for you by taking advantage of asyncio.
 
 Let's see how we would take advantage of multiple sockets to send multiple remote procedure calls at once.
 
@@ -427,3 +427,123 @@ The nonce manager gets the number of transactions an account has sent, and uses 
 
 The syntax for this is visible in earlier examples.
 
+A brief more complete example of nonce and gas management in use is available in the `demo folder <https://github.com/gabedonnan/pythereum/blob/main/demo/block_submissions.py>`_
+
+Block Builder Submission
+========================
+
+This area of the tutorial is for more advanced users who know what they are doing with block builders and submissions.
+The library is additionally still under-tested in some areas related to block submission, any feedback here is always welcome.
+
+If this is not you, do not worry, this is simply a section to cater to more advanced users, simply continue to the next section.
+
+When transactions are sent out for execution, they are stored in a public memory pool (mempool).
+
+Other users can read information in this mempool and act on the information in there.
+(maybe you are trying to buy a friendtech share and someone outbids you after seeing your bid in the memory pool, causing you to lose out)
+
+As such, submitting your transactions to a `Block Builder <https://ethereum.org/nl/roadmap/pbs/>`_
+directly without them floating around in the mempool may be desirable.
+
+Pythereum introduces the `BuilderRPC <https://pythereum.readthedocs.io/en/latest/pythereum.html#pythereum.builders.BuilderRPC>`_ class to facilitate this.
+
+Since most block builders do not support websocket connection, this BuilderRPC class communicates over HTTP using aiohttp.
+
+There are many block builders, each of which compete to create the next block,
+as such in order to have the best likelihood for your transaction to be included in the final minted block,
+it is advisable to submit to many of them at once.
+
+Here is an example of block builder submission to the TitanBuilder and Builder0x69.
+A snapshot of the most popular block builders can be found at `mevboost.pics <https://mevboost.pics/>`_
+
+.. code-block:: python
+  :linenos:
+
+  import asyncio
+  from pythereum import (
+    Transaction, EthRPC, GasManager, NonceManager,
+    BuilderRPC, TitanBuilder, Builder0x69, HexStr,
+  )
+  from eth_account import Account
+
+  async def my_first_builder_submission():
+    acct = Account.create()
+      # Create an arbitrary transaction (minus gas and nonce values)
+    tx = Transaction(
+        from_address=acct.address,
+        to_address="0x5fC2E691E520bbd3499f409bb9602DBA94184672",
+        value=1,
+        chain_id=1,
+    )
+
+    manager_rpc = EthRPC(erpc_url, 2)
+    gm = GasManager(manager_rpc)
+    await manager_rpc.start_pool()
+
+    async with NonceManager(manager_rpc) as nm:
+      await nm.fill_transaction(tx)
+
+    async with gm.naive_manager() as nvm:
+      await nvm.fill_transaction(tx)
+
+    signed_tx = acct.sign_transaction(tx).rawTransaction
+
+    # A list of block builders to submit to is used, in this case TitanBuilder and Builder0x69
+    # Pythereum comes with inbuilt support for many of the most popular block builders
+    # Support for more can be added by inheriting from Pythereum's Builder base class
+    # We pass in the private key of our account to the builder RPC to sign payloads with flashbots headers (not always relevant but sometiems necessary)
+    async with BuilderRPC(
+      [TitanBuilder(), Builder0x69()], private_key=acct.key
+    ) as brpc:
+      msg = await brpc.send_private_transaction(HexStr(signed_tx))
+
+    print(msg)
+    await manager_rpc.close_pool()
+
+  if __name__ == "__main__":
+    asyncio.run(my_first_builder_submission())
+
+This is very similar to an example in the demo folder,
+
+In addition to single transactions, there exists support for Bundle submissions (which are the private transaction equivalent to batch sending transactions),
+and mevboost bundles (a new transaction protocol popularised by the flashbots builder).
+
+Examples below:
+
+.. code-block:: python
+  :linenos:
+
+  # Bundle submission
+
+  # Bundles have a large amount of optional parameters
+  # Check your chosen block builder's documentation for more info (e.g. https://docs.titanbuilder.xyz/api/eth_sendbundle)
+  bd = Bundle(
+    txs=[tx for tx in signed_transactions],
+  )
+
+  async with BuilderRPC(
+    [TitanBuilder()], private_key=acct.key
+  ) as brpc:
+    msg = await brpc.send_bundle(bd)
+
+  print(msg)
+
+.. code-block:: python
+  :linenos:
+
+  # MEVBundle submission
+
+  # MEVBundles have a large amount of optional parameters, similar to normal bundles,
+  # Check Pythereum's implementation and flashbots documentation for info
+  bd = MEVBundle(
+    block=(await rpc.get_block_number()) + 1,  # The bundle is valid for the next block
+    refund_addresses=["0x5fC2E691E520bbd3499f409bb9602DBA94184672"],
+    refund_percentages=[100],
+  )
+
+  async with BuilderRPC(
+    [FlashbotsBuilder()], private_key=acct.key
+  ) as brpc:
+    msg = await brpc.send_mev_bundle(bd)
+
+  print(msg)
