@@ -45,6 +45,12 @@ upon which this project depends.
 
 Install poetry with the instructions [here.](https://python-poetry.org/docs/)
 
+## Documentation
+
+Brief documentation available on [readthedocs.](https://pythereum.readthedocs.io/en/latest/index.html)
+
+More information and guides will be added to documentation over time.
+
 ## Installation
 
 ### Poetry Installation
@@ -60,7 +66,7 @@ pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 or
 
 ```toml
-pythereum = "^1.1.6"
+pythereum = "^1.1.7"
 ```
 
 If you would like to install the library via pypi instead of via this git repository.
@@ -76,12 +82,6 @@ It can be installed with the following command, or downloaded [here](https://pyp
 ```commandline
 python3 -m pip install pythereum
 ```
-
-### Documentation
-
-Brief documentation available on [readthedocs.](https://pythereum.readthedocs.io/en/latest/index.html)
-
-More information and guides will be added to documentation over time.
 
 ## Example usage
 
