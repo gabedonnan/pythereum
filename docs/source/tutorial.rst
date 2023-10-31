@@ -306,6 +306,7 @@ in its current state we can use eth_utils and eth_abi to help us out in developm
 
 .. code-block:: python
   :linenos:
+
   from eth_utils import function_signature_to_4byte_selector
   from eth_abi import encode
 
