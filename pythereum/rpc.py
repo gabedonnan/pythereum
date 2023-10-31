@@ -1282,6 +1282,7 @@ class EthRPC:
     ) -> TransactionFull | list[TransactionFull]:
         """
         Access the memory pool for a given OpenEthereum parity node, does not work on other node types
+        Under testing, feel free to improve.
         """
         msg = await self._send_message("parity_pendingTransactions", [], websocket)
         match msg:
@@ -1299,6 +1300,7 @@ class EthRPC:
     ) -> TransactionFull | list[TransactionFull]:
         """
         Access the memory pool for a geth node, does not work on other node types
+        Under testing, feel free to improve.
         """
         msg = await self._send_message("txpool_content", [], websocket)
         match msg:
