@@ -328,6 +328,7 @@ in its current state we can use eth_utils and eth_abi to help us out in developm
       data=final_data  # Smart contract call data
     )
 
+    # These managers are covered in the next section of the tutorial!
     async with NonceManager(self.rpc) as nm:
       await nm.fill_transaction(tx)
     async with self.gm.informed_manager() as im:
