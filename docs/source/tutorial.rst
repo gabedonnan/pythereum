@@ -278,6 +278,64 @@ This creation of transactions is all well and good but it would be great if we c
 
 With Pythereum's `NonceManager <https://pythereum.readthedocs.io/en/latest/pythereum.html#pythereum.rpc.NonceManager>`_ and `GasManager <https://pythereum.readthedocs.io/en/latest/pythereum.html#pythereum.gas_managers.GasManager>`_ classes that can be done very simply, and with a high degree of control!
 
+Smart Contract / ABI Interaction
+--------------------------------
+
+Some transactions require data sent with them, for example if we are interacting with a smart contract, we need to specify what methods we would like to work with, etc.
+The methods a smart contract has available are shown in it's ABI, with information on data types for each parameter and returns.
+In order to call these methods we must appropriately encode our data to send such that it abides by the ABI's rules.
+
+For example if we are interacting with a method "buyShares(uint256 number, uint256 price)", we need to do a couple things:
+
+* Prepare a number of shares we would like to buy n at price p
+
+* Extract a four byte function selector (this is a four byte value which represents the function to call)
+
+  * This is done by taking the function name we want to call without variable names or spaces like "buyShares(uint256,uint256)"
+
+  * We then call "eth_utils.function_signature_to_4byte_selector" on it, giving us the first four bytes of our data.
+
+* Encode the data we would like to pass as parameters to the function (n and p)
+
+  * We use "eth_abi.encode(["uint256", "uint256"], [n, p])" here, to encode our data to the correct data types
+
+* We then concatenate the selector with the encoded data and voila, we have a complete smart contract function call to pass alongside our transaction
+
+While the end goal is for Pythereum to be able to encode and decode ABI data by itself,
+in its current state we can use eth_utils and eth_abi to help us out in development.
+
+.. code-block:: python
+  :linenos:
+  from eth_utils import function_signature_to_4byte_selector
+  from eth_abi import encode
+
+  ...  # Generic RPC setup code inside a class
+
+  async def send_buy_transaction(self, quantity: int, price: int):
+    # Get signature and convert it to hexadecimal
+    signature = function_signature_to_4byte_selector("buyShares(uint256,uint256)").hex()
+    # Get encoded function parameters and convert it to hexadecimal
+    encoded_params = encode(["uint256", "uint256"], [quantity, price]).hex()
+    # Combine signature and params for final data to send
+    final_data = f"0x{signature}{encoded_params}"
+
+    tx = Transaction(
+      from_address=self.acct.address,  # My address
+      to_address="0x5fC2E691E520bbd3499f409bb9602DBA94184672",  # Smart contract address
+      value=1,  # Value to send alongside data (maybe to pay for shares)
+      chain_id=1,
+      data=final_data  # Smart contract call data
+    )
+
+    async with NonceManager(self.rpc) as nm:
+      await nm.fill_transaction(tx)
+    async with self.gm.informed_manager() as im:
+      im.fill_transaction(tx)
+
+    signed_tx = self.acct.sign_transaction(tx).rawTransaction.hex()
+
+    await self.rpc.send_raw_transaction(signed_tx)
+
 Gas and Nonce Management
 ========================
 
@@ -547,3 +605,23 @@ Examples below:
     msg = await brpc.send_mev_bundle(bd)
 
   print(msg)
+
+Mempool Access
+==============
+
+The memory pool (mempool) holds proposed transactions in a public place before they are either added to a block or discarded.
+
+Accessing the possible transactions that others may make in the future is an important way to gain an advantage when interacting with the Ethereum blockchain.
+
+The way to access this mempool is different depending on what type of node you are connected to,
+for geth or OpenEthereum parity nodes there are inbuilt methods for this.
+
+.. code-block:: python
+  :linenos:
+
+  await rpc.get_mempool_geth()
+  await rpc.get_mempool_parity()
+
+However if you are connected to another ethereum endpoint type there may not be a simple method to do this.
+Instead it is possible to use subscriptions to build up your own picture of the mempool using the new pending transactions subscription type.
+
