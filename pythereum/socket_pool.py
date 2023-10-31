@@ -25,7 +25,9 @@ class WebsocketPool:
         if self.connected:
             await self.quit()
         # Creates a number of sockets equal to the maximum pool size
-        sockets = await gather(*(connect(self._url) for _ in range(self._max_pool_size)))
+        sockets = await gather(
+            *(connect(self._url) for _ in range(self._max_pool_size))
+        )
         await gather(*(self._sockets.put(socket) for socket in sockets))
         self._sockets_used = 0
         self.connected = True
