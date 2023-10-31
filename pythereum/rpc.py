@@ -404,7 +404,7 @@ class EthRPC:
         async with self._pool.get_socket() as ws:
             subscription_id = ""
             try:
-                subscription_id = await self.get_subscription(method, ws)
+                subscription_id = await self._get_subscription(method, ws)
                 sub = Subscription(
                     subscription_id=subscription_id, socket=ws, subscription_type=method
                 )
@@ -414,11 +414,11 @@ class EthRPC:
                     raise ERPCSubscriptionException(
                         f"Subscription of type {method.value} rejected by destination."
                     )
-                await self.unsubscribe(subscription_id, ws)
+                await self._unsubscribe(subscription_id, ws)
 
     # Public RPC methods
 
-    async def get_subscription(
+    async def _get_subscription(
         self,
         method: SubscriptionType,
         websocket: websockets.WebSocketClientProtocol | None = None,
@@ -428,7 +428,7 @@ class EthRPC:
         """
         return await self._send_message("eth_subscribe", [method.value], websocket)
 
-    async def unsubscribe(
+    async def _unsubscribe(
         self,
         subscription_id: str | HexStr,
         websocket: websockets.WebSocketClientProtocol | None = None,
@@ -1277,9 +1277,12 @@ class EthRPC:
 
     # OpenEthereum parity functions
 
-    async def parity_get_mempool(
+    async def get_mempool_parity(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> TransactionFull | list[TransactionFull]:
+        """
+        Access the memory pool for a given OpenEthereum parity node, does not work on other node types
+        """
         msg = await self._send_message("parity_pendingTransactions", [], websocket)
         match msg:
             case None:
@@ -1291,9 +1294,12 @@ class EthRPC:
 
     # Geth functions
 
-    async def geth_get_mempool(
+    async def get_mempool_geth(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> TransactionFull | list[TransactionFull]:
+        """
+        Access the memory pool for a geth node, does not work on other node types
+        """
         msg = await self._send_message("txpool_content", [], websocket)
         match msg:
             case None:
