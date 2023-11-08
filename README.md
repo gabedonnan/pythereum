@@ -30,6 +30,7 @@ The following builder classes are currently implemented:
 - Rsync Builder
 - Builder0x69
 - Flashbots Builder
+- Loki Builder
 - Beaver Builder (Very poorly documented parameters online, may need adjustment)
 
 

@@ -226,6 +226,36 @@ class FlashbotsBuilder(Builder):
         }
 
 
+class LokiBuilder(Builder):
+    def __init__(self, private_key: str | HexStr | None = None):
+        super().__init__(
+            "https://rpc.lokibuilder.xyz/",
+            "eth_sendPrivateRawTransaction",
+            "eth_sendBundle",
+            "eth_cancelBundle",
+            "mev_sendBundle",
+            {
+                "txs",
+                "blockNumber",
+                "minTimestamp",
+                "maxTimestamp",
+                "revertingTxHashes",
+                "replacementUuid",
+                "refundPercent",
+                "refundRecipient",
+                "refundTxHashes",
+            },
+            private_key,
+        )
+
+    def format_private_transaction(
+        self,
+        tx: str | HexStr | list[str] | list[HexStr],
+        max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
+    ) -> list[Any]:
+        return [tx]
+
+
 class BuilderRPC:
     """
     An RPC class designed for sending raw transactions and bundles to specific block builders
@@ -379,4 +409,5 @@ ALL_BUILDERS = [
     RsyncBuilder(),
     BeaverBuilder(),
     FlashbotsBuilder(),
+    LokiBuilder(),
 ]
