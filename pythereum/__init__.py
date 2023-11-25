@@ -20,6 +20,7 @@ from pythereum.builders import (
     TitanBuilder,
     RsyncBuilder,
     FlashbotsBuilder,
+    LokiBuilder,
     ALL_BUILDERS,
 )
 
