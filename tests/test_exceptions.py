@@ -15,8 +15,7 @@ def test_ERPCRequestException():
     code = 404
     message = "Not Found"
     exception = ERPCRequestException(code, message)
-
-    assert str(exception) == f"Error {code}: {message}"
+    assert str(exception) == f"Error {code}: {message}\nPlease consult your endpoint's documentation for info on error codes."
     assert exception.code == code
 
 
