@@ -60,6 +60,12 @@ async def test_flashbots_builder():
 
 
 @pytest.mark.asyncio
+async def test_loki_builder():
+    async with pye.BuilderRPC(pye.LokiBuilder()) as brpc:
+        assert await brpc.send_private_transaction(None) is None
+
+
+@pytest.mark.asyncio
 async def test_all_builders():
     async with pye.BuilderRPC(
         pye.ALL_BUILDERS, private_key=Account.create().key

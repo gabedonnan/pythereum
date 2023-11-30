@@ -6,6 +6,7 @@ from pythereum import (
     BuilderRPC,
     TitanBuilder,
     RsyncBuilder,
+    LokiBuilder,
     HexStr,
     NonceManager,
     Transaction,
@@ -49,7 +50,7 @@ async def building():
     signed_tx = Account.sign_transaction(tx, acct.key).rawTransaction
 
     async with BuilderRPC(
-        [TitanBuilder(), RsyncBuilder()], private_key=acct.key
+        [TitanBuilder(), RsyncBuilder(), LokiBuilder()], private_key=acct.key
     ) as brpc:
         msg = await brpc.send_private_transaction(HexStr(signed_tx))
         print(msg)
