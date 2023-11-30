@@ -66,7 +66,7 @@ pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 or
 
 ```toml
-pythereum = "^1.1.7"
+pythereum = "^1.1.8"
 ```
 
 If you would like to install the library via pypi instead of via this git repository.
@@ -164,7 +164,7 @@ if __name__ == "__main__":
 
 ```python
 >>> from pythereum import EthDenomination, convert_eth
->>> convert_eth(1_000_000, convert_from=EthDenomination.wei, covert_to=EthDenomination.ether)
+>>> convert_eth(1_000_000, convert_from=EthDenomination.wei, convert_to=EthDenomination.ether)
 1e-12
 >>> convert_eth(1_000, EthDenomination.babbage, EthDenomination.finney)
 1e-09
