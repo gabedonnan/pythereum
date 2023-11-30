@@ -9,6 +9,7 @@ from pythereum.exceptions import (
     ERPCInvalidReturnException,
     ERPCSubscriptionException,
     ERPCManagerException,
+    ERPCGenericException,
 )
 from pythereum.common import (
     HexStr,
@@ -24,19 +25,32 @@ from pythereum.dclasses import Block, Sync, Receipt, Log, Transaction, Transacti
 
 def convert_eth(
     quantity: float | str | HexStr,
-    convert_from: EthDenomination,
-    covert_to: EthDenomination,
+    convert_from: EthDenomination | str,
+    convert_to: EthDenomination | str,
 ) -> float:
     """
     Converts eth values from a given denomination to another.
     Strings passed in are automatically decoded from hexadecimal to integers, as are Hex values
     """
-    if isinstance(quantity, str):
-        quantity = int(quantity, 16)
-    elif isinstance(quantity, HexStr):
+    if isinstance(quantity, HexStr):
         quantity = quantity.integer_value
+    elif isinstance(quantity, str):
+        quantity = int(quantity, 16)
 
-    return (convert_from.value * quantity) / covert_to.value
+    # Allow strings to be used instead of enum values
+    if isinstance(convert_from, str):
+        if hasattr(EthDenomination, convert_from):
+            convert_from = EthDenomination[convert_from]
+        else:
+            raise ERPCGenericException("convert_from value string is not a member of EthDenomination")
+
+    if isinstance(convert_to, str):
+        if hasattr(EthDenomination, convert_to):
+            convert_to = EthDenomination[convert_to]
+        else:
+            raise ERPCGenericException("convert_to value string is not a member of EthDenomination")
+
+    return (convert_from.value * quantity) / convert_to.value
 
 
 def parse_results(

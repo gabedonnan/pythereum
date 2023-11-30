@@ -6,6 +6,7 @@ from pythereum.exceptions import (
     ERPCSubscriptionException,
     ERPCBuilderException,
     ERPCManagerException,
+    ERPCGenericException,
 )
 
 
@@ -61,5 +62,12 @@ def test_ERPCBuilderException():
 def test_ERPCManagerException():
     message = "Manager Error"
     exception = ERPCManagerException(message)
+
+    assert str(exception) == message
+
+
+def test_ERPCGenericException():
+    message = "Generic Error"
+    exception = ERPCGenericException(message)
 
     assert str(exception) == message

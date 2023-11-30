@@ -53,3 +53,9 @@ class ERPCManagerException(ERPCBaseException):
     """
     Raised for exceptions related to manager classes such as nonce managers or gas managers
     """
+
+
+class ERPCGenericException(ERPCBaseException):
+    """
+    Raised for exceptions which do not fall into any of the above categories, things like utility functions will use it
+    """

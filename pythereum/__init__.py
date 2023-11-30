@@ -43,6 +43,7 @@ from pythereum.exceptions import (
     ERPCSubscriptionException,
     ERPCBuilderException,
     ERPCManagerException,
+    ERPCGenericException,
 )
 
 from pythereum.gas_managers import GasManager
