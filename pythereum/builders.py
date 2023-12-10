@@ -55,6 +55,9 @@ class Builder(ABC):
     def format_bundle(self, bundle: dict | Bundle) -> dict:
         return {key: bundle[key] for key in bundle.keys() & self.bundle_params}
 
+    def __hash__(self):
+        return self.builder_name
+
 
 class TitanBuilder(Builder):
     def __init__(self):
@@ -242,8 +245,9 @@ class BuilderRPC:
         | list[bytes]
         | list[HexStr] = None,
     ):
-        if not isinstance(builders, list):
+        if isinstance(builders, Builder):
             builders = [builders]
+
         self.builders = builders
         self.private_key = private_key
         self.session = None
@@ -370,6 +374,15 @@ class BuilderRPC:
         else:
             bundle["privacy"] = {"builders": [builder.builder_name for builder in self.builders]}
         return await self._send_message(FlashbotsBuilder(), "mev_sendBundle", [bundle], True)
+
+    async def titan_trace_bundle(self, bundle_hash: str | HexStr) -> dict:
+        # TODO: When more builders enable bundle tracing, create a more generic version of this function
+        return await self._send_message(
+            TitanBuilder(),  # Always uses TitanBuilder, so create a titanbuilder obj regardless
+            "titan_getBundleStats",
+            [{"bundleHash": bundle_hash}],
+            True
+        )
 
 
 # A list containing all the current supported builders. Can be passed in to a BuilderRPC to send to all
