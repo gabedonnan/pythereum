@@ -646,6 +646,7 @@ class MEVBundle(dict):
         extra_mev_bundles: list[dict] | None = None,
         refund_addresses: list[str] | None = None,
         refund_percentages: list[int] | None = None,
+        valid_builders: list[str] | None = None,
     ):
         """
         :param version: (OPTIONAL) MEVBoost protocol version to use
@@ -657,6 +658,7 @@ class MEVBundle(dict):
         :param extra_mev_bundles: (OPTIONAL) MEV bundles may be compounded, this parameter is a list of extra MEV bundles to include in this bundle
         :param refund_addresses: A list of addresses for refunds to be addressed to
         :param refund_percentages: A list of integers defining the percentage of refunds directed to each address
+        :param valid_builders: A list of builders who are allowed to execute this MEV bundle
         """
         if not isinstance(block, HexStr):
             block = HexStr(block)
@@ -698,6 +700,11 @@ class MEVBundle(dict):
                         refund_addresses, refund_percentages
                     )
                 ]
+            }
+
+        if valid_builders is not None:
+            res["privacy"] = {
+                "builders": valid_builders
             }
 
         super().__init__(res)

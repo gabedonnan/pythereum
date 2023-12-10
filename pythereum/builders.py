@@ -21,9 +21,8 @@ class Builder(ABC):
         private_transaction_method: str = "eth_sendPrivateTransaction",
         bundle_method: str = "eth_sendBundle",
         cancel_bundle_method: str = "eth_cancelBundle",
-        mev_bundle_method: str = "mev_sendBundle",
+        builder_name: str = "Builder",
         bundle_params: set = None,
-        private_key: str = None,
     ):
         if bundle_params is None:
             bundle_params = {
@@ -42,9 +41,8 @@ class Builder(ABC):
         self.private_transaction_method = private_transaction_method
         self.bundle_method = bundle_method
         self.cancel_bundle_method = cancel_bundle_method
+        self.builder_name = builder_name
         self.bundle_params = bundle_params
-        self.mev_bundle_method = mev_bundle_method
-        self.private_key = HexStr(private_key) if private_key is not None else None
         super().__init__()
 
     def format_private_transaction(
@@ -57,29 +55,15 @@ class Builder(ABC):
     def format_bundle(self, bundle: dict | Bundle) -> dict:
         return {key: bundle[key] for key in bundle.keys() & self.bundle_params}
 
-    @staticmethod
-    def format_mev_bundle(bundle: MEVBundle) -> list[dict]:
-        return [bundle]
-
-    def get_header(self, data: Any = None) -> Any:
-        return None
-
-    def get_flashbots_header(self, payload: str = "") -> dict:
-        payload = messages.encode_defunct(keccak(text=payload))
-        return {
-            "X-Flashbots-Signature": f"{Account.from_key(self.private_key.hex_bytes).address}:"
-            f"{Account.sign_message(payload, self.private_key.hex_bytes).signature.hex()}"
-        }
-
 
 class TitanBuilder(Builder):
-    def __init__(self, private_key: str | HexStr | None = None):
+    def __init__(self):
         super().__init__(
             "https://rpc.titanbuilder.xyz",
             "eth_sendPrivateTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
-            "mev_sendBundle",
+            "Titan",
             {
                 "txs",
                 "blockNumber",
@@ -91,7 +75,6 @@ class TitanBuilder(Builder):
                 "refundIndex",
                 "refundRecipient",
             },
-            private_key,
         )
 
     def format_private_transaction(
@@ -106,13 +89,13 @@ class TitanBuilder(Builder):
 
 
 class BeaverBuilder(Builder):
-    def __init__(self, private_key: str | HexStr | None = None):
+    def __init__(self):
         super().__init__(
             "https://rpc.beaverbuild.org/",
             "eth_sendPrivateRawTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
-            "mev_sendBundle",
+            "beaverbuild.org",
             {
                 "txs",
                 "blockNumber",
@@ -124,7 +107,6 @@ class BeaverBuilder(Builder):
                 "refundRecipient",
                 "refundTxHashes",
             },
-            private_key,
         )
 
     def format_private_transaction(
@@ -136,13 +118,13 @@ class BeaverBuilder(Builder):
 
 
 class RsyncBuilder(Builder):
-    def __init__(self, private_key: str | HexStr | None = None):
+    def __init__(self):
         super().__init__(
             "https://rsync-builder.xyz/",
             "eth_sendPrivateRawTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
-            "mev_sendBundle",
+            "rsync",
             {
                 "txs",
                 "blockNumber",
@@ -154,7 +136,6 @@ class RsyncBuilder(Builder):
                 "refundRecipient",
                 "refundTxHashes",
             },
-            private_key,
         )
 
     def format_private_transaction(
@@ -166,13 +147,13 @@ class RsyncBuilder(Builder):
 
 
 class Builder0x69(Builder):
-    def __init__(self, private_key: str | HexStr | None = None):
+    def __init__(self):
         super().__init__(
             "https://builder0x69.io/",
             "eth_sendRawTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
-            "mev_sendBundle",
+            "builder0x69",
             {
                 "txs",
                 "blockNumber",
@@ -183,7 +164,6 @@ class Builder0x69(Builder):
                 "refundPercent",
                 "refundRecipient",
             },
-            private_key,
         )
 
     def format_private_transaction(
@@ -195,13 +175,13 @@ class Builder0x69(Builder):
 
 
 class FlashbotsBuilder(Builder):
-    def __init__(self, private_key: str | HexStr | None = None):
+    def __init__(self):
         super().__init__(
             "https://relay.flashbots.net",
             "eth_sendPrivateRawTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
-            "mev_sendBundle",
+            "flashbots",
             {
                 "txs",
                 "blockNumber",
@@ -210,7 +190,6 @@ class FlashbotsBuilder(Builder):
                 "revertingTxHashes",
                 "replacementUuid",
             },
-            private_key,
         )
 
     def format_private_transaction(
@@ -218,22 +197,15 @@ class FlashbotsBuilder(Builder):
     ) -> list[Any]:
         return [{"tx": tx, "preferences": preferences}]
 
-    def get_header(self, payload: str = "") -> dict:
-        payload = messages.encode_defunct(keccak(text=payload))
-        return {
-            "X-Flashbots-Signature": f"{Account.from_key(self.private_key.hex_bytes).address}:"
-            f"{Account.sign_message(payload, self.private_key.hex_bytes).signature.hex()}"
-        }
-
 
 class LokiBuilder(Builder):
-    def __init__(self, private_key: str | HexStr | None = None):
+    def __init__(self):
         super().__init__(
             "https://rpc.lokibuilder.xyz/",
             "eth_sendPrivateRawTransaction",
             "eth_sendBundle",
             "eth_cancelBundle",
-            "mev_sendBundle",
+            "Loki",
             {
                 "txs",
                 "blockNumber",
@@ -245,7 +217,6 @@ class LokiBuilder(Builder):
                 "refundRecipient",
                 "refundTxHashes",
             },
-            private_key,
         )
 
     def format_private_transaction(
@@ -274,17 +245,26 @@ class BuilderRPC:
         if not isinstance(builders, list):
             builders = [builders]
         self.builders = builders
-        if isinstance(private_key, list):
-            for key, builder in zip(private_key, self.builders):
-                builder.private_key = HexStr(key)
-        elif private_key is not None:
-            for builder in self.builders:
-                builder.private_key = HexStr(private_key)
+        self.private_key = private_key
         self.session = None
         self._id = 0
 
+    async def __aenter__(self):
+        await self.start_session()
+        return self
+
+    async def __aexit__(self, *args):
+        await self.close_session()
+
     def _next_id(self) -> None:
         self._id += 1
+
+    def _get_flashbots_header(self, payload: str = "") -> dict:
+        payload = messages.encode_defunct(keccak(text=payload))
+        return {
+            "X-Flashbots-Signature": f"{Account.from_key(self.private_key.hex_bytes).address}:"
+            f"{Account.sign_message(payload, self.private_key.hex_bytes).signature.hex()}"
+        }
 
     def _build_json(
         self, method: str, params: list[Any], increment: bool = True
@@ -311,9 +291,9 @@ class BuilderRPC:
         if self.session is not None:
             constructed_json = self._build_json(method, params)
             header_data = (
-                builder.get_flashbots_header(json.dumps(constructed_json))
+                self._get_flashbots_header(json.dumps(constructed_json))
                 if use_flashbots_signature
-                else builder.get_header(json.dumps(constructed_json))
+                else None
             )
             async with self.session.post(
                 builder.url, json=constructed_json, headers=header_data
@@ -385,21 +365,11 @@ class BuilderRPC:
         )
 
     async def send_mev_bundle(self, bundle: MEVBundle) -> Any:
-        mev_methods = [builder.mev_bundle_method for builder in self.builders]
-        bundles = [builder.format_mev_bundle(bundle) for builder in self.builders]
-        return await asyncio.gather(
-            *(
-                self._send_message(builder, method, bundle, True)
-                for builder, method, bundle in zip(self.builders, mev_methods, bundles)
-            )
-        )
-
-    async def __aenter__(self):
-        await self.start_session()
-        return self
-
-    async def __aexit__(self, *args):
-        await self.close_session()
+        if "privacy" in bundle:
+            bundle["privacy"]["builders"].extend([builder.builder_name for builder in self.builders])
+        else:
+            bundle["privacy"] = {"builders": [builder.builder_name for builder in self.builders]}
+        return await self._send_message(FlashbotsBuilder(), "mev_sendBundle", [bundle], True)
 
 
 # A list containing all the current supported builders. Can be passed in to a BuilderRPC to send to all
