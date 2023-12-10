@@ -230,6 +230,23 @@ class LokiBuilder(Builder):
         return [tx]
 
 
+# Tuple of the types of builders which use flashbots headers for their transactions
+FLASHBOTS_BUILDER_TYPES = (
+    FlashbotsBuilder,
+    TitanBuilder,
+)
+
+# A list containing all the current supported builders. Can be passed in to a BuilderRPC to send to all
+ALL_BUILDERS = (
+    TitanBuilder(),
+    Builder0x69(),
+    RsyncBuilder(),
+    BeaverBuilder(),
+    FlashbotsBuilder(),
+    LokiBuilder(),
+)
+
+
 class BuilderRPC:
     """
     An RPC class designed for sending raw transactions and bundles to specific block builders
@@ -328,15 +345,15 @@ class BuilderRPC:
         tx: str | HexStr,
         extra_info: Any = None,
     ) -> Any:
-        tx_methods = [builder.private_transaction_method for builder in self.builders]
-        tx = [
-            builder.format_private_transaction(tx, extra_info)
-            for builder in self.builders
-        ]
         return await asyncio.gather(
             *(
-                self._send_message(builder, method, transaction)
-                for builder, method, transaction in zip(self.builders, tx_methods, tx)
+                self._send_message(
+                    builder,
+                    builder.private_transaction_method,
+                    [builder.format_private_transaction(tx, extra_info)],
+                    isinstance(builder, FLASHBOTS_BUILDER_TYPES)
+                )
+                for builder in self.builders
             )
         )
 
@@ -344,12 +361,15 @@ class BuilderRPC:
         self,
         bundle: Bundle,
     ) -> Any:
-        tx_methods = [builder.bundle_method for builder in self.builders]
-        tx = [builder.format_bundle(bundle) for builder in self.builders]
         return await asyncio.gather(
             *(
-                self._send_message(builder, method, transaction)
-                for builder, method, transaction in zip(self.builders, tx_methods, tx)
+                self._send_message(
+                    builder,
+                    builder.bundle_method,
+                    [builder.format_bundle(bundle)],
+                    isinstance(builder, FLASHBOTS_BUILDER_TYPES)
+                )
+                for builder in self.builders
             )
         )
 
@@ -357,40 +377,39 @@ class BuilderRPC:
         self,
         replacement_uuids: str | HexStr,
     ):
-        cancel_methods = [builder.cancel_bundle_method for builder in self.builders]
-        replacement_uuids = [replacement_uuids for _ in self.builders]
         return await asyncio.gather(
             *(
-                self._send_message(builder, method, uuid)
-                for builder, method, uuid in zip(
-                    self.builders, cancel_methods, replacement_uuids
-                )
+                self._send_message(
+                    builder,
+                    builder.cancel_bundle_method,
+                    [replacement_uuids],
+                    isinstance(builder, FLASHBOTS_BUILDER_TYPES))
+                for builder in self.builders
             )
         )
 
     async def send_mev_bundle(self, bundle: MEVBundle) -> Any:
+        """
+        Sends a MEV bundle to the flashbots builder
+        Attempts to distribute the bundle among all builders in the BuilderRPC
+        May not work with builders not currently supporting the MEV protocol
+        """
         if "privacy" in bundle:
             bundle["privacy"]["builders"].extend([builder.builder_name for builder in self.builders])
         else:
             bundle["privacy"] = {"builders": [builder.builder_name for builder in self.builders]}
-        return await self._send_message(FlashbotsBuilder(), "mev_sendBundle", [bundle], True)
+        return await self._send_message(
+            FlashbotsBuilder(),
+            "mev_sendBundle",
+            [bundle],
+            True
+        )
 
     async def titan_trace_bundle(self, bundle_hash: str | HexStr) -> dict:
         # TODO: When more builders enable bundle tracing, create a more generic version of this function
         return await self._send_message(
-            TitanBuilder(),  # Always uses TitanBuilder, so create a titanbuilder obj regardless
+            TitanBuilder(),  # Always uses TitanBuilder, so create a titan builder obj regardless
             "titan_getBundleStats",
             [{"bundleHash": bundle_hash}],
             True
         )
-
-
-# A list containing all the current supported builders. Can be passed in to a BuilderRPC to send to all
-ALL_BUILDERS = [
-    TitanBuilder(),
-    Builder0x69(),
-    RsyncBuilder(),
-    BeaverBuilder(),
-    FlashbotsBuilder(),
-    LokiBuilder(),
-]
