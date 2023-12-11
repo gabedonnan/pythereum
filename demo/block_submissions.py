@@ -1,6 +1,5 @@
 # Example demonstration of builder submission, alongside implementations of gas and nonce managers
 import asyncio
-from time import time
 from eth_account import Account
 from pythereum import (
     BuilderRPC,
@@ -11,9 +10,7 @@ from pythereum import (
     NonceManager,
     Transaction,
     GasManager,
-    GasStrategy,
     EthRPC,
-    EthDenomination,
 )
 from dotenv import dotenv_values
 

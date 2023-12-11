@@ -50,10 +50,10 @@ class Builder(ABC):
         tx: str | HexStr | list[str] | list[HexStr],
         max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
     ) -> list[Any]:
-        return [tx, max_block_number]
+        return [[tx, max_block_number]]
 
-    def format_bundle(self, bundle: dict | Bundle) -> dict:
-        return {key: bundle[key] for key in bundle.keys() & self.bundle_params}
+    def format_bundle(self, bundle: dict | Bundle) -> list[dict]:
+        return [{key: bundle[key] for key in bundle.keys() & self.bundle_params}]
 
     def __hash__(self):
         return self.builder_name
@@ -266,7 +266,13 @@ class BuilderRPC:
             builders = [builders]
 
         self.builders = builders
-        self.private_key = private_key
+
+        if isinstance(private_key, HexStr):
+            private_key = private_key.hex_bytes
+        elif isinstance(private_key, str):
+            private_key = HexStr(private_key).hex_bytes
+
+        self.private_key: bytes = private_key
         self.session = None
         self._id = 0
 
@@ -283,8 +289,8 @@ class BuilderRPC:
     def _get_flashbots_header(self, payload: str = "") -> dict:
         payload = messages.encode_defunct(keccak(text=payload))
         return {
-            "X-Flashbots-Signature": f"{Account.from_key(self.private_key.hex_bytes).address}:"
-            f"{Account.sign_message(payload, self.private_key.hex_bytes).signature.hex()}"
+            "X-Flashbots-Signature": f"{Account.from_key(self.private_key).address}:"
+            f"{Account.sign_message(payload, self.private_key).signature.hex()}"
         }
 
     def _build_json(
@@ -350,7 +356,7 @@ class BuilderRPC:
                 self._send_message(
                     builder,
                     builder.private_transaction_method,
-                    [builder.format_private_transaction(tx, extra_info)],
+                    builder.format_private_transaction(tx, extra_info),
                     isinstance(builder, FLASHBOTS_BUILDER_TYPES)
                 )
                 for builder in self.builders
@@ -366,7 +372,7 @@ class BuilderRPC:
                 self._send_message(
                     builder,
                     builder.bundle_method,
-                    [builder.format_bundle(bundle)],
+                    builder.format_bundle(bundle),
                     isinstance(builder, FLASHBOTS_BUILDER_TYPES)
                 )
                 for builder in self.builders
