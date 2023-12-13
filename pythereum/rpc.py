@@ -39,14 +39,14 @@ def convert_eth(
 
     # Allow strings to be used instead of enum values
     if isinstance(convert_from, str):
-        if hasattr(EthDenomination, convert_from):
-            convert_from = EthDenomination[convert_from]
+        if hasattr(EthDenomination, convert_from.lower()):
+            convert_from = EthDenomination[convert_from.lower()]
         else:
             raise ERPCGenericException("convert_from value string is not a member of EthDenomination")
 
     if isinstance(convert_to, str):
-        if hasattr(EthDenomination, convert_to):
-            convert_to = EthDenomination[convert_to]
+        if hasattr(EthDenomination, convert_to.lower()):
+            convert_to = EthDenomination[convert_to.lower()]
         else:
             raise ERPCGenericException("convert_to value string is not a member of EthDenomination")
 

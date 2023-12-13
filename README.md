@@ -169,6 +169,8 @@ if __name__ == "__main__":
 1e-12
 >>> convert_eth(1_000, EthDenomination.babbage, EthDenomination.finney)
 1e-09
+>>> convert_eth(1e18, "wei", "eth")  # We can now use strings to represent denominations
+1
 ```
 
 ### Example builder submission
