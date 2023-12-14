@@ -319,7 +319,7 @@ class BuilderRPC:
             constructed_json = self._build_json(method, params)
             header_data = (
                 self._get_flashbots_header(json.dumps(constructed_json))
-                if use_flashbots_signature
+                if use_flashbots_signature and self.private_key is not None
                 else None
             )
             async with self.session.post(

@@ -17,7 +17,7 @@ More comprehensive tests will be generated for these at a later date
 
 @pytest.mark.asyncio
 async def test_titan_builder():
-    async with pye.BuilderRPC(pye.TitanBuilder()) as brpc:
+    async with pye.BuilderRPC(pye.TitanBuilder(), Account.create().key) as brpc:
         try:
             print(await brpc.send_private_transaction(None))
         except ERPCRequestException as e:
@@ -48,7 +48,7 @@ async def test_0x69_builder():
 
 @pytest.mark.asyncio
 async def test_flashbots_builder():
-    async with pye.BuilderRPC(pye.FlashbotsBuilder(Account.create().key)) as brpc:
+    async with pye.BuilderRPC(pye.FlashbotsBuilder(), Account.create().key) as brpc:
         try:
             await brpc.send_private_transaction(None)
         except ERPCRequestException as e:
