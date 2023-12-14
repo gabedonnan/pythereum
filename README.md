@@ -170,7 +170,7 @@ if __name__ == "__main__":
 >>> convert_eth(1_000, EthDenomination.babbage, EthDenomination.finney)
 1e-09
 >>> convert_eth(1e18, "wei", "eth")  # We can now use strings to represent denominations
-1
+1.0
 ```
 
 ### Example builder submission
@@ -202,7 +202,8 @@ async def test_builder_submission():
   # Sign your transaction with your account's key
   signed_tx = Account.sign_transaction(tx, acct.key).rawTransaction
 
-  async with BuilderRPC(TitanBuilder()) as brpc:
+  # BuilderRPC sends to TitanBuilder, private key used for creating a signed header
+  async with BuilderRPC(TitanBuilder(), private_key=acct.key) as brpc:
     msg = await brpc.send_private_transaction(HexStr(signed_tx))
     print(msg)
 
