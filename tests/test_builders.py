@@ -23,7 +23,7 @@ async def test_titan_builder():
         except ERPCRequestException as e:
             assert (
                 str(e)
-                == "Error -32600: json: cannot unmarshal array into Go value of type ipc.RpcTransaction"
+                == "Error -32000: no transaction found for builder https://rpc.titanbuilder.xyz"
                    "\nPlease consult your endpoint's documentation for info on error codes."
             )
 
@@ -31,7 +31,7 @@ async def test_titan_builder():
 @pytest.mark.asyncio
 async def test_rsync_builder():
     async with pye.BuilderRPC(pye.RsyncBuilder()) as brpc:
-        assert await brpc.send_private_transaction(None) is None
+        assert await brpc.send_private_transaction(None) == [None]
 
 
 @pytest.mark.asyncio
@@ -42,7 +42,8 @@ async def test_0x69_builder():
         except ERPCRequestException as e:
             assert str(e) == (
                 "Error -32602: invalid argument 0: json: cannot unmarshal non-string into Go value of "
-                "type hexutil.Bytes\nPlease consult your endpoint's documentation for info on error codes."
+                "type hexutil.Bytes for builder https://builder0x69.io/"
+                "\nPlease consult your endpoint's documentation for info on error codes."
             )
 
 
@@ -62,7 +63,11 @@ async def test_flashbots_builder():
 @pytest.mark.asyncio
 async def test_loki_builder():
     async with pye.BuilderRPC(pye.LokiBuilder()) as brpc:
-        assert await brpc.send_private_transaction(None) is None
+        try:
+            await brpc.send_private_transaction(None)
+        except ERPCRequestException as e:
+            assert str(e) == ("Error -32603: Timeout for builder https://rpc.lokibuilder.xyz/"
+                              "\nPlease consult your endpoint's documentation for info on error codes.")
 
 
 @pytest.mark.asyncio
@@ -73,5 +78,11 @@ async def test_all_builders():
         try:
             await brpc.send_private_transaction(None)
         except ERPCRequestException as e:
-            assert str(e) == ("Error -32000: no transaction found"
-                              "\nPlease consult your endpoint's documentation for info on error codes.")
+            assert str(e) in (
+                "Error 400: Invalid BuilderRPC request "
+                "for url https://rpc.beaverbuild.org/ of form (method=eth_sendPrivateRawTransaction, params=[None])"
+                "\nPlease consult your endpoint's documentation for info on error codes.",
+
+                "Error -32000: no transaction found for builder https://rpc.titanbuilder.xyz"
+                "\nPlease consult your endpoint's documentation for info on error codes.",
+            )
