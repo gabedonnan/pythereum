@@ -361,7 +361,7 @@ class BuilderRPC:
                     builder,
                     builder.private_transaction_method,
                     builder.format_private_transaction(tx, extra_info),
-                    isinstance(builder, FLASHBOTS_BUILDER_TYPES)
+                    isinstance(builder, FLASHBOTS_BUILDER_TYPES),
                 )
                 for builder in self.builders
             )
@@ -377,7 +377,7 @@ class BuilderRPC:
                     builder,
                     builder.bundle_method,
                     builder.format_bundle(bundle),
-                    isinstance(builder, FLASHBOTS_BUILDER_TYPES)
+                    isinstance(builder, FLASHBOTS_BUILDER_TYPES),
                 )
                 for builder in self.builders
             )
@@ -393,7 +393,8 @@ class BuilderRPC:
                     builder,
                     builder.cancel_bundle_method,
                     [replacement_uuids],
-                    isinstance(builder, FLASHBOTS_BUILDER_TYPES))
+                    isinstance(builder, FLASHBOTS_BUILDER_TYPES),
+                )
                 for builder in self.builders
             )
         )
@@ -405,14 +406,15 @@ class BuilderRPC:
         May not work with builders not currently supporting the MEV protocol
         """
         if "privacy" in bundle:
-            bundle["privacy"]["builders"].extend([builder.builder_name for builder in self.builders])
+            bundle["privacy"]["builders"].extend(
+                [builder.builder_name for builder in self.builders]
+            )
         else:
-            bundle["privacy"] = {"builders": [builder.builder_name for builder in self.builders]}
+            bundle["privacy"] = {
+                "builders": [builder.builder_name for builder in self.builders]
+            }
         return await self._send_message(
-            FlashbotsBuilder(),
-            "mev_sendBundle",
-            [bundle],
-            True
+            FlashbotsBuilder(), "mev_sendBundle", [bundle], True
         )
 
     async def titan_trace_bundle(self, bundle_hash: str | HexStr) -> dict:
@@ -421,8 +423,9 @@ class BuilderRPC:
             TitanBuilder(),  # Always uses TitanBuilder, so create a titan builder obj regardless
             "titan_getBundleStats",
             [{"bundleHash": bundle_hash}],
-            True
+            True,
         )
+
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

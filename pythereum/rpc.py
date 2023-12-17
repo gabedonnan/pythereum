@@ -46,13 +46,17 @@ def convert_eth(
         if hasattr(EthDenomination, convert_from.lower()):
             convert_from = EthDenomination[convert_from.lower()]
         else:
-            raise ERPCGenericException("convert_from value string is not a member of EthDenomination")
+            raise ERPCGenericException(
+                "convert_from value string is not a member of EthDenomination"
+            )
 
     if isinstance(convert_to, str):
         if hasattr(EthDenomination, convert_to.lower()):
             convert_to = EthDenomination[convert_to.lower()]
         else:
-            raise ERPCGenericException("convert_to value string is not a member of EthDenomination")
+            raise ERPCGenericException(
+                "convert_to value string is not a member of EthDenomination"
+            )
 
     return (convert_from.value * quantity) / convert_to.value
 
@@ -1347,6 +1351,7 @@ class EthRPC:
         if the function does not exist for the given params an error will be raised
         """
         return await self._send_message(method_name, params, websocket)
+
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

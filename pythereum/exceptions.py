@@ -2,6 +2,7 @@
 # Copyright (C) 2023 Gabriel "gabedonnan" Donnan
 # Further copyright info available at the end of the file
 
+
 class ERPCBaseException(Exception):
     """
     Base exception class for Ethereum RPC interactions.
@@ -63,6 +64,7 @@ class ERPCGenericException(ERPCBaseException):
     """
     Raised for exceptions which do not fall into any of the above categories, things like utility functions will use it
     """
+
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

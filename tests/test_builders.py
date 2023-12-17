@@ -28,7 +28,7 @@ async def test_titan_builder():
             assert (
                 str(e)
                 == "Error -32000: no transaction found for builder https://rpc.titanbuilder.xyz"
-                   "\nPlease consult your endpoint's documentation for info on error codes."
+                "\nPlease consult your endpoint's documentation for info on error codes."
             )
 
 
@@ -70,8 +70,10 @@ async def test_loki_builder():
         try:
             await brpc.send_private_transaction(None)
         except ERPCRequestException as e:
-            assert str(e) == ("Error -32603: Timeout for builder https://rpc.lokibuilder.xyz/"
-                              "\nPlease consult your endpoint's documentation for info on error codes.")
+            assert str(e) == (
+                "Error -32603: Timeout for builder https://rpc.lokibuilder.xyz/"
+                "\nPlease consult your endpoint's documentation for info on error codes."
+            )
 
 
 @pytest.mark.asyncio
@@ -86,10 +88,10 @@ async def test_all_builders():
                 "Error 400: Invalid BuilderRPC request "
                 "for url https://rpc.beaverbuild.org/ of form (method=eth_sendPrivateRawTransaction, params=[None])"
                 "\nPlease consult your endpoint's documentation for info on error codes.",
-
                 "Error -32000: no transaction found for builder https://rpc.titanbuilder.xyz"
                 "\nPlease consult your endpoint's documentation for info on error codes.",
             )
+
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

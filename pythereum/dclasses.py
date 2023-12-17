@@ -707,11 +707,10 @@ class MEVBundle(dict):
             }
 
         if valid_builders is not None:
-            res["privacy"] = {
-                "builders": valid_builders
-            }
+            res["privacy"] = {"builders": valid_builders}
 
         super().__init__(res)
+
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

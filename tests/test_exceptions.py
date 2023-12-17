@@ -19,7 +19,10 @@ def test_ERPCRequestException():
     code = 404
     message = "Not Found"
     exception = ERPCRequestException(code, message)
-    assert str(exception) == f"Error {code}: {message}\nPlease consult your endpoint's documentation for info on error codes."
+    assert (
+        str(exception)
+        == f"Error {code}: {message}\nPlease consult your endpoint's documentation for info on error codes."
+    )
     assert exception.code == code
 
 
@@ -74,6 +77,7 @@ def test_ERPCGenericException():
     exception = ERPCGenericException(message)
 
     assert str(exception) == message
+
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
