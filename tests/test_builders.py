@@ -90,6 +90,9 @@ async def test_all_builders():
                 "\nPlease consult your endpoint's documentation for info on error codes.",
                 "Error -32000: no transaction found for builder https://rpc.titanbuilder.xyz"
                 "\nPlease consult your endpoint's documentation for info on error codes.",
+                "Error -32602: invalid argument 0: json: cannot unmarshal non-string into "
+                "Go value of type hexutil.Bytes for builder https://builder0x69.io/"
+                "\nPlease consult your endpoint's documentation for info on error codes.",
             )
 
 
