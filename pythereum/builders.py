@@ -59,6 +59,9 @@ class Builder(ABC):
     def format_bundle(self, bundle: dict | Bundle) -> list[dict]:
         return [{key: bundle[key] for key in bundle.keys() & self.bundle_params}]
 
+    def format_cancellation(self, uuids: HexStr | str | list[HexStr] | list[str]):
+        return [uuids]
+
     def __hash__(self):
         return self.builder_name
 
@@ -101,7 +104,7 @@ class BeaverBuilder(Builder):
             "https://rpc.beaverbuild.org/",
             "eth_sendPrivateRawTransaction",
             "eth_sendBundle",
-            "eth_cancelBundle",
+            "eth_sendBundle",
             "beaverbuild.org",
             {
                 "txs",
@@ -109,10 +112,10 @@ class BeaverBuilder(Builder):
                 "minTimestamp",
                 "maxTimestamp",
                 "revertingTxHashes",
+                "uuid",
                 "replacementUuid",
                 "refundPercent",
                 "refundRecipient",
-                "refundTxHashes",
             },
         )
 
@@ -122,6 +125,11 @@ class BeaverBuilder(Builder):
         max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
     ) -> list[Any]:
         return [tx]
+
+    def format_cancellation(self, uuids: HexStr | str | list[HexStr] | list[str]):
+        if isinstance(uuids, str):
+            return [Bundle(uuid=uuids, txs=[])]
+        return [[Bundle(uuid=uuid, txs=[]) for uuid in uuids]]
 
 
 class RsyncBuilder(Builder):
@@ -167,7 +175,8 @@ class Builder0x69(Builder):
                 "minTimestamp",
                 "maxTimestamp",
                 "revertingTxHashes",
-                "uuid" "replacementUuid",
+                "uuid",
+                "replacementUuid",
                 "refundPercent",
                 "refundRecipient",
             },
@@ -392,7 +401,7 @@ class BuilderRPC:
                 self._send_message(
                     builder,
                     builder.cancel_bundle_method,
-                    [replacement_uuids],
+                    builder.format_cancellation(replacement_uuids),
                     isinstance(builder, FLASHBOTS_BUILDER_TYPES),
                 )
                 for builder in self.builders
