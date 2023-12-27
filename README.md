@@ -12,6 +12,7 @@ Features include:
 - Currency conversion, with support for esoteric denomination names (e.g. lovelace)
 - Private transaction and Bundle support for communication directly with block builders
 - Automatic nonce and gas management for transactions
+- Early-stage support for L2 chain specific functionality (Optimism P2P implemented for now)
 - Typed function outputs for intuitive library use
 
 ### Implemented RPC methods

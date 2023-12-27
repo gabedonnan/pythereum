@@ -34,6 +34,9 @@ from pythereum.dclasses import (
     Transaction,
     Bundle,
     MEVBundle,
+    Proof,
+    StorageProof,
+    FeeHistory,
 )
 
 from pythereum.exceptions import (
@@ -48,3 +51,5 @@ from pythereum.exceptions import (
 )
 
 from pythereum.gas_managers import GasManager
+
+from pythereum.l2_rpc import OptimismRPC
