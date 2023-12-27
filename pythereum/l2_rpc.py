@@ -1,9 +1,7 @@
 # MIT License
 # Copyright (C) 2023 Gabriel "gabedonnan" Donnan
 # Further copyright info available at the end of the file
-import websockets
 
-from pythereum import Sync
 # This file contains support for L2 chains' potential extra RPC methods or in-network communication, e.g. optimism
 
 from pythereum.rpc import EthRPC, HexStr
