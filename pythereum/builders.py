@@ -394,14 +394,14 @@ class BuilderRPC:
 
     async def cancel_bundle(
         self,
-        replacement_uuids: str | HexStr,
+        replacement_uuid: str | HexStr,
     ):
         return await asyncio.gather(
             *(
                 self._send_message(
                     builder,
                     builder.cancel_bundle_method,
-                    builder.format_cancellation(replacement_uuids),
+                    builder.format_cancellation(replacement_uuid),
                     isinstance(builder, FLASHBOTS_BUILDER_TYPES),
                 )
                 for builder in self.builders

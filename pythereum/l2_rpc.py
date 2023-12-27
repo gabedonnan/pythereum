@@ -12,6 +12,7 @@ class OptimismRPC(EthRPC):
     Class extending EthRPC for communicating between Optimism nodes
     Currently does not have support for custom object encoding
     """
+
     async def optimism_output_at_block(
         self,
         block_num: HexStr | int | list[HexStr] | list[int],
@@ -35,6 +36,7 @@ class OptimismRPC(EthRPC):
         param: bool = True,
     ) -> dict:
         return await self._send_message("opp2p_peers", [param])
+
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

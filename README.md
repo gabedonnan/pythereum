@@ -31,10 +31,10 @@ The following builder classes are currently implemented:
 - Builder0x69
 - Flashbots Builder
 - Loki Builder
-- Beaver Builder (Very poorly documented parameters online, may need adjustment)
+- Beaver Builder
 
 
-Each of these now have support for [mevboost](https://mevboost.pics) bundles.
+Titan Builder and Flashbots now have support for [mevboost](https://mevboost.pics) bundles.
 
 # Getting started
 
@@ -67,7 +67,7 @@ pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 or
 
 ```toml
-pythereum = "^1.1.8"
+pythereum = "^1.1.9"
 ```
 
 If you would like to install the library via pypi instead of via this git repository.
