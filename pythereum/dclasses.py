@@ -2,6 +2,8 @@
 # Copyright (C) 2023 Gabriel "gabedonnan" Donnan
 # Further copyright info available at the end of the file
 
+# Yes all these decoders are stupid, they will need refactoring soon.
+
 import re
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json, LetterCase, config
@@ -70,6 +72,24 @@ def hex_list_encoder(hex_obj_list: list[HexStr] | None) -> list[str] | None:
         return None
 
 
+def hex_list_list_decoder(
+    hex_string_list: list[list[str]] | None,
+) -> list[list[HexStr]] | None:
+    if hex_string_list is not None:
+        return [hex_list_decoder(hex_string) for hex_string in hex_string_list]
+    else:
+        return None
+
+
+def hex_list_list_encoder(
+    hex_obj_list: list[list[HexStr]] | None,
+) -> list[list[str]] | None:
+    if hex_obj_list is not None:
+        return [hex_list_encoder(hex_obj) for hex_obj in hex_obj_list]
+    else:
+        return None
+
+
 def transaction_decoder(
     transaction_hex: dict | str | None,
 ) -> "TransactionFull | HexStr | None":
@@ -134,6 +154,42 @@ def access_list_decoder(access_list: list[dict] | None) -> list["Access"] | None
 def access_list_encoder(access_obj_list: list["Access"] | None) -> list[dict] | None:
     if access_obj_list is not None:
         return [access_encoder(acc) for acc in access_obj_list]
+    else:
+        return None
+
+
+def storage_proof_decoder(storage_proof: dict | None) -> "StorageProof | None":
+    if storage_proof is not None:
+        return StorageProof.from_dict(storage_proof)
+    else:
+        return None
+
+
+def storage_proof_encoder(storage_proof: "StorageProof | None") -> dict | None:
+    if storage_proof is not None:
+        return storage_proof.to_dict()
+    else:
+        return None
+
+
+def storage_proof_list_decoder(
+    storage_proof_list: list[dict] | None,
+) -> list["StorageProof"] | None:
+    if storage_proof_list is not None:
+        return [
+            storage_proof_decoder(storage_proof) for storage_proof in storage_proof_list
+        ]
+    else:
+        return None
+
+
+def storage_proof_list_encoder(
+    storage_proof_list: list["StorageProof"] | None,
+) -> list[dict] | None:
+    if storage_proof_list is not None:
+        return [
+            storage_proof_encoder(storage_proof) for storage_proof in storage_proof_list
+        ]
     else:
         return None
 
@@ -490,6 +546,57 @@ class Access:
     )
     storage_keys: list[HexStr] | None = field(
         metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder)
+    )
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class FeeHistory:
+    oldest_block: HexStr | None = field(
+        metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+    )
+    base_fee_per_gas: list[HexStr] | None = field(
+        metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder)
+    )
+    gas_used_ratio: list[float] | None
+    reward: list[list[HexStr]] | None = field(
+        metadata=config(decoder=hex_list_list_decoder, encoder=hex_list_list_encoder)
+    )
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class StorageProof:
+    key: HexStr | None = field(
+        metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+    )
+    value: HexStr | None = field(
+        metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+    )
+    proof: list[HexStr] | None = field(
+        metadata=config(decoder=hex_list_decoder, encoder=hex_list_encoder)
+    )
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Proof:
+    balance: HexStr | None = field(
+        metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+    )
+    code_hash: HexStr | None = field(
+        metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+    )
+    nonce: HexStr | None = field(
+        metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+    )
+    storage_hash: HexStr | None = field(
+        metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+    )
+    storage_proof: list[StorageProof] | None = field(
+        metadata=config(
+            decoder=storage_proof_list_decoder, encoder=storage_proof_list_encoder
+        )
     )
 
 

@@ -24,7 +24,16 @@ from pythereum.common import (
 )
 from typing import Any
 from pythereum.socket_pool import WebsocketPool
-from pythereum.dclasses import Block, Sync, Receipt, Log, Transaction, TransactionFull
+from pythereum.dclasses import (
+    Block,
+    Sync,
+    Receipt,
+    Log,
+    Transaction,
+    TransactionFull,
+    FeeHistory,
+    Proof,
+)
 
 
 def convert_eth(
@@ -1045,6 +1054,68 @@ class EthRPC:
                 return Block.from_dict(msg, infer_missing=True)
             case _:
                 return [Block.from_dict(result, infer_missing=True) for result in msg]
+
+    async def get_fee_history(
+        self,
+        block_count: DefaultBlock | list[DefaultBlock],
+        newest_block: DefaultBlock | list[DefaultBlock],
+        reward_percentiles: list[HexStr]
+        | list[int]
+        | list[list[HexStr]]
+        | list[list[int]] = None,
+        websocket: websockets.WebSocketClientProtocol | None = None,
+    ) -> FeeHistory | list[FeeHistory]:
+        """
+        Returns a collection of historical gas information from which you can decide what to submit as your
+        maxFeePerGas and/or maxPriorityFeePerGas.
+
+        :param block_count: Number of blocks in the requested range.
+            Between 1 and 1024 blocks can be requested in a single query.
+            Less than requested may be returned if not all blocks are available.
+        :param newest_block: Highest block number of requested range.
+        :param reward_percentiles: An optional monotonically increasing list of percentile values to sample
+            from each block's effective priority fees per gas in ascending order, weighted by gas used.
+        :param websocket: An optional external websocket for calls to this function
+        :return: A FeeHistory object (or list thereof) containing information about past fees (at desired percentiles)
+        """
+        block_count = self._block_formatter(block_count)
+        newest_block = self._block_formatter(newest_block)
+        if reward_percentiles is None:
+            reward_percentiles = []
+
+        msg = await self._send_message(
+            "eth_feeHistory", [block_count, newest_block, reward_percentiles], websocket
+        )
+        match msg:
+            case None:
+                return msg
+            case dict():
+                return FeeHistory.from_dict(msg, infer_missing=True)
+            case _:
+                return [
+                    FeeHistory.from_dict(result, infer_missing=True) for result in msg
+                ]
+
+    async def get_proof(
+        self,
+        data: str | HexStr | list[str] | list[HexStr],
+        storage_keys: list[HexStr] | list[str] | list[list[HexStr]] | list[list[str]],
+        block_specifier: DefaultBlock | list[DefaultBlock] = BlockTag.latest,
+        websocket: websockets.WebSocketClientProtocol | None = None,
+    ) -> Proof | list[Proof]:
+        block_specifier = self._block_formatter(block_specifier)
+        msg = await self._send_message(
+            "eth_getProof",
+            [data, storage_keys, block_specifier],
+            websocket,
+        )
+        match msg:
+            case None:
+                return msg
+            case dict():
+                return Proof.from_dict(msg, infer_missing=True)
+            case _:
+                return [Proof.from_dict(result, infer_missing=True) for result in msg]
 
     async def new_filter(
         self,

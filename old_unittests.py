@@ -250,6 +250,20 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
         msg = await self.rpc.get_net_peer_count()
         print(msg)
 
+    async def test_experimental(self):
+        # msg = await self.rpc.get_fee_history(
+        #     [4, 5, 6],
+        #     ["latest", "latest", "latest"],
+        #     [[25, 75], [25, 75], [25, 75]]
+        # )
+        # print(msg)
+        msg = await self.rpc.get_proof(
+            "0x7F0d15C7FAae65896648C8273B6d7E43f58Fa842",
+            ["0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"],
+            "latest",
+        )
+        print(msg)
+
     async def test_w3_functions(self):
         msg = await self.rpc.get_client_version()
         print(msg)

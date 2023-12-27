@@ -29,6 +29,8 @@ from pythereum.dclasses import (
     Log,
     Access,
     TransactionFull,
+    hex_list_list_decoder,
+    hex_list_list_encoder,
 )
 
 
@@ -85,6 +87,36 @@ def test_hex_list_encoder():
         "0xaaaa",
     ]
     assert hex_list_encoder(None) is None
+
+
+def test_hex_list_list_decoder():
+    assert hex_list_list_decoder([["0x0"], ["0x0"]]) == [
+        [HexStr("0x0")],
+        [HexStr("0x0")],
+    ]
+    assert hex_list_list_decoder([[HexStr("0")], [HexStr("0")]]) == [
+        [HexStr("0x0")],
+        [HexStr("0x0")],
+    ]
+    assert hex_list_list_decoder([[HexStr("0xaaaa")], [HexStr("0xaaaa")]]) == [
+        [HexStr("0xaaaa")],
+        [HexStr("0xaaaa")],
+    ]
+    assert hex_list_list_decoder(None) is None
+    with pytest.raises(ERPCDecoderException) as info:
+        hex_list_list_decoder([["zzzzz"]])
+
+
+def test_hex_list_list_encoder():
+    assert hex_list_list_encoder([[HexStr("0x0")]]) == [["0x0"]]
+    assert hex_list_list_encoder([[HexStr("0x0"), HexStr("0")]]) == [["0x0", "0x0"]]
+    assert hex_list_list_encoder([[HexStr("0xaaaa"), HexStr("0xaaaa")]]) == [
+        [
+            "0xaaaa",
+            "0xaaaa",
+        ]
+    ]
+    assert hex_list_list_encoder(None) is None
 
 
 def test_log_decoder():
