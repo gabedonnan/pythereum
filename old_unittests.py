@@ -284,6 +284,13 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
         async with EthRPC(url=ANVIL_URL, use_socket_pool=False) as rpc:
             print(await rpc.get_net_version())
 
+    async def test_mempool_geth(self):
+        async with EthRPC(
+            "https://docs-demo.quiknode.pro/",
+                use_socket_pool=False
+        ) as erpc:
+            print(await erpc.get_mempool_geth())
+
 
 if __name__ == "__main__":
     unittest.main()
