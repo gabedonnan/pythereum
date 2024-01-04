@@ -221,15 +221,17 @@ class EthRPC:
         url: str,
         pool_size: int = 5,
         use_socket_pool: bool = True,
+        connection_max_payload_size: int = 2**20,
     ) -> None:
         """
         :param url: URL for the ethereum node to connect to
         :param pool_size: The number of websocket connections opened for the WebsocketPool
         :param use_socket_pool: Whether the socket pool should be used or AIOHTTP requests
+        :param connection_max_payload_size: The maximum payload size a websocket can send or recv in one message
         """
         self._id = 0
         if use_socket_pool:
-            self._pool = WebsocketPool(url, pool_size)
+            self._pool = WebsocketPool(url, pool_size, connection_max_payload_size)
         else:
             self._pool = None
             self.session = ClientSession()

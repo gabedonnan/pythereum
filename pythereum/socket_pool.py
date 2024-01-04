@@ -13,10 +13,13 @@ class WebsocketPool:
     Greatly improves speed over having to handshake a new connection for each request
     """
 
-    def __init__(self, url: str, pool_size: int = 6):
+    def __init__(
+        self, url: str, pool_size: int = 6, connection_max_payload_size: int = 2**20
+    ):
         self._url = url
         self._id = 0
         self._max_pool_size = pool_size
+        self._max_payload_size = connection_max_payload_size
         self._sockets_used = 0
         self._sockets = Queue(maxsize=pool_size)
         self.connected = False
@@ -30,7 +33,10 @@ class WebsocketPool:
             await self.quit()
         # Creates a number of sockets equal to the maximum pool size
         sockets = await gather(
-            *(connect(self._url) for _ in range(self._max_pool_size))
+            *(
+                connect(self._url, max_size=self._max_payload_size)
+                for _ in range(self._max_pool_size)
+            )
         )
         await gather(*(self._sockets.put(socket) for socket in sockets))
         self._sockets_used = 0
