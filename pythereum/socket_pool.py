@@ -14,7 +14,7 @@ class WebsocketPool:
     """
 
     def __init__(
-        self, url: str, pool_size: int = 6, connection_max_payload_size: int = 2**20, connection_timeout: int = 20000
+        self, url: str, pool_size: int = 6, connection_max_payload_size: int = 2**20, connection_timeout: int = 20
     ):
         self._url = url
         self._id = 0
