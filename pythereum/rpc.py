@@ -32,7 +32,8 @@ from pythereum.dclasses import (
     Transaction,
     TransactionFull,
     FeeHistory,
-    Proof, MempoolInfo,
+    Proof,
+    MempoolInfo,
 )
 
 
@@ -233,7 +234,9 @@ class EthRPC:
         """
         self._id = 0
         if use_socket_pool:
-            self._pool = WebsocketPool(url, pool_size, connection_max_payload_size, connection_timeout)
+            self._pool = WebsocketPool(
+                url, pool_size, connection_max_payload_size, connection_timeout
+            )
         else:
             self._pool = None
             self.session = ClientSession()
@@ -1378,13 +1381,15 @@ class EthRPC:
         self,
         tx_limit: int,
         tx_filter: dict,
-        websocket: websockets.WebSocketClientProtocol | None = None
+        websocket: websockets.WebSocketClientProtocol | None = None,
     ) -> TransactionFull | list[TransactionFull]:
         """
         Access the memory pool for a given OpenEthereum parity node, does not work on other node types
         Under testing, feel free to improve.
         """
-        msg = await self._send_message("parity_pendingTransactions", [tx_limit, tx_filter], websocket)
+        msg = await self._send_message(
+            "parity_pendingTransactions", [tx_limit, tx_filter], websocket
+        )
         match msg:
             case None:
                 return msg
@@ -1408,10 +1413,7 @@ class EthRPC:
             case None:
                 return msg
             case _:
-                transactions = {
-                    "pending": [],
-                    "queued": []
-                }
+                transactions = {"pending": [], "queued": []}
 
                 for tx_group in transactions.keys():
                     if tx_group in msg:

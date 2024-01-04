@@ -480,81 +480,65 @@ class TransactionFull:
     """
 
     block_hash: HexStr | None = field(
-        default=None,
-        metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+        default=None, metadata=config(decoder=hex_decoder, encoder=hex_encoder)
     )
     block_number: int | None = field(
-        default=None,
-        metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
+        default=None, metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
     from_address: HexStr | None = field(
         default=None,
-        metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder)
+        metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder),
     )
     gas: int | None = field(
-        default=None,
-        metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
+        default=None, metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
     gas_price: int | None = field(
-        default=None,
-        metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
+        default=None, metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
     max_fee_per_gas: int | None = field(
-        default=None,
-        metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
+        default=None, metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
     max_priority_fee_per_gas: int | None = field(
-        default=None,
-        metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
+        default=None, metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
     hash: HexStr | None = field(
-        default=None,
-        metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+        default=None, metadata=config(decoder=hex_decoder, encoder=hex_encoder)
     )
     input: HexStr | None = field(
-        default=None,
-        metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+        default=None, metadata=config(decoder=hex_decoder, encoder=hex_encoder)
     )
     nonce: int | None = field(
-        default=None,
-        metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
+        default=None, metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
     to_address: HexStr | None = field(
         default=None,
-        metadata=config(field_name="to", decoder=hex_decoder, encoder=hex_encoder)
+        metadata=config(field_name="to", decoder=hex_decoder, encoder=hex_encoder),
     )
     transaction_index: int | None = field(
-        default=None,
-        metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
+        default=None, metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
     value: int | None = field(
-        default=None,
-        metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
+        default=None, metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
     type: int | None = field(
-        default=None,
-        metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
+        default=None, metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
     access_list: list["Access"] | None = field(
         metadata=config(decoder=access_list_decoder, encoder=access_list_encoder),
-        default_factory=list
+        default_factory=list,
     )
     chain_id: int | None = field(
-        default=None,
-        metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
+        default=None, metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
     v: int | None = field(
-        default=None,
-        metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
+        default=None, metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
     r: HexStr | None = field(
-        default=None,
-        metadata=config(decoder=hex_decoder, encoder=hex_encoder)
-        )
+        default=None, metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+    )
     s: HexStr | None = field(
-        default=None,
-        metadata=config(decoder=hex_decoder, encoder=hex_encoder)
-        )
+        default=None, metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+    )
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
