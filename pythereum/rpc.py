@@ -222,7 +222,7 @@ class EthRPC:
         pool_size: int = 5,
         use_socket_pool: bool = True,
         connection_max_payload_size: int = 2**20,
-        connection_timeout: int = 20000,
+        connection_timeout: int = 20,
     ) -> None:
         """
         :param url: URL for the ethereum node to connect to
@@ -1406,12 +1406,16 @@ class EthRPC:
             case dict():
                 transactions = []
 
-                for tx_group in ["pending", "queued"]:
-                    if tx_group in msg:
-                        for address, address_data in msg[tx_group].items():
-                            for nonce, tx_data in address_data.items():
-                                transaction = TransactionFull.from_dict(tx_data)
-                                transactions.append(transaction)
+                # Loop through pending and queued transactions
+                for tx_status, txs in msg.items():
+                    # Loop through each address initiating the transaction
+                    for address, address_data in txs.items():
+                        # Loop through the nonces of transactions sent by that address
+                        for nonce, tx_data in address_data.items():
+                            # Decode transactions and add them to the output list
+                            transaction = TransactionFull.from_dict(tx_data)
+                            transactions.append(transaction)
+
                 return transactions
             case _:
                 return [TransactionFull.from_dict(result) for result in msg]
