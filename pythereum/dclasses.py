@@ -623,6 +623,12 @@ class Proof:
     )
 
 
+@dataclass
+class MempoolInfo:
+    pending: list[TransactionFull]
+    queued: list[TransactionFull]
+
+
 class Transaction(dict):
     """
     from_address: Address from which fees should be sent. Transaction must be signed by private key from this account.
