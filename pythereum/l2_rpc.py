@@ -13,6 +13,7 @@ class OptimismRPC(EthRPC):
     Currently does not have support for custom object encoding
     https://docs.optimism.io/builders/node-operators/json-rpc
     """
+
     def __init__(self, url: str):
         super().__init__(url, 0, False)
 
@@ -46,10 +47,14 @@ class OptimismRPC(EthRPC):
     async def opp2p_discovery_table(self) -> list[str]:
         return await self._send_message("opp2p_discoveryTable", [])
 
-    async def opp2p_block_peer(self, peer_id: HexStr | str | list[HexStr] | list[str]) -> bool | None:
+    async def opp2p_block_peer(
+        self, peer_id: HexStr | str | list[HexStr] | list[str]
+    ) -> bool | None:
         return await self._send_message("opp2p_blockPeer", [peer_id])
 
-    async def opp2p_unblock_peer(self, peer_id: HexStr | str | list[HexStr] | list[str]) -> bool | None:
+    async def opp2p_unblock_peer(
+        self, peer_id: HexStr | str | list[HexStr] | list[str]
+    ) -> bool | None:
         return await self._send_message("opp2p_unblockPeer", [peer_id])
 
     async def opp2p_list_blocked_peers(self) -> list[str]:
@@ -73,16 +78,24 @@ class OptimismRPC(EthRPC):
     async def opp2p_list_blocked_subnets(self) -> list[str]:
         return await self._send_message("opp2p_listBlockedSubnets", [])
 
-    async def opp2p_protect_peer(self, peer_id: HexStr | str | list[HexStr] | list[str]) -> bool | None:
+    async def opp2p_protect_peer(
+        self, peer_id: HexStr | str | list[HexStr] | list[str]
+    ) -> bool | None:
         return await self._send_message("opp2p_protectPeer", [peer_id])
 
-    async def opp2p_unprotect_peer(self, peer_id: HexStr | str | list[HexStr] | list[str]) -> bool | None:
+    async def opp2p_unprotect_peer(
+        self, peer_id: HexStr | str | list[HexStr] | list[str]
+    ) -> bool | None:
         return await self._send_message("opp2p_unprotectPeer", [peer_id])
 
-    async def opp2p_connect_peer(self, peer_multi_address: HexStr | str | list[HexStr] | list[str]) -> bool | None:
+    async def opp2p_connect_peer(
+        self, peer_multi_address: HexStr | str | list[HexStr] | list[str]
+    ) -> bool | None:
         return await self._send_message("opp2p_connectPeer", [peer_multi_address])
 
-    async def opp2p_disconnect_peer(self, peer_multi_address: HexStr | str | list[HexStr] | list[str]) -> bool | None:
+    async def opp2p_disconnect_peer(
+        self, peer_multi_address: HexStr | str | list[HexStr] | list[str]
+    ) -> bool | None:
         return await self._send_message("opp2p_disconnectPeer", [peer_multi_address])
 
     async def admin_reset_derivation_pipeline(self):
