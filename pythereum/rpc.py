@@ -32,7 +32,7 @@ from pythereum.dclasses import (
     Transaction,
     TransactionFull,
     FeeHistory,
-    Proof,
+    Proof, MempoolInfo,
 )
 
 
@@ -1375,13 +1375,16 @@ class EthRPC:
     # OpenEthereum parity functions
 
     async def get_mempool_parity(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self,
+        tx_limit: int,
+        tx_filter: dict,
+        websocket: websockets.WebSocketClientProtocol | None = None
     ) -> TransactionFull | list[TransactionFull]:
         """
         Access the memory pool for a given OpenEthereum parity node, does not work on other node types
         Under testing, feel free to improve.
         """
-        msg = await self._send_message("parity_pendingTransactions", [], websocket)
+        msg = await self._send_message("parity_pendingTransactions", [tx_limit, tx_filter], websocket)
         match msg:
             case None:
                 return msg
@@ -1394,31 +1397,32 @@ class EthRPC:
 
     async def get_mempool_geth(
         self, websocket: websockets.WebSocketClientProtocol | None = None
-    ) -> TransactionFull | list[TransactionFull]:
+    ) -> MempoolInfo | None:
         """
         Access the memory pool for a geth node, does not work on other node types
         Under testing, feel free to improve.
+        Returns a MempoolInfo object to allow users to self select whether they want to include pending txs
         """
         msg = await self._send_message("txpool_content", [], websocket)
         match msg:
             case None:
                 return msg
-            case dict():
-                transactions = []
-
-                # Loop through pending and queued transactions
-                for tx_status, txs in msg.items():
-                    # Loop through each address initiating the transaction
-                    for address, address_data in txs.items():
-                        # Loop through the nonces of transactions sent by that address
-                        for nonce, tx_data in address_data.items():
-                            # Decode transactions and add them to the output list
-                            transaction = TransactionFull.from_dict(tx_data)
-                            transactions.append(transaction)
-
-                return transactions
             case _:
-                return [TransactionFull.from_dict(result) for result in msg]
+                transactions = {
+                    "pending": [],
+                    "queued": []
+                }
+
+                for tx_group in transactions.keys():
+                    if tx_group in msg:
+                        # iterate through each address that is making transactions
+                        for address, address_data in msg[tx_group].items():
+                            # iterate through each tx nonce produced by each address and its associated tx
+                            for nonce, tx_data in address_data.items():
+                                transaction = TransactionFull.from_dict(tx_data)
+                                transactions[tx_group].append(transaction)
+
+                return MempoolInfo(transactions["pending"], transactions["queued"])
 
     # Generic sending
 
