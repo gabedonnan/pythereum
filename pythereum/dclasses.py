@@ -9,7 +9,6 @@ from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json, LetterCase, config
 from pythereum.common import HexStr
 from pythereum.exceptions import ERPCDecoderException, ERPCEncoderException
-from typing import Optional
 
 
 def hex_int_decoder(hex_string: str | None) -> int | None:
@@ -480,79 +479,79 @@ class TransactionFull:
     The full information on a transaction to be executed, including metadata with reference to its inclusion on chain
     """
 
-    block_hash: Optional[HexStr] | None = field(
+    block_hash: HexStr | None = field(
         default=None,
         metadata=config(decoder=hex_decoder, encoder=hex_encoder)
     )
-    block_number: Optional[int] | None = field(
+    block_number: int | None = field(
         default=None,
         metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
-    from_address: Optional[HexStr] | None = field(
+    from_address: HexStr | None = field(
         default=None,
         metadata=config(field_name="from", decoder=hex_decoder, encoder=hex_encoder)
     )
-    gas: Optional[int] | None = field(
+    gas: int | None = field(
         default=None,
         metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
-    gas_price: Optional[int] | None = field(
+    gas_price: int | None = field(
         default=None,
         metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
-    max_fee_per_gas: Optional[int] | None = field(
+    max_fee_per_gas: int | None = field(
         default=None,
         metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
-    max_priority_fee_per_gas: Optional[int] | None = field(
+    max_priority_fee_per_gas: int | None = field(
         default=None,
         metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
-    hash: Optional[HexStr] | None = field(
+    hash: HexStr | None = field(
         default=None,
         metadata=config(decoder=hex_decoder, encoder=hex_encoder)
     )
-    input: Optional[HexStr] | None = field(
+    input: HexStr | None = field(
         default=None,
         metadata=config(decoder=hex_decoder, encoder=hex_encoder)
     )
-    nonce: Optional[int] | None = field(
+    nonce: int | None = field(
         default=None,
         metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
-    to_address: Optional[HexStr] | None = field(
+    to_address: HexStr | None = field(
         default=None,
         metadata=config(field_name="to", decoder=hex_decoder, encoder=hex_encoder)
     )
-    transaction_index: Optional[int] | None = field(
+    transaction_index: int | None = field(
         default=None,
         metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
-    value: Optional[int] | None = field(
+    value: int | None = field(
         default=None,
         metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
-    type: Optional[int] | None = field(
+    type: int | None = field(
         default=None,
         metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
-    access_list: Optional[list["Access"] ]| None = field(
+    access_list: list["Access"] | None = field(
         metadata=config(decoder=access_list_decoder, encoder=access_list_encoder),
         default_factory=list
     )
-    chain_id: Optional[int] | None = field(
+    chain_id: int | None = field(
         default=None,
         metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
-    v: Optional[int] | None = field(
+    v: int | None = field(
         default=None,
         metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
     )
-    r: Optional[HexStr] | None = field(
+    r: HexStr | None = field(
         default=None,
         metadata=config(decoder=hex_decoder, encoder=hex_encoder)
         )
-    s: Optional[HexStr] | None = field(
+    s: HexStr | None = field(
         default=None,
         metadata=config(decoder=hex_decoder, encoder=hex_encoder)
         )
