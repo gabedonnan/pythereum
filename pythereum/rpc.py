@@ -1415,6 +1415,7 @@ class EthRPC:
             case _:
                 transactions = {"pending": [], "queued": []}
 
+                # Loop through pending and queued transactions, if they exist
                 for tx_group in transactions.keys():
                     if tx_group in msg:
                         # iterate through each address that is making transactions
