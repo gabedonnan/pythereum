@@ -289,7 +289,7 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
             "https://docs-demo.quiknode.pro/",
                 use_socket_pool=False
         ) as erpc:
-            print(await erpc.get_mempool_geth())
+            print((await erpc.get_mempool_geth()).pending)
 
 
 if __name__ == "__main__":
