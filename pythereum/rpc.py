@@ -222,16 +222,18 @@ class EthRPC:
         pool_size: int = 5,
         use_socket_pool: bool = True,
         connection_max_payload_size: int = 2**20,
+        connection_timeout: int = 20000,
     ) -> None:
         """
         :param url: URL for the ethereum node to connect to
         :param pool_size: The number of websocket connections opened for the WebsocketPool
         :param use_socket_pool: Whether the socket pool should be used or AIOHTTP requests
         :param connection_max_payload_size: The maximum payload size a websocket can send or recv in one message
+        :param connection_timeout: The maximum time in seconds to wait a response from the websocket before timing out (default 20s )
         """
         self._id = 0
         if use_socket_pool:
-            self._pool = WebsocketPool(url, pool_size, connection_max_payload_size)
+            self._pool = WebsocketPool(url, pool_size, connection_max_payload_size, connection_timeout)
         else:
             self._pool = None
             self.session = ClientSession()
@@ -1402,7 +1404,15 @@ class EthRPC:
             case None:
                 return msg
             case dict():
-                return TransactionFull.from_dict(msg)
+                transactions = []
+
+                for tx_group in ["pending", "queued"]:
+                    if tx_group in msg:
+                        for address, address_data in msg[tx_group].items():
+                            for nonce, tx_data in address_data.items():
+                                transaction = TransactionFull.from_dict(tx_data)
+                                transactions.append(transaction)
+                return transactions
             case _:
                 return [TransactionFull.from_dict(result) for result in msg]
 

@@ -14,12 +14,13 @@ class WebsocketPool:
     """
 
     def __init__(
-        self, url: str, pool_size: int = 6, connection_max_payload_size: int = 2**20
+        self, url: str, pool_size: int = 6, connection_max_payload_size: int = 2**20, connection_timeout: int = 20000
     ):
         self._url = url
         self._id = 0
         self._max_pool_size = pool_size
         self._max_payload_size = connection_max_payload_size
+        self._timeout = connection_timeout
         self._sockets_used = 0
         self._sockets = Queue(maxsize=pool_size)
         self.connected = False
@@ -34,7 +35,7 @@ class WebsocketPool:
         # Creates a number of sockets equal to the maximum pool size
         sockets = await gather(
             *(
-                connect(self._url, max_size=self._max_payload_size)
+                connect(self._url, max_size=self._max_payload_size, ping_interval=self._timeout)
                 for _ in range(self._max_pool_size)
             )
         )
