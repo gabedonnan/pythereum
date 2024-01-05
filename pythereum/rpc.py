@@ -31,10 +31,12 @@ from pythereum.dclasses import (
     Log,
     Transaction,
     TransactionFull,
+    Signature,
     FeeHistory,
     Proof,
     MempoolInfo,
 )
+from Crypto.Hash import keccak
 
 
 def convert_eth(
@@ -1445,6 +1447,40 @@ class EthRPC:
         if the function does not exist for the given params an error will be raised
         """
         return await self._send_message(method_name, params, websocket)
+    
+    class Utils:
+
+        @staticmethod
+        def to_checksum_address(address) -> HexStr:
+            """
+            Returns the checksummed address given an address
+            :param address: The hex address to be checksummed
+            :return: The checksummed address
+            """
+            
+            address = address.lower()
+            chars = list(address[2:])
+
+            expanded = bytearray(40)
+            for i in range(40):
+                expanded[i] = ord(chars[i])
+
+            hashed = keccak.new(digest_bits=256)
+            hashed.update(bytes(expanded))
+            hashed = bytearray(hashed.digest())
+
+
+            for i in range(0, 40, 2):
+                if (hashed[i // 2] >> 4) >= 8:
+                    chars[i] = chars[i].upper()
+                if (hashed[i // 2] & 0x0f) >= 8:
+                    chars[i + 1] = chars[i + 1].upper()
+
+            return "0x" + ''.join(chars)
+        
+        
+
+        
 
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy

@@ -520,6 +520,22 @@ class TransactionFull:
         default=None, metadata=config(decoder=hex_decoder, encoder=hex_encoder)
     )
 
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Signature:
+    """
+    A signature object
+    """
+    v: int | None = field(
+        default=None, metadata=config(decoder=hex_int_decoder, encoder=hex_int_encoder)
+    )
+    r: HexStr | None = field(
+        default=None, metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+    )
+    s: HexStr | None = field(
+        default=None, metadata=config(decoder=hex_decoder, encoder=hex_encoder)
+    )
+
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
