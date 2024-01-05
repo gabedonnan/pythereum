@@ -6,7 +6,16 @@ import asyncio
 import json
 from contextlib import asynccontextmanager
 
-from typing import Any
+
+import re
+from typing import (
+    Any,
+    Union,
+    List, 
+    Dict,
+    Union, 
+    Tuple
+)
 from aiohttp import ClientSession
 import websockets
 from pythereum.exceptions import (
@@ -22,6 +31,7 @@ from pythereum.common import (
     BlockTag,
     DefaultBlock,
     SubscriptionType,
+    TransactionType,
 )
 from pythereum.socket_pool import WebsocketPool
 from pythereum.dclasses import (
@@ -36,7 +46,7 @@ from pythereum.dclasses import (
     Proof,
     MempoolInfo,
 )
-from Crypto.Hash import keccak
+from Crypto.Hash import keccak, SHA3_256
 
 
 def convert_eth(
@@ -1477,10 +1487,198 @@ class EthRPC:
                     chars[i + 1] = chars[i + 1].upper()
 
             return "0x" + ''.join(chars)
-        
-        
 
+        @staticmethod
+        def _get_big_int(value: Union[int, str, float], name: str = None) -> int:
+            max_value = (2 ** 255) - 1
+            min_value = -(2 ** 255)
+            if isinstance(value, int):
+                return value
+            elif isinstance(value, (float, int)):
+                if not isinstance(value, int):
+                    raise ValueError(f"{name or 'value'} must be an integer")
+                if not (min_value <= value <= max_value):
+                    raise ValueError(f"{name or 'value'} out of range")
+                return int(value)
+            elif isinstance(value, str):
+                try:
+                    if value == "":
+                        raise ValueError("empty string")
+                    if value[0] == "-" and value[1] != "-":
+                        return -int(value[1:])
+                    return int(value)
+                except Exception as e:
+                    raise ValueError(f"invalid BigNumberish string: {e}") from None
+            raise ValueError(f"invalid BigNumberish value: {value}")
+
+        @staticmethod
+        def _to_be_array(value: Union[int, str, float]) -> bytes:
+            value = EthRPC.Utils._get_big_int(value, "value")
+
+            if value == 0:
+                return bytes()
+
+            hex_value = hex(value)[2:]
+            if len(hex_value) % 2:
+                hex_value = "0" + hex_value
+
+            result = bytes.fromhex(hex_value)
+            return result
         
+        def _get_address(address: HexStr) -> HexStr:
+            if not isinstance(address, HexStr):
+                raise ValueError("invalid address")
+
+            if re.match(r'^(0x)?[0-9a-fA-F]{40}$', address):
+                if not address.startswith("0x"):
+                    address = "0x" + address
+
+                result = EthRPC.Utils.to_checksum_address(address)
+
+                if (re.match(r'([A-F].*[a-f])|([a-f].*[A-F])', address) and result != address):
+                    raise ValueError("bad address checksum")
+
+                return result
+            
+            raise ValueError("invalid address")
+
+        def _format_number(value: int, name: str = None) -> str:
+            value = EthRPC.Utils._get_big_int(value, "value")
+            result = EthRPC.Utils._to_be_array(value)
+            if len(result) > 32:
+                raise ValueError(f"value too large: tx.{name}")
+            return result
+
+        def _encode_rlp(fields: list[Any]) -> str:
+            serialized = ""
+            for field in fields:
+                if isinstance(field, list):
+                    serialized += EthRPC.Utils._encode_rlp(field)
+                else:
+                    serialized += str(field)
+            return SHA3_256.new(serialized.encode()).hexdigest()
+
+        def _serialize_legacy(tx: TransactionFull, sig: Signature | None) -> str:
+            fields = [
+                EthRPC.Utils._format_number(tx.nonce or 0, "nonce"),
+                EthRPC.Utils._format_number(tx.gas_price or 0, "gasPrice"),
+                EthRPC.Utils._format_number(tx.gas_limit or 0, "gasLimit"),
+                EthRPC.Utils._get_address(tx.to_address),
+                EthRPC.Utils._format_number(tx.value or 0, "value"),
+                tx.input or "0x",
+            ]
+
+            chainId = EthRPC.Utils._get_big_int(tx.chainId, "tx.chainId")
+            if chainId != 0:
+                chainId = EthRPC.Utils._get_big_int(tx.chainId, "tx.chainId")
+                if sig is not None and sig.networkV is None or sig.legacyChainId == chainId:
+                    raise ValueError(f'chainId mismatch, expected {chainId} and got {sig.legacyChainId}')
+            elif tx.signature is not None:
+                legacy = tx.signature.legacyChainId
+                if legacy is not None:
+                    chainId = legacy
+
+            if sig is None:
+                if chainId != 0:
+                    fields.extend([EthRPC.Utils._to_be_array(chainId), "0x", "0x"])
+                return EthRPC.Utils._encode_rlp(fields)
+
+            v = 27 + sig.yParity
+            if chainId != 0:
+                v = 42  # Placeholder for the getChainIdV function logic
+
+            if chainId == 0 and sig.v != v:
+                raise ValueError(f"sig.v ({sig.v}) != v ({v})")
+
+            fields.extend([EthRPC.Utils._to_be_array(v), EthRPC.Utils._to_be_array(sig.r), EthRPC.Utils._to_be_array(sig.s)])
+            return EthRPC.Utils._encode_rlp(fields)
+        
+        def _serialize_eip2930(tx: TransactionFull, sig: Signature | None):
+            fields = [
+                EthRPC.Utils._format_number(tx.chain_id or 0, "chainId"),
+                EthRPC.Utils._format_number(tx.nonce or 0, "nonce"),
+                EthRPC.Utils._format_number(tx.gas_price or 0, "gasPrice"),
+                EthRPC.Utils._format_number(tx.gas_limit or 0, "gasLimit"),
+                EthRPC.Utils._get_address(tx.to_address),
+                EthRPC.Utils._format_number(tx.value or 0, "value"),
+                tx.input or "0x",
+                EthRPC.Utils.format_access_list(tx.access_list or [])
+            ]
+
+            if sig:
+                fields.extend([
+                    EthRPC.Utils._format_number(sig.yParity, "recoveryParam"),
+                    EthRPC.Utils._to_be_array(sig.r),
+                    EthRPC.Utils._to_be_array(sig.s)
+                ])
+
+            return "0x01" + EthRPC.Utils._encode_rlp(fields)
+        
+        def _serialize_eip1559(tx: TransactionFull, sig: Signature | None):
+            fields = [
+                EthRPC.Utils._format_number(tx.chain_id or 0, "chainId"),
+                EthRPC.Utils._format_number(tx.nonce or 0, "nonce"),
+                EthRPC.Utils._format_number(tx.max_priority_fee_per_gas or 0, "maxPriorityFeePerGas"),
+                EthRPC.Utils._format_number(tx.max_fee_per_gas or 0, "maxFeePerGas"),
+                # EthRPC.Utils._format_number(tx.gas_limit or 0, "gasLimit"),
+                EthRPC.Utils._get_address(tx.to_address),
+                EthRPC.Utils._format_number(tx.value or 0, "value"),
+                tx.input or "0x",
+                EthRPC.Utils.format_access_list(tx.access_list or [])
+            ]
+
+            print("sig", sig)
+            if sig:
+                fields.extend([
+                    EthRPC.Utils._format_number(sig.yParity, "yParity"),
+                    EthRPC.Utils._to_be_array(sig.r),
+                    EthRPC.Utils._to_be_array(sig.s)
+                ])
+
+            return "0x02" + EthRPC.Utils._encode_rlp(fields)
+        
+        AccessListish = Union[
+            List[Tuple[str, List[str]]],
+            Dict[str, List[str]]
+        ]
+
+        AccessList = List[Dict[str, Union[str, List[str]]]]
+
+
+        def format_access_list(value: AccessListish) -> List[Tuple[str, List[str]]]:
+            access_list = EthRPC.Utils.access_listify(value)
+            return [(set['address'], set['storageKeys']) for set in access_list]
+
+
+        def access_listify(value: AccessListish) -> AccessList:
+            def access_setify(address: str, storage_keys: List[str]) -> Dict[str, Union[str, List[str]]]:
+                return {'address': address, 'storageKeys': storage_keys}
+
+            if isinstance(value, list):
+                return [
+                    access_setify(set[0], set[1]) if isinstance(set, list) else access_setify(set['address'], set['storageKeys'])
+                    for set in value
+                ]
+
+            assert isinstance(value, dict), "invalid access list"
+            result = []
+            for addr, storage_keys in sorted(value.items()):
+                result.append(access_setify(addr, sorted(set(storage_keys))))
+
+            result.sort(key=lambda x: x['address'])
+            return result
+        
+        def serialize(tx: TransactionFull, sig: Signature | None):
+ 
+            match tx.type:
+                case TransactionType.legacy.value:
+                    return EthRPC.Utils._serialize_legacy(tx, sig)
+                case TransactionType.eip2930.value:
+                    return EthRPC.Utils._serialize_eip2930(tx, sig)
+                case TransactionType.eip1559.value:
+                    return EthRPC.Utils._serialize_eip1559(tx, sig)
+                case _:
+                    raise ValueError("invalid transaction type")
 
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
