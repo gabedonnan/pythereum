@@ -520,7 +520,6 @@ class TransactionFull:
         default=None, metadata=config(decoder=hex_decoder, encoder=hex_encoder)
     )
 
-
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Access:
