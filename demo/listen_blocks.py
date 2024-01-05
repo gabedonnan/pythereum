@@ -16,13 +16,13 @@ async def listen_blocks(url):
     That full block info is then used to get all transaction receipts from that given block.
     """
     # Create EthRPC object with pool size of 2 (arbitrarily chosen, as it does not matter here)
-    erpc = EthRPC(url, 2)
+    erpc = EthRPC(url, 2, connection_max_payload_size=2**24)
 
     # Start the socket pool, may take a while due to connection forming
     await erpc.start_pool()
 
     # Create + context manage new_heads subscription
-    async with erpc.subscribe(SubscriptionType.new_heads) as sc:
+    async with erpc.subscribe(SubscriptionType.new_heads, 3) as sc:
         # Loops forever over the received data from the subscription
         async for header in sc.recv():
             # Gets more block data from the hash received from the headers
