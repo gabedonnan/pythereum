@@ -1,13 +1,12 @@
 # MIT License
 # Copyright (C) 2023 Gabriel "gabedonnan" Donnan
 # Further copyright info available at the end of the file
+from abc import ABC
+from typing import Any
 
 import asyncio
 import json
 import aiohttp
-
-from abc import ABC
-from typing import Any
 
 from eth_account import Account, messages
 from eth_utils import keccak

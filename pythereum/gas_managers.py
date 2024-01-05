@@ -68,9 +68,9 @@ class NaiveGasManager:
     ) -> float:
         transactions = await self._get_latest_receipts(use_stored_results)
         prices = [
-            x.__getattribute__(attribute)
+            getattr(x, attribute)
             for x in transactions
-            if x.__getattribute__(attribute) is not None
+            if getattr(x, attribute) is not None
         ]
         match strategy:
             case GasStrategy.min_price:
@@ -218,9 +218,9 @@ class InformedGasManager:
             self.prices[key] = round(
                 statistics.mean(
                     [
-                        x.__getattribute__(attribute)
+                        getattr(x, attribute)
                         for x in transactions
-                        if x.__getattribute__(attribute) is not None
+                        if getattr(x, attribute) is not None
                     ]
                 )
             )

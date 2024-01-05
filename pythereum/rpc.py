@@ -6,6 +6,7 @@ import asyncio
 import json
 from contextlib import asynccontextmanager
 
+from typing import Any
 from aiohttp import ClientSession
 import websockets
 from pythereum.exceptions import (
@@ -22,7 +23,6 @@ from pythereum.common import (
     DefaultBlock,
     SubscriptionType,
 )
-from typing import Any
 from pythereum.socket_pool import WebsocketPool
 from pythereum.dclasses import (
     Block,
@@ -230,7 +230,7 @@ class EthRPC:
         :param pool_size: The number of websocket connections opened for the WebsocketPool
         :param use_socket_pool: Whether the socket pool should be used or AIOHTTP requests
         :param connection_max_payload_size: The maximum payload size a websocket can send or recv in one message
-        :param connection_timeout: The maximum time in seconds to wait a response from the websocket before timing out (default 20s )
+        :param connection_timeout: The maximum time in seconds to wait for a response from the websocket before timing out (default 20s )
         """
         self._id = 0
         if use_socket_pool:
@@ -348,7 +348,7 @@ class EthRPC:
         Automatically formats parameters for sending via build_batch_json
         """
         if all(isinstance(item, list) for item in param_list):
-            return [item for item in zip(*param_list)]
+            return list(zip(*param_list))
         else:
             return param_list
 
@@ -1419,9 +1419,9 @@ class EthRPC:
                 for tx_group in transactions.keys():
                     if tx_group in msg:
                         # iterate through each address that is making transactions
-                        for address, address_data in msg[tx_group].items():
+                        for address_data in msg[tx_group].values():
                             # iterate through each tx nonce produced by each address and its associated tx
-                            for nonce, tx_data in address_data.items():
+                            for tx_data in address_data.values():
                                 transaction = TransactionFull.from_dict(tx_data)
                                 transactions[tx_group].append(transaction)
 

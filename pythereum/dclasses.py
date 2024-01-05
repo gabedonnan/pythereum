@@ -61,15 +61,13 @@ def hex_encoder(hex_obj: HexStr | None) -> str | None:
 def hex_list_decoder(hex_string_list: list[str] | None) -> list[HexStr] | None:
     if hex_string_list is not None:
         return [hex_decoder(hex_string) for hex_string in hex_string_list]
-    else:
-        return None
+    return None
 
 
 def hex_list_encoder(hex_obj_list: list[HexStr] | None) -> list[str] | None:
     if hex_obj_list is not None:
         return [hex_encoder(hex_obj) for hex_obj in hex_obj_list]
-    else:
-        return None
+    return None
 
 
 def hex_list_list_decoder(
@@ -77,8 +75,7 @@ def hex_list_list_decoder(
 ) -> list[list[HexStr]] | None:
     if hex_string_list is not None:
         return [hex_list_decoder(hex_string) for hex_string in hex_string_list]
-    else:
-        return None
+    return None
 
 
 def hex_list_list_encoder(
@@ -86,8 +83,7 @@ def hex_list_list_encoder(
 ) -> list[list[str]] | None:
     if hex_obj_list is not None:
         return [hex_list_encoder(hex_obj) for hex_obj in hex_obj_list]
-    else:
-        return None
+    return None
 
 
 def transaction_decoder(
@@ -97,8 +93,7 @@ def transaction_decoder(
         return TransactionFull.from_dict(transaction_hex, infer_missing=True)
     elif transaction_hex is not None:
         return hex_decoder(transaction_hex)
-    else:
-        return None
+    return None
 
 
 def transaction_encoder(
@@ -108,8 +103,7 @@ def transaction_encoder(
         return transaction_obj.to_dict()
     elif transaction_obj is not None:
         return hex_encoder(transaction_obj)
-    else:
-        return None
+    return None
 
 
 def transaction_list_decoder(
@@ -117,8 +111,7 @@ def transaction_list_decoder(
 ) -> list["TransactionFull | HexStr"] | None:
     if tr_list is not None:
         return [transaction_decoder(transaction) for transaction in tr_list]
-    else:
-        return None
+    return None
 
 
 def transaction_list_encoder(
@@ -126,50 +119,43 @@ def transaction_list_encoder(
 ) -> list[dict | str] | None:
     if tr_list is not None:
         return [transaction_encoder(transaction) for transaction in tr_list]
-    else:
-        return None
+    return None
 
 
 def access_decoder(access_dict: dict | None) -> "Access | None":
     if access_dict is not None:
         return Access.from_dict(access_dict, infer_missing=True)
-    else:
-        return None
+    return None
 
 
 def access_encoder(access_obj: "Access | None") -> dict | None:
     if access_obj is not None:
         return access_obj.to_dict()
-    else:
-        return None
+    return None
 
 
 def access_list_decoder(access_list: list[dict] | None) -> list["Access"] | None:
     if access_list is not None:
         return [access_decoder(acc) for acc in access_list]
-    else:
-        return None
+    return None
 
 
 def access_list_encoder(access_obj_list: list["Access"] | None) -> list[dict] | None:
     if access_obj_list is not None:
         return [access_encoder(acc) for acc in access_obj_list]
-    else:
-        return None
+    return None
 
 
 def storage_proof_decoder(storage_proof: dict | None) -> "StorageProof | None":
     if storage_proof is not None:
         return StorageProof.from_dict(storage_proof)
-    else:
-        return None
+    return None
 
 
 def storage_proof_encoder(storage_proof: "StorageProof | None") -> dict | None:
     if storage_proof is not None:
         return storage_proof.to_dict()
-    else:
-        return None
+    return None
 
 
 def storage_proof_list_decoder(
@@ -179,8 +165,7 @@ def storage_proof_list_decoder(
         return [
             storage_proof_decoder(storage_proof) for storage_proof in storage_proof_list
         ]
-    else:
-        return None
+    return None
 
 
 def storage_proof_list_encoder(
@@ -190,36 +175,31 @@ def storage_proof_list_encoder(
         return [
             storage_proof_encoder(storage_proof) for storage_proof in storage_proof_list
         ]
-    else:
-        return None
+    return None
 
 
 def log_decoder(log_dict: dict | None) -> "Log | None":
     if log_dict is not None:
         return Log.from_dict(log_dict)
-    else:
-        return None
+    return None
 
 
 def log_encoder(log_obj: "Log | None") -> dict | None:
     if log_obj is not None:
         return log_obj.to_dict()
-    else:
-        return None
+    return None
 
 
 def log_list_decoder(log_list: list[dict] | None) -> list["Log"] | None:
     if log_list is not None:
         return [log_decoder(lg) for lg in log_list]
-    else:
-        return None
+    return None
 
 
 def log_list_encoder(log_obj_list: list["Log"] | None) -> list[dict] | None:
     if log_obj_list is not None:
         return [log_encoder(lg) for lg in log_obj_list]
-    else:
-        return None
+    return None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
