@@ -124,9 +124,11 @@ class Subscription:
         subscription_id: str,
         socket: websockets.WebSocketClientProtocol,
         subscription_type: SubscriptionType = SubscriptionType.new_heads,
+        max_message_num: int = -1,
     ):
         self.subscription_id = subscription_id
         self.socket = socket
+        self.max_message_num = max_message_num
 
         # Selects the appropriate function to interpret the output of self.recv
         self.decode_function = {
@@ -140,25 +142,39 @@ class Subscription:
         """
         infinite async generator function which will yield new information retrieved from a websocket
         """
-        while True:
+        counter = 0
+        while self.max_message_num == -1 or counter < self.max_message_num:
             res = await self.socket.recv()
             res = parse_results(res, is_subscription=True)
+            counter += 1
             yield self.decode_function(res)
 
     @staticmethod
     def new_heads_decoder(data: Any) -> Block:
+        """
+        Decodes the outputs for a new heads subscription
+        """
         return Block.from_dict(data, infer_missing=True)
 
     @staticmethod
     def logs_decoder(data: Any) -> Log:
+        """
+        Decodes the outputs for a logs subscription
+        """
         return Log.from_dict(data, infer_missing=True)
 
     @staticmethod
     def new_pending_transactions_decoder(data: Any) -> HexStr:
+        """
+        Decodes the outputs for a new pending transactions subscription
+        """
         return HexStr(data)
 
     @staticmethod
     def syncing_decoder(data: Any) -> Sync:
+        """
+        Decodes the outputs for a syncing status subscription
+        """
         return Sync.from_dict(data)
 
 
@@ -200,6 +216,9 @@ class NonceManager:
             await self.rpc.close_pool()
 
     async def next_nonce(self, address: str | HexStr) -> int:
+        """
+        Get the next nonce for a transaction from a given address
+        """
         address = HexStr(address)
         if self.rpc is not None and address not in self.nonces:
             self.nonces[address] = await self.rpc.get_transaction_count(
@@ -254,6 +273,9 @@ class EthRPC:
         self._http_url = url.replace("wss://", "https://").replace("ws://", "http://")
 
     def _next_id(self) -> None:
+        """
+        Increments the internal ID by 1, used for nonces
+        """
         self._id += 1
 
     async def __aenter__(self):
@@ -362,13 +384,18 @@ class EthRPC:
             return param_list
 
     def pool_connected(self) -> bool:
+        """
+        Returns a boolean indicating whether the socket pool is connected to an endpoint
+        """
         if self._pool is None:
             return False
         else:
             return self._pool.connected
 
     async def start_pool(self) -> None:
-        """Exposes the ability to start the ERPC's socket pool before the first method call"""
+        """
+        Exposes the ability to start the ERPC's socket pool before the first method call
+        """
         if self._pool is not None:
             await self._pool.start()
         else:
@@ -424,6 +451,9 @@ class EthRPC:
         return parse_results(msg, is_subscription)
 
     async def _send_message_aio(self, built_msg: str) -> dict:
+        """
+        Sends a message with aiohttp and returns a dict
+        """
         async with self.session.post(
             url=self._http_url,
             data=built_msg,
@@ -438,9 +468,13 @@ class EthRPC:
         return msg
 
     @asynccontextmanager
-    async def subscribe(self, method: SubscriptionType) -> Subscription:
+    async def subscribe(self, method: SubscriptionType, max_message_num: int = -1) -> Subscription:
         """
         :param method: The subscription's type, determined by a preset enum of possible types
+        :param max_message_num: The maximum number of messages the subscription can receive,
+            default -1 for infinite subscription.
+            Eventually this will be replaced with a fleshed out filter to cancel subscriptions based on conditions.
+
         This function is decorated with an async context manager such that it can be used in an async with statement
 
         A subscription object is returned generated with a unique subscription id
@@ -453,7 +487,10 @@ class EthRPC:
             try:
                 subscription_id = await self._get_subscription(method, ws)
                 sub = Subscription(
-                    subscription_id=subscription_id, socket=ws, subscription_type=method
+                    subscription_id=subscription_id,
+                    socket=ws,
+                    subscription_type=method,
+                    max_message_num=max_message_num,
                 )
                 yield sub
             finally:
@@ -494,8 +531,7 @@ class EthRPC:
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
         """
-        cannot be batched
-        :return: Integer number indicating the number of the most recently mined block
+        :return: Integer number indicating the number of the most recently formed block
         """
         msg = await self._send_message("eth_blockNumber", [], websocket)
         match msg:
@@ -563,7 +599,6 @@ class EthRPC:
     ) -> int:
         """
         Returns the current price per gas in Wei
-        Cannot be batched
         :return: Integer number representing gas price in Wei
         """
         msg = await self._send_message("eth_gasPrice", [], websocket)
@@ -698,13 +733,16 @@ class EthRPC:
         websocket: websockets.WebSocketClientProtocol | None = None,
     ):
         """
-        Creates a new message call transaction or contract creation
+        Sends a new method call transaction or contract creation
         """
         return await self._send_message("eth_sendTransaction", [transaction], websocket)
 
     async def get_protocol_version(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
+        """
+        Gets the ethereum protocol version the current node is using
+        """
         msg = await self._send_message("eth_protocolVersion", [], websocket)
         match msg:
             case None:
@@ -715,6 +753,9 @@ class EthRPC:
     async def get_sync_status(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> bool | Sync:
+        """
+        Returns whether the connected node is syncing to the ethereum network
+        """
         msg = await self._send_message("eth_syncing", [], websocket)
         match msg:
             case None:
@@ -733,6 +774,9 @@ class EthRPC:
     async def get_chain_id(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
+        """
+        Get the chain id to which the current node is connected, will be 1 for main chain ethereum
+        """
         msg = await self._send_message("eth_chainId", [], websocket)
         match msg:
             case None:
@@ -743,11 +787,17 @@ class EthRPC:
     async def is_mining(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> bool:
+        """
+        Gets whether the current node is mining a block, this is now meaningless with proof-of-stake
+        """
         return await self._send_message("eth_mining", [], websocket)
 
     async def get_hashrate(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
+        """
+        Gets the rate at which a node is computing hashes for mining, now meaningless with proof-of-stake
+        """
         msg = await self._send_message("eth_hashrate", [], websocket)
         match msg:
             case None:
@@ -1322,7 +1372,7 @@ class EthRPC:
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> str:
         """
-        Returns the current client version
+        Returns the current node's client version
         """
         return await self._send_message("web3_clientVersion", [], websocket)
 
@@ -1354,7 +1404,7 @@ class EthRPC:
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
         """
-        Returns the network version ID
+        Returns the network version ID that the current node is connected to
         """
         msg = await self._send_message("net_version", [], websocket)
         match msg:
@@ -1375,7 +1425,7 @@ class EthRPC:
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
         """
-        Returns the number of peers connected to the client
+        Returns the number of peers connected to the connected node
         """
         msg = await self._send_message("net_peerCount", [], websocket)
         match msg:
