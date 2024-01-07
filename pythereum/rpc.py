@@ -1547,7 +1547,7 @@ class EthRPC:
                 "maxPriorityFeePerGas": tx.max_priority_fee_per_gas,
                 "maxFeePerGas": tx.max_fee_per_gas,
                 "gas": tx.gas,
-                "to": EthRPC.utils.to_checksum_address(tx.to),
+                "to": EthRPC.utils.to_checksum_address(tx.to_address),
                 "value": tx.value,
                 "accessList": tx.access_list,
                 "data": tx.input,
@@ -1558,14 +1558,6 @@ class EthRPC:
             s = tx.s
             unsigned_transaction = serializable_unsigned_transaction_from_dict(transaction)
             return "0x" + encode_transaction(unsigned_transaction, vrs=(v, r, s)).hex()
-        
-        def get_raw_transaction_from_hash(tx_hash: str | HexStr) -> str:
-            """
-            Get raw transaction from a transaction hash
-            :param tx_hash: Transaction hash to be recovered
-            :return: Raw transaction string
-            """
-            return EthRPC.utils.recover_raw_transaction(EthRPC.get_transaction_by_hash(tx_hash))  
         
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
