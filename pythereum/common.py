@@ -16,11 +16,6 @@ class GasStrategy(Enum):
     lower_quartile_price = 6
     custom = 7  # Exists such that custom gas managers may be implemented
 
-class TransactionType(Enum):
-    legacy = 0
-    eip2930 = 1
-    eip1559 = 2
-
 
 class SubscriptionType(str, Enum):
     new_heads = "newHeads"
