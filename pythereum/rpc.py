@@ -5,10 +5,18 @@
 import asyncio
 import json
 from contextlib import asynccontextmanager
-
 from typing import Any
 from aiohttp import ClientSession
 import websockets
+from pythereum.socket_pool import WebsocketPool
+from Crypto.Hash import keccak
+from .types import (
+    is_integer,
+    is_string,
+    is_list,
+    is_hexstr,
+    is_tuple,
+)
 from pythereum.exceptions import (
     ERPCRequestException,
     ERPCInvalidReturnException,
@@ -23,7 +31,6 @@ from pythereum.common import (
     DefaultBlock,
     SubscriptionType,
 )
-from pythereum.socket_pool import WebsocketPool
 from pythereum.dclasses import (
     Block,
     Sync,
@@ -31,12 +38,14 @@ from pythereum.dclasses import (
     Log,
     Transaction,
     TransactionFull,
-    Signature,
     FeeHistory,
     Proof,
     MempoolInfo,
 )
-from Crypto.Hash import keccak
+from eth_account._utils.legacy_transactions import (
+    encode_transaction,
+    serializable_unsigned_transaction_from_dict,
+)
 
 
 def convert_eth(
@@ -48,13 +57,13 @@ def convert_eth(
     Converts eth values from a given denomination to another.
     Strings passed in are automatically decoded from hexadecimal to integers, as are Hex values
     """
-    if isinstance(quantity, HexStr):
+    if is_hexstr(quantity):
         quantity = quantity.integer_value
-    elif isinstance(quantity, str):
+    elif is_string(quantity):
         quantity = int(quantity, 16)
 
     # Allow strings to be used instead of enum values
-    if isinstance(convert_from, str):
+    if is_string(convert_from):
         if hasattr(EthDenomination, convert_from.lower()):
             convert_from = EthDenomination[convert_from.lower()]
         else:
@@ -62,7 +71,7 @@ def convert_eth(
                 "convert_from value string is not a member of EthDenomination"
             )
 
-    if isinstance(convert_to, str):
+    if is_string(convert_to):
         if hasattr(EthDenomination, convert_to.lower()):
             convert_to = EthDenomination[convert_to.lower()]
         else:
@@ -79,10 +88,10 @@ def parse_results(
     """
     Validates and parses the results of an RPC
     """
-    if isinstance(res, str):
+    if is_string(res):
         res = json.loads(res)
 
-    if isinstance(res, list):
+    if is_list(res):
         return [parse_results(item) for item in res]
 
     if is_subscription and "params" in res:
@@ -115,9 +124,11 @@ class Subscription:
         subscription_id: str,
         socket: websockets.WebSocketClientProtocol,
         subscription_type: SubscriptionType = SubscriptionType.new_heads,
+        max_message_num: int = -1,
     ):
         self.subscription_id = subscription_id
         self.socket = socket
+        self.max_message_num = max_message_num
 
         # Selects the appropriate function to interpret the output of self.recv
         self.decode_function = {
@@ -131,25 +142,39 @@ class Subscription:
         """
         infinite async generator function which will yield new information retrieved from a websocket
         """
-        while True:
+        counter = 0
+        while self.max_message_num == -1 or counter < self.max_message_num:
             res = await self.socket.recv()
             res = parse_results(res, is_subscription=True)
+            counter += 1
             yield self.decode_function(res)
 
     @staticmethod
     def new_heads_decoder(data: Any) -> Block:
+        """
+        Decodes the outputs for a new heads subscription
+        """
         return Block.from_dict(data, infer_missing=True)
 
     @staticmethod
     def logs_decoder(data: Any) -> Log:
+        """
+        Decodes the outputs for a logs subscription
+        """
         return Log.from_dict(data, infer_missing=True)
 
     @staticmethod
     def new_pending_transactions_decoder(data: Any) -> HexStr:
+        """
+        Decodes the outputs for a new pending transactions subscription
+        """
         return HexStr(data)
 
     @staticmethod
     def syncing_decoder(data: Any) -> Sync:
+        """
+        Decodes the outputs for a syncing status subscription
+        """
         return Sync.from_dict(data)
 
 
@@ -162,7 +187,7 @@ class NonceManager:
     """
 
     def __init__(self, rpc: "EthRPC | str | None" = None):
-        if isinstance(rpc, str):
+        if is_string(rpc):
             rpc = EthRPC(rpc, 1)
         self.rpc = rpc
         self.nonces = {}
@@ -191,6 +216,9 @@ class NonceManager:
             await self.rpc.close_pool()
 
     async def next_nonce(self, address: str | HexStr) -> int:
+        """
+        Get the next nonce for a transaction from a given address
+        """
         address = HexStr(address)
         if self.rpc is not None and address not in self.nonces:
             self.nonces[address] = await self.rpc.get_transaction_count(
@@ -206,7 +234,7 @@ class NonceManager:
         """
         This function mutates input transaction dictionaries such that they are filled with the correct nonce values
         """
-        if isinstance(tx, list):
+        if is_list(tx):
             for sub_tx in tx:
                 # If elements in a list are references to the same list this will not work properly
                 sub_tx["nonce"] = HexStr(await self.next_nonce(sub_tx["from"]))
@@ -245,6 +273,9 @@ class EthRPC:
         self._http_url = url.replace("wss://", "https://").replace("ws://", "http://")
 
     def _next_id(self) -> None:
+        """
+        Increments the internal ID by 1, used for nonces
+        """
         self._id += 1
 
     async def __aenter__(self):
@@ -270,7 +301,7 @@ class EthRPC:
         Converts a given set of filter options into either a dictionary or list of dictionaries to be passed to the RPC
         """
         if all(
-            isinstance(param, list) for param in (from_block, to_block, address, topics)
+            is_list(param) for param in (from_block, to_block, address, topics)
         ):
             # Detects whether a set of filter options is batched
             return [
@@ -298,14 +329,12 @@ class EthRPC:
         raw strings cannot be managed by this function and are ignored,
         it is expected that a provided string is either hex or the string representation of a block specifier
         """
-        if isinstance(
-            block_specifier, int
-        ):  # Converts integer values from DefaultBlock to hex for parsing
+        if is_integer(block_specifier):  # Converts integer values from DefaultBlock to hex for parsing
             block_specifier = hex(block_specifier)
-        elif isinstance(block_specifier, list) or isinstance(block_specifier, tuple):
+        elif is_list(block_specifier) or is_tuple(block_specifier):
             # Converts integers in an iterable to hex and ignores others such as Block or str data types
             block_specifier = [
-                hex(item) if isinstance(item, int) else item for item in block_specifier
+                hex(item) if is_integer(item) else item for item in block_specifier
             ]
         return block_specifier
 
@@ -349,19 +378,24 @@ class EthRPC:
         """
         Automatically formats parameters for sending via build_batch_json
         """
-        if all(isinstance(item, list) for item in param_list):
+        if all(is_list(item) for item in param_list):
             return list(zip(*param_list))
         else:
             return param_list
 
     def pool_connected(self) -> bool:
+        """
+        Returns a boolean indicating whether the socket pool is connected to an endpoint
+        """
         if self._pool is None:
             return False
         else:
             return self._pool.connected
 
     async def start_pool(self) -> None:
-        """Exposes the ability to start the ERPC's socket pool before the first method call"""
+        """
+        Exposes the ability to start the ERPC's socket pool before the first method call
+        """
         if self._pool is not None:
             await self._pool.start()
         else:
@@ -397,7 +431,7 @@ class EthRPC:
         # json_builder is determined by whether a call is determined to be a batch or singular
         built_msg = (
             self._build_batch_json(method, params)
-            if any(isinstance(param, tuple) for param in params)
+            if any(is_tuple(param) for param in params)
             else self._build_json(method, params)
         )
 
@@ -417,6 +451,9 @@ class EthRPC:
         return parse_results(msg, is_subscription)
 
     async def _send_message_aio(self, built_msg: str) -> dict:
+        """
+        Sends a message with aiohttp and returns a dict
+        """
         async with self.session.post(
             url=self._http_url,
             data=built_msg,
@@ -431,9 +468,13 @@ class EthRPC:
         return msg
 
     @asynccontextmanager
-    async def subscribe(self, method: SubscriptionType) -> Subscription:
+    async def subscribe(self, method: SubscriptionType, max_message_num: int = -1) -> Subscription:
         """
         :param method: The subscription's type, determined by a preset enum of possible types
+        :param max_message_num: The maximum number of messages the subscription can receive,
+            default -1 for infinite subscription.
+            Eventually this will be replaced with a fleshed out filter to cancel subscriptions based on conditions.
+
         This function is decorated with an async context manager such that it can be used in an async with statement
 
         A subscription object is returned generated with a unique subscription id
@@ -446,7 +487,10 @@ class EthRPC:
             try:
                 subscription_id = await self._get_subscription(method, ws)
                 sub = Subscription(
-                    subscription_id=subscription_id, socket=ws, subscription_type=method
+                    subscription_id=subscription_id,
+                    socket=ws,
+                    subscription_type=method,
+                    max_message_num=max_message_num,
                 )
                 yield sub
             finally:
@@ -487,8 +531,7 @@ class EthRPC:
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
         """
-        cannot be batched
-        :return: Integer number indicating the number of the most recently mined block
+        :return: Integer number indicating the number of the most recently formed block
         """
         msg = await self._send_message("eth_blockNumber", [], websocket)
         match msg:
@@ -556,7 +599,6 @@ class EthRPC:
     ) -> int:
         """
         Returns the current price per gas in Wei
-        Cannot be batched
         :return: Integer number representing gas price in Wei
         """
         msg = await self._send_message("eth_gasPrice", [], websocket)
@@ -691,13 +733,16 @@ class EthRPC:
         websocket: websockets.WebSocketClientProtocol | None = None,
     ):
         """
-        Creates a new message call transaction or contract creation
+        Sends a new method call transaction or contract creation
         """
         return await self._send_message("eth_sendTransaction", [transaction], websocket)
 
     async def get_protocol_version(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
+        """
+        Gets the ethereum protocol version the current node is using
+        """
         msg = await self._send_message("eth_protocolVersion", [], websocket)
         match msg:
             case None:
@@ -708,6 +753,9 @@ class EthRPC:
     async def get_sync_status(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> bool | Sync:
+        """
+        Returns whether the connected node is syncing to the ethereum network
+        """
         msg = await self._send_message("eth_syncing", [], websocket)
         match msg:
             case None:
@@ -726,6 +774,9 @@ class EthRPC:
     async def get_chain_id(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
+        """
+        Get the chain id to which the current node is connected, will be 1 for main chain ethereum
+        """
         msg = await self._send_message("eth_chainId", [], websocket)
         match msg:
             case None:
@@ -736,11 +787,17 @@ class EthRPC:
     async def is_mining(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> bool:
+        """
+        Gets whether the current node is mining a block, this is now meaningless with proof-of-stake
+        """
         return await self._send_message("eth_mining", [], websocket)
 
     async def get_hashrate(
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
+        """
+        Gets the rate at which a node is computing hashes for mining, now meaningless with proof-of-stake
+        """
         msg = await self._send_message("eth_hashrate", [], websocket)
         match msg:
             case None:
@@ -1230,7 +1287,7 @@ class EthRPC:
         match msg:
             case None:
                 return msg
-            case l if any(isinstance(elem, list) for elem in l):
+            case l if any(is_list(elem) for elem in l):
                 return [[HexStr(el) for el in result] for result in msg]
             case list():
                 return [HexStr(result) for result in msg]
@@ -1256,10 +1313,10 @@ class EthRPC:
         match msg:
             case None:
                 return msg
-            case l if all(isinstance(elem, list) for elem in l):
+            case l if all(is_list(elem) for elem in l):
                 return [[Log.from_dict(el) for el in result] for result in msg]
-            case li if isinstance(li, list) and not any(
-                isinstance(elem, list) for elem in li
+            case li if is_list(li) and not any(
+                is_list(elem) for elem in li
             ):
                 return [Log.from_dict(result) for result in msg]
             case _:
@@ -1298,10 +1355,10 @@ class EthRPC:
         match msg:
             case None:
                 return msg
-            case l if all(isinstance(elem, list) for elem in l):
+            case l if all(is_list(elem) for elem in l):
                 return [[Log.from_dict(el) for el in result] for result in msg]
-            case li if isinstance(li, list) and not any(
-                isinstance(elem, list) for elem in li
+            case li if is_list(li) and not any(
+                is_list(elem) for elem in li
             ):
                 return [Log.from_dict(result) for result in msg]
             case _:
@@ -1315,7 +1372,7 @@ class EthRPC:
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> str:
         """
-        Returns the current client version
+        Returns the current node's client version
         """
         return await self._send_message("web3_clientVersion", [], websocket)
 
@@ -1347,7 +1404,7 @@ class EthRPC:
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
         """
-        Returns the network version ID
+        Returns the network version ID that the current node is connected to
         """
         msg = await self._send_message("net_version", [], websocket)
         match msg:
@@ -1368,7 +1425,7 @@ class EthRPC:
         self, websocket: websockets.WebSocketClientProtocol | None = None
     ) -> int:
         """
-        Returns the number of peers connected to the client
+        Returns the number of peers connected to the connected node
         """
         msg = await self._send_message("net_peerCount", [], websocket)
         match msg:
@@ -1448,10 +1505,10 @@ class EthRPC:
         """
         return await self._send_message(method_name, params, websocket)
     
-    class Utils:
+    class utils:
 
         @staticmethod
-        def to_checksum_address(address) -> HexStr:
+        def to_checksum_address(address: HexStr | str) -> HexStr:
             """
             Returns the checksummed address given an address
             :param address: The hex address to be checksummed
@@ -1478,11 +1535,31 @@ class EthRPC:
 
             return "0x" + ''.join(chars)
         
+        @staticmethod
+        def recover_raw_transaction(tx: TransactionFull) -> str:
+            """
+            Recover raw transaction from a TransactionFull object
+            :param tx: TransactionFull object to be recovered
+            :return: Raw transaction string
+            """
+            transaction = {
+                "chainId": tx.chain_id,
+                "nonce": tx.nonce,
+                "maxPriorityFeePerGas": tx.max_priority_fee_per_gas,
+                "maxFeePerGas": tx.max_fee_per_gas,
+                "gas": tx.gas,
+                "to": EthRPC.utils.to_checksum_address(tx.to_address),
+                "value": tx.value,
+                "accessList": tx.access_list,
+                "data": tx.input,
+            }
+
+            v = tx.v
+            r = tx.r
+            s = tx.s
+            unsigned_transaction = serializable_unsigned_transaction_from_dict(transaction)
+            return "0x" + encode_transaction(unsigned_transaction, vrs=(v, r, s)).hex()
         
-
-        
-
-
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
