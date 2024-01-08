@@ -1508,7 +1508,7 @@ class EthRPC:
     class utils:
 
         @staticmethod
-        def to_checksum_address(address) -> HexStr:
+        def to_checksum_address(address: HexStr | str) -> HexStr:
             """
             Returns the checksummed address given an address
             :param address: The hex address to be checksummed
@@ -1535,6 +1535,7 @@ class EthRPC:
 
             return "0x" + ''.join(chars)
         
+        @staticmethod
         def recover_raw_transaction(tx: TransactionFull) -> str:
             """
             Recover raw transaction from a TransactionFull object
