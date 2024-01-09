@@ -18,10 +18,10 @@ def to_checksum_address(address: HexStr | str) -> HexStr:
     address = address.lower()
     chars = list(address[2:])
 
-    expanded = bytearray([ord(chars[i]) for i in range(40)])
+    expanded = bytes([ord(chars[i]) for i in range(40)])
 
     hashed = keccak.new(digest_bits=256)
-    hashed.update(bytes(expanded))
+    hashed.update(expanded)
     hashed = bytearray(hashed.digest())
 
     for i in range(0, 40, 2):
