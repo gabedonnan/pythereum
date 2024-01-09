@@ -1,6 +1,5 @@
 from pythereum.rpc import (
     EthRPC,
-    convert_eth,
     NonceManager,
 )
 
@@ -57,4 +56,5 @@ from pythereum.l2_rpc import OptimismRPC
 from pythereum.utils import (
     to_checksum_address,
     recover_raw_transaction,
+    convert_eth,
 )
