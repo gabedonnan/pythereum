@@ -53,3 +53,8 @@ from pythereum.exceptions import (
 from pythereum.gas_managers import GasManager
 
 from pythereum.l2_rpc import OptimismRPC
+
+from pythereum.utils import (
+    to_checksum_address,
+    recover_raw_transaction,
+)

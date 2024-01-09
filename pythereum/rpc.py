@@ -9,14 +9,6 @@ from typing import Any
 from aiohttp import ClientSession
 import websockets
 from pythereum.socket_pool import WebsocketPool
-from Crypto.Hash import keccak
-from .types import (
-    is_integer,
-    is_string,
-    is_list,
-    is_hexstr,
-    is_tuple,
-)
 from pythereum.exceptions import (
     ERPCRequestException,
     ERPCInvalidReturnException,
@@ -42,10 +34,6 @@ from pythereum.dclasses import (
     Proof,
     MempoolInfo,
 )
-from eth_account._utils.legacy_transactions import (
-    encode_transaction,
-    serializable_unsigned_transaction_from_dict,
-)
 
 
 def convert_eth(
@@ -57,13 +45,13 @@ def convert_eth(
     Converts eth values from a given denomination to another.
     Strings passed in are automatically decoded from hexadecimal to integers, as are Hex values
     """
-    if is_hexstr(quantity):
+    if isinstance(quantity, HexStr):
         quantity = quantity.integer_value
-    elif is_string(quantity):
+    elif isinstance(quantity, str):
         quantity = int(quantity, 16)
 
     # Allow strings to be used instead of enum values
-    if is_string(convert_from):
+    if isinstance(convert_from, str):
         if hasattr(EthDenomination, convert_from.lower()):
             convert_from = EthDenomination[convert_from.lower()]
         else:
@@ -71,7 +59,7 @@ def convert_eth(
                 "convert_from value string is not a member of EthDenomination"
             )
 
-    if is_string(convert_to):
+    if isinstance(convert_to, str):
         if hasattr(EthDenomination, convert_to.lower()):
             convert_to = EthDenomination[convert_to.lower()]
         else:
@@ -88,10 +76,10 @@ def parse_results(
     """
     Validates and parses the results of an RPC
     """
-    if is_string(res):
+    if isinstance(res, str):
         res = json.loads(res)
 
-    if is_list(res):
+    if isinstance(res, list):
         return [parse_results(item) for item in res]
 
     if is_subscription and "params" in res:
@@ -187,7 +175,7 @@ class NonceManager:
     """
 
     def __init__(self, rpc: "EthRPC | str | None" = None):
-        if is_string(rpc):
+        if isinstance(rpc, str):
             rpc = EthRPC(rpc, 1)
         self.rpc = rpc
         self.nonces = {}
@@ -234,7 +222,7 @@ class NonceManager:
         """
         This function mutates input transaction dictionaries such that they are filled with the correct nonce values
         """
-        if is_list(tx):
+        if isinstance(tx, list):
             for sub_tx in tx:
                 # If elements in a list are references to the same list this will not work properly
                 sub_tx["nonce"] = HexStr(await self.next_nonce(sub_tx["from"]))
@@ -301,7 +289,7 @@ class EthRPC:
         Converts a given set of filter options into either a dictionary or list of dictionaries to be passed to the RPC
         """
         if all(
-            is_list(param) for param in (from_block, to_block, address, topics)
+            isinstance(param, list) for param in (from_block, to_block, address, topics)
         ):
             # Detects whether a set of filter options is batched
             return [
@@ -329,12 +317,12 @@ class EthRPC:
         raw strings cannot be managed by this function and are ignored,
         it is expected that a provided string is either hex or the string representation of a block specifier
         """
-        if is_integer(block_specifier):  # Converts integer values from DefaultBlock to hex for parsing
+        if isinstance(block_specifier, int):  # Converts integer values from DefaultBlock to hex for parsing
             block_specifier = hex(block_specifier)
-        elif is_list(block_specifier) or is_tuple(block_specifier):
+        elif isinstance(block_specifier, list) or isinstance(block_specifier, tuple):
             # Converts integers in an iterable to hex and ignores others such as Block or str data types
             block_specifier = [
-                hex(item) if is_integer(item) else item for item in block_specifier
+                hex(item) if isinstance(item, int) else item for item in block_specifier
             ]
         return block_specifier
 
@@ -378,7 +366,7 @@ class EthRPC:
         """
         Automatically formats parameters for sending via build_batch_json
         """
-        if all(is_list(item) for item in param_list):
+        if all(isinstance(item, list) for item in param_list):
             return list(zip(*param_list))
         else:
             return param_list
@@ -431,7 +419,7 @@ class EthRPC:
         # json_builder is determined by whether a call is determined to be a batch or singular
         built_msg = (
             self._build_batch_json(method, params)
-            if any(is_tuple(param) for param in params)
+            if any(isinstance(param, tuple) for param in params)
             else self._build_json(method, params)
         )
 
@@ -1287,7 +1275,7 @@ class EthRPC:
         match msg:
             case None:
                 return msg
-            case l if any(is_list(elem) for elem in l):
+            case l if any(isinstance(elem, list) for elem in l):
                 return [[HexStr(el) for el in result] for result in msg]
             case list():
                 return [HexStr(result) for result in msg]
@@ -1313,10 +1301,10 @@ class EthRPC:
         match msg:
             case None:
                 return msg
-            case l if all(is_list(elem) for elem in l):
+            case l if all(isinstance(elem, list) for elem in l):
                 return [[Log.from_dict(el) for el in result] for result in msg]
-            case li if is_list(li) and not any(
-                is_list(elem) for elem in li
+            case li if isinstance(li, list) and not any(
+                isinstance(elem, list) for elem in li
             ):
                 return [Log.from_dict(result) for result in msg]
             case _:
@@ -1355,10 +1343,10 @@ class EthRPC:
         match msg:
             case None:
                 return msg
-            case l if all(is_list(elem) for elem in l):
+            case l if all(isinstance(elem, list) for elem in l):
                 return [[Log.from_dict(el) for el in result] for result in msg]
-            case li if is_list(li) and not any(
-                is_list(elem) for elem in li
+            case li if isinstance(li, list) and not any(
+                isinstance(elem, list) for elem in li
             ):
                 return [Log.from_dict(result) for result in msg]
             case _:
@@ -1504,61 +1492,7 @@ class EthRPC:
         if the function does not exist for the given params an error will be raised
         """
         return await self._send_message(method_name, params, websocket)
-    
-    class utils:
-
-        @staticmethod
-        def to_checksum_address(address: HexStr | str) -> HexStr:
-            """
-            Returns the checksummed address given an address
-            :param address: The hex address to be checksummed
-            :return: The checksummed address
-            """
-            
-            address = address.lower()
-            chars = list(address[2:])
-
-            expanded = bytearray(40)
-            for i in range(40):
-                expanded[i] = ord(chars[i])
-
-            hashed = keccak.new(digest_bits=256)
-            hashed.update(bytes(expanded))
-            hashed = bytearray(hashed.digest())
-
-
-            for i in range(0, 40, 2):
-                if (hashed[i // 2] >> 4) >= 8:
-                    chars[i] = chars[i].upper()
-                if (hashed[i // 2] & 0x0f) >= 8:
-                    chars[i + 1] = chars[i + 1].upper()
-
-            return "0x" + ''.join(chars)
-        
-        @staticmethod
-        def recover_raw_transaction(tx: TransactionFull) -> str:
-            """
-            Recover raw transaction from a TransactionFull object
-            :param tx: TransactionFull object to be recovered
-            :return: Raw transaction string
-            """
-            transaction = {
-                "chainId": tx.chain_id,
-                "nonce": tx.nonce,
-                "maxPriorityFeePerGas": tx.max_priority_fee_per_gas,
-                "maxFeePerGas": tx.max_fee_per_gas,
-                "gas": tx.gas,
-                "to": EthRPC.utils.to_checksum_address(tx.to_address),
-                "value": tx.value,
-                "accessList": tx.access_list,
-                "data": tx.input,
-            }
-
-            v = tx.v
-            r = tx.r
-            s = tx.s
-            unsigned_transaction = serializable_unsigned_transaction_from_dict(transaction)
-            return "0x" + encode_transaction(unsigned_transaction, vrs=(v, r, s)).hex()
+       
         
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
