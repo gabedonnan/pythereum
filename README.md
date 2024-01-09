@@ -68,7 +68,7 @@ pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 or
 
 ```toml
-pythereum = "^1.1.10"
+pythereum = "^1.2.0"
 ```
 
 If you would like to install the library via pypi instead of via this git repository.
@@ -162,7 +162,7 @@ if __name__ == "__main__":
   asyncio.run(test_batching())
 ```
 
-### Example currency conversion
+### Example utility functions
 
 ```python
 >>> from pythereum import EthDenomination, convert_eth
@@ -173,6 +173,13 @@ if __name__ == "__main__":
 >>> convert_eth(1e18, "wei", "eth")  # We can now use strings to represent denominations
 1.0
 ```
+
+```python
+>>> from pythereum import to_checksum_address
+>>> to_checksum_address("0x5050f69a9786f081509234f1a7f4684b5e5b76c9")
+HexStr('0x5050F69a9786F081509234F1a7F4684b5E5b76C9')
+```
+
 
 ### Example builder submission
 
