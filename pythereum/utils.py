@@ -16,13 +16,16 @@ def to_checksum_address(address: HexStr | str) -> HexStr:
     :return: The checksummed address
     """
     address = address.lower()
-    chars = list(address[2:])
-
-    expanded = bytes([ord(chars[i]) for i in range(40)])
+    if address.startswith("0x"):
+        chars = list(address[2:])
+        expanded = bytes(address[2:42], encoding="utf-8")
+    else:
+        chars = list(address)
+        expanded = bytes(address[0:40], encoding="utf-8")
 
     hashed = keccak.new(digest_bits=256)
     hashed.update(expanded)
-    hashed = bytearray(hashed.digest())
+    hashed = hashed.digest()
 
     for i in range(0, 40, 2):
         if (hashed[i // 2] >> 4) >= 8:
