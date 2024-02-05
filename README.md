@@ -13,6 +13,7 @@ Features include:
 - Private transaction and Bundle support for communication directly with block builders
 - Automatic nonce and gas management for transactions
 - Early-stage support for L2 chain specific functionality (Optimism P2P implemented for now)
+- Automatic ABI decoding
 - Typed function outputs for intuitive library use
 
 ### Implemented RPC methods
@@ -68,7 +69,7 @@ pythereum = {git = "https://github.com/gabedonnan/pythereum.git"}
 or
 
 ```toml
-pythereum = "^1.2.0"
+pythereum = "^1.2.1"
 ```
 
 If you would like to install the library via pypi instead of via this git repository.
