@@ -13,7 +13,7 @@ from eth_utils import keccak
 
 from pythereum.common import HexStr
 from pythereum.dclasses import Bundle, MEVBundle
-from pythereum.exceptions import ERPCBuilderException, ERPCRequestException
+from pythereum.exceptions import PythereumBuilderException, PythereumRequestException
 from pythereum.rpc import parse_results
 
 
@@ -338,7 +338,7 @@ class BuilderRPC:
                 builder.url, json=constructed_json, headers=header_data
             ) as resp:
                 if resp.status != 200:
-                    raise ERPCRequestException(
+                    raise PythereumRequestException(
                         resp.status,
                         f"Invalid BuilderRPC request for url {builder.url} of form "
                         f"(method={method}, params={params})",
@@ -346,7 +346,7 @@ class BuilderRPC:
 
                 msg = await resp.json()
         else:
-            raise ERPCBuilderException(
+            raise PythereumBuilderException(
                 "BuilderRPC session not started. Either context manage this class or call BuilderRPC.start_session()"
             )
 

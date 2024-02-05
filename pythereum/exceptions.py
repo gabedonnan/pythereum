@@ -3,7 +3,7 @@
 # Further copyright info available at the end of the file
 
 
-class ERPCBaseException(Exception):
+class PythereumBaseException(Exception):
     """
     Base exception class for Ethereum RPC interactions.
     """
@@ -13,7 +13,7 @@ class ERPCBaseException(Exception):
         super().__init__(self.message)
 
 
-class ERPCRequestException(ERPCBaseException):
+class PythereumRequestException(PythereumBaseException):
     """
     Raised when an error is returned from the Ethereum RPC.
     """
@@ -24,46 +24,50 @@ class ERPCRequestException(ERPCBaseException):
         super().__init__(full_message)
 
 
-class ERPCInvalidReturnException(ERPCBaseException):
+class PythereumInvalidReturnException(PythereumBaseException):
     """
     Raised when the Ethereum RPC returns a value which is incorrectly formatted.
     """
 
 
-class ERPCDecoderException(ERPCBaseException):
+class PythereumDecoderException(PythereumBaseException):
     """
     Raised when invalid data is input to a decoder and an error is thrown.
     """
 
 
-class ERPCEncoderException(ERPCBaseException):
+class PythereumEncoderException(PythereumBaseException):
     """
     Raised when invalid data is input to an encoder and an error is thrown.
     """
 
 
-class ERPCSubscriptionException(ERPCBaseException):
+class PythereumSubscriptionException(PythereumBaseException):
     """
     Raised when a subscription request is rejected by a host or for other generic subscription errors.
     """
 
 
-class ERPCBuilderException(ERPCBaseException):
+class PythereumBuilderException(PythereumBaseException):
     """
     Raised for exceptions related to builders and the BuilderRPC
     """
 
 
-class ERPCManagerException(ERPCBaseException):
+class PythereumManagerException(PythereumBaseException):
     """
     Raised for exceptions related to manager classes such as nonce managers or gas managers
     """
 
 
-class ERPCGenericException(ERPCBaseException):
+class PythereumGenericException(PythereumBaseException):
     """
     Raised for exceptions which do not fall into any of the above categories, things like utility functions will use it
     """
+
+
+class PythereumABIException(Exception):
+    ...
 
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy

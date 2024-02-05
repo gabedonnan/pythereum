@@ -23,8 +23,8 @@ from pythereum.dclasses import (
     log_decoder,
     transaction_decoder,
     access_decoder,
-    ERPCDecoderException,
-    ERPCEncoderException,
+    PythereumDecoderException,
+    PythereumEncoderException,
     HexStr,
     Log,
     Access,
@@ -39,7 +39,7 @@ def test_hex_int_decoder():
     assert hex_int_decoder("0") == 0
     assert hex_int_decoder("0xaaaa") == 43690
     assert hex_int_decoder(None) is None
-    with pytest.raises(ERPCDecoderException) as info:
+    with pytest.raises(PythereumDecoderException) as info:
         hex_int_decoder("zzzzz")
 
 
@@ -47,7 +47,7 @@ def test_hex_int_encoder():
     assert hex_int_encoder(0) == "0x0"
     assert hex_int_encoder(43690) == "0xaaaa"
     assert hex_int_encoder(None) is None
-    with pytest.raises(ERPCEncoderException) as info:
+    with pytest.raises(PythereumEncoderException) as info:
         hex_int_encoder("zzzzz")
 
 
@@ -56,7 +56,7 @@ def test_hex_decoder():
     assert hex_decoder("0") == HexStr("0x0")
     assert hex_decoder("0xaaaa") == HexStr("0xaaaa")
     assert hex_decoder(None) is None
-    with pytest.raises(ERPCDecoderException) as info:
+    with pytest.raises(PythereumDecoderException) as info:
         hex_decoder("zzzzz")
 
 
@@ -75,7 +75,7 @@ def test_hex_list_decoder():
         HexStr("0xaaaa"),
     ]
     assert hex_list_decoder(None) is None
-    with pytest.raises(ERPCDecoderException) as info:
+    with pytest.raises(PythereumDecoderException) as info:
         hex_list_decoder(["zzzzz"])
 
 
@@ -103,7 +103,7 @@ def test_hex_list_list_decoder():
         [HexStr("0xaaaa")],
     ]
     assert hex_list_list_decoder(None) is None
-    with pytest.raises(ERPCDecoderException) as info:
+    with pytest.raises(PythereumDecoderException) as info:
         hex_list_list_decoder([["zzzzz"]])
 
 

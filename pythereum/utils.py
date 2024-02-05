@@ -1,6 +1,6 @@
 from Crypto.Hash import keccak
 
-from pythereum import ERPCGenericException
+from pythereum import PythereumGenericException
 from pythereum.common import HexStr, EthDenomination
 from pythereum.dclasses import TransactionFull
 from eth_account._utils.legacy_transactions import (
@@ -77,7 +77,7 @@ def convert_eth(
         if hasattr(EthDenomination, convert_from.lower()):
             convert_from = EthDenomination[convert_from.lower()]
         else:
-            raise ERPCGenericException(
+            raise PythereumGenericException(
                 "convert_from value string is not a member of EthDenomination"
             )
 
@@ -85,7 +85,7 @@ def convert_eth(
         if hasattr(EthDenomination, convert_to.lower()):
             convert_to = EthDenomination[convert_to.lower()]
         else:
-            raise ERPCGenericException(
+            raise PythereumGenericException(
                 "convert_to value string is not a member of EthDenomination"
             )
 

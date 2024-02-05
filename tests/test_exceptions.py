@@ -3,22 +3,23 @@
 # Further copyright info available at the end of the file
 
 from pythereum.exceptions import (
-    ERPCRequestException,
-    ERPCInvalidReturnException,
-    ERPCDecoderException,
-    ERPCEncoderException,
-    ERPCSubscriptionException,
-    ERPCBuilderException,
-    ERPCManagerException,
-    ERPCGenericException,
+    PythereumRequestException,
+    PythereumInvalidReturnException,
+    PythereumDecoderException,
+    PythereumEncoderException,
+    PythereumSubscriptionException,
+    PythereumBuilderException,
+    PythereumManagerException,
+    PythereumGenericException,
+    PythereumABIException
 )
 
 
 # Test for ERPCRequestException
-def test_ERPCRequestException():
+def test_PythereumRequestException():
     code = 404
     message = "Not Found"
-    exception = ERPCRequestException(code, message)
+    exception = PythereumRequestException(code, message)
     assert (
         str(exception)
         == f"Error {code}: {message}\nPlease consult your endpoint's documentation for info on error codes."
@@ -27,54 +28,61 @@ def test_ERPCRequestException():
 
 
 # Test for ERPCInvalidReturnException
-def test_ERPCInvalidReturnException():
+def test_PythereumInvalidReturnException():
     message = "Invalid Return"
-    exception = ERPCInvalidReturnException(message)
+    exception = PythereumInvalidReturnException(message)
 
     assert str(exception) == message
 
 
 # Test for ERPCDecoderException
-def test_ERPCDecoderException():
+def test_PythereumDecoderException():
     message = "Decoder Error"
-    exception = ERPCDecoderException(message)
+    exception = PythereumDecoderException(message)
 
     assert str(exception) == message
 
 
 # Test for ERPCEncoderException
-def test_ERPCEncoderException():
+def test_PythereumEncoderException():
     message = "Encoder Error"
-    exception = ERPCEncoderException(message)
+    exception = PythereumEncoderException(message)
 
     assert str(exception) == message
 
 
 # Test for ERPCSubscriptionException
-def test_ERPCSubscriptionException():
+def test_PythereumSubscriptionException():
     message = "Subscription Error"
-    exception = ERPCSubscriptionException(message)
+    exception = PythereumSubscriptionException(message)
 
     assert str(exception) == message
 
 
-def test_ERPCBuilderException():
+def test_PythereumBuilderException():
     message = "Builder Error"
-    exception = ERPCBuilderException(message)
+    exception = PythereumBuilderException(message)
 
     assert str(exception) == message
 
 
-def test_ERPCManagerException():
+def test_PythereumManagerException():
     message = "Manager Error"
-    exception = ERPCManagerException(message)
+    exception = PythereumManagerException(message)
 
     assert str(exception) == message
 
 
-def test_ERPCGenericException():
+def test_PythereumGenericException():
     message = "Generic Error"
-    exception = ERPCGenericException(message)
+    exception = PythereumGenericException(message)
+
+    assert str(exception) == message
+
+
+def test_PythereumABIException():
+    message = "ABI Error"
+    exception = PythereumABIException(message)
 
     assert str(exception) == message
 

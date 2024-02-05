@@ -39,14 +39,14 @@ from pythereum.dclasses import (
 )
 
 from pythereum.exceptions import (
-    ERPCRequestException,
-    ERPCInvalidReturnException,
-    ERPCDecoderException,
-    ERPCEncoderException,
-    ERPCSubscriptionException,
-    ERPCBuilderException,
-    ERPCManagerException,
-    ERPCGenericException,
+    PythereumRequestException,
+    PythereumInvalidReturnException,
+    PythereumDecoderException,
+    PythereumEncoderException,
+    PythereumSubscriptionException,
+    PythereumBuilderException,
+    PythereumManagerException,
+    PythereumGenericException,
 )
 
 from pythereum.gas_managers import GasManager
@@ -58,3 +58,5 @@ from pythereum.utils import (
     recover_raw_transaction,
     convert_eth,
 )
+
+from pythereum.abi import ContractABI

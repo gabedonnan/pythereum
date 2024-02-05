@@ -5,7 +5,7 @@
 import statistics
 from contextlib import asynccontextmanager
 
-from pythereum.exceptions import ERPCManagerException, ERPCInvalidReturnException
+from pythereum.exceptions import PythereumManagerException, PythereumInvalidReturnException
 from pythereum.common import EthDenomination, GasStrategy, BlockTag
 from pythereum.rpc import EthRPC
 from pythereum.dclasses import TransactionFull, Transaction
@@ -58,7 +58,7 @@ class NaiveGasManager:
             transactions = latest_block.transactions
             self.latest_transactions = transactions
         if len(transactions) == 0:
-            raise ERPCInvalidReturnException(
+            raise PythereumInvalidReturnException(
                 f"Invalid vlue: {transactions} returned from _get_latest_receipts"
             )
         return transactions
@@ -98,7 +98,7 @@ class NaiveGasManager:
             case GasStrategy.custom:
                 res = self.custom_pricing(prices)
             case _:
-                raise ERPCManagerException(f"Invalid strategy of type {strategy} used")
+                raise PythereumManagerException(f"Invalid strategy of type {strategy} used")
         return round(res)
 
     async def fill_transaction(
@@ -158,7 +158,7 @@ class NaiveGasManager:
 
     def custom_pricing(self, prices):
         # Override this function when subclassing for custom pricing implementation
-        raise ERPCManagerException("Custom pricing strategy not defined for this class")
+        raise PythereumManagerException("Custom pricing strategy not defined for this class")
 
 
 class InformedGasManager:
@@ -209,7 +209,7 @@ class InformedGasManager:
         transactions = latest_block.transactions
         self.latest_transactions = transactions
         if len(transactions) == 0:
-            raise ERPCInvalidReturnException(
+            raise PythereumInvalidReturnException(
                 f"Invalid vlue: {transactions} returned from _get_latest_receipts"
             )
         for key, attribute in zip(

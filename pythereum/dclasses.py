@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json, LetterCase, config
 from pythereum.common import HexStr
-from pythereum.exceptions import ERPCDecoderException, ERPCEncoderException
+from pythereum.exceptions import PythereumDecoderException, PythereumEncoderException
 
 
 def hex_int_decoder(hex_string: str | None) -> int | None:
@@ -17,7 +17,7 @@ def hex_int_decoder(hex_string: str | None) -> int | None:
     elif re.match(r"^(0[xX])?[A-Fa-f0-9]+$", hex_string):
         return int(hex_string, 16)
     else:
-        raise ERPCDecoderException(
+        raise PythereumDecoderException(
             f'{type(hex_string)} "{hex_string}" is an invalid input to decoder "hex_int_decoder"'
         )
 
@@ -26,7 +26,7 @@ def hex_int_encoder(int_val: int | None) -> str | None:
     if int_val is None:
         return None
     elif not isinstance(int_val, int):
-        raise ERPCEncoderException(
+        raise PythereumEncoderException(
             f'{type(int_val)} {int_val} is an invalid input to encoder "hex_int_encoder"'
         )
     return hex(int_val)
@@ -40,7 +40,7 @@ def hex_decoder(hex_string: str | None) -> HexStr | None:
     elif hex_string == "0x":
         return None
     else:
-        raise ERPCDecoderException(
+        raise PythereumDecoderException(
             f'{type(hex_string)} "{hex_string}" is an invalid input to decoder "hex_decoder"'
         )
 
@@ -52,7 +52,7 @@ def hex_encoder(hex_obj: HexStr | None) -> str | None:
     if hex_obj is None:
         return None
     elif not isinstance(hex_obj, HexStr):
-        raise ERPCEncoderException(
+        raise PythereumEncoderException(
             f'{type(hex_obj)} {hex_obj} is an invalid input to encoder "hex_encoder"'
         )
     return str(hex_obj)

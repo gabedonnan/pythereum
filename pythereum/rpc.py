@@ -10,10 +10,10 @@ from aiohttp import ClientSession
 import websockets
 from pythereum.socket_pool import WebsocketPool
 from pythereum.exceptions import (
-    ERPCRequestException,
-    ERPCInvalidReturnException,
-    ERPCSubscriptionException,
-    ERPCManagerException,
+    PythereumRequestException,
+    PythereumInvalidReturnException,
+    PythereumSubscriptionException,
+    PythereumManagerException,
 )
 from pythereum.common import (
     HexStr,
@@ -56,9 +56,9 @@ def parse_results(
             errmsg = res["error"]["message"] + (
                 "" if builder is None else f" for builder {builder}"
             )
-            raise ERPCRequestException(res["error"]["code"], errmsg)
+            raise PythereumRequestException(res["error"]["code"], errmsg)
         else:
-            raise ERPCInvalidReturnException(
+            raise PythereumInvalidReturnException(
                 f"Invalid return value from RPC, return format: {res}"
             )
 
@@ -158,7 +158,7 @@ class NonceManager:
             else:
                 self._close_pool = False
         else:
-            raise ERPCManagerException(
+            raise PythereumManagerException(
                 "NonceManager was never given EthRPC or RPC Url instance"
             )
         return self
@@ -212,7 +212,7 @@ class EthRPC:
         :param pool_size: The number of websocket connections opened for the WebsocketPool
         :param use_socket_pool: Whether the socket pool should be used or AIOHTTP requests
         :param connection_max_payload_size: The maximum payload size a websocket can send or recv in one message
-        :param connection_timeout: The maximum time in seconds to wait for a response from the websocket before timing out (default 20s )
+        :param connection_timeout: The maximum time in seconds to wait for a response from the websocket before timeout
         """
         self._id = 0
         if use_socket_pool:
@@ -412,7 +412,7 @@ class EthRPC:
             headers={"Content-Type": "application/json"},
         ) as resp:
             if resp.status != 200:
-                raise ERPCRequestException(
+                raise PythereumRequestException(
                     resp.status,
                     f"Bad EthRPC aiohttp request for url {self._http_url} of form {built_msg}",
                 )
@@ -447,7 +447,7 @@ class EthRPC:
                 yield sub
             finally:
                 if subscription_id == "":
-                    raise ERPCSubscriptionException(
+                    raise PythereumSubscriptionException(
                         f"Subscription of type {method.value} rejected by destination."
                     )
                 await self._unsubscribe(subscription_id, ws)
@@ -1244,7 +1244,7 @@ class EthRPC:
             case list():
                 return [HexStr(result) for result in msg]
             case _:
-                raise ERPCInvalidReturnException(
+                raise PythereumInvalidReturnException(
                     f"Unexpected return of form {msg} in get_filter_changes"
                 )
 
@@ -1272,7 +1272,7 @@ class EthRPC:
             ):
                 return [Log.from_dict(result) for result in msg]
             case _:
-                raise ERPCInvalidReturnException(
+                raise PythereumInvalidReturnException(
                     f"Unexpected return of form {msg} in get_filter_changes"
                 )
 
@@ -1314,7 +1314,7 @@ class EthRPC:
             ):
                 return [Log.from_dict(result) for result in msg]
             case _:
-                raise ERPCInvalidReturnException(
+                raise PythereumInvalidReturnException(
                     f"Unexpected return of form {msg} in get_filter_changes"
                 )
 
@@ -1346,7 +1346,7 @@ class EthRPC:
             case list():
                 return [HexStr(result) for result in msg]
             case _:
-                raise ERPCInvalidReturnException(
+                raise PythereumInvalidReturnException(
                     f"Unexpected return of form {msg} in sha3"
                 )
 
