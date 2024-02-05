@@ -627,3 +627,33 @@ for geth or OpenEthereum parity nodes there are inbuilt methods for this.
 However if you are connected to another ethereum endpoint type there may not be a simple method to do this.
 Instead it is possible to use subscriptions to build up your own picture of the mempool using the new pending transactions subscription type.
 
+ABI Contract Calls
+==================
+
+When calling smart contracts, one needs to know the signature of the functions they desire to call.
+
+Contracts, when compiled, produce ABIs which can be publicly viewed on etherscan.
+These ABIs have enough information to allow us to call functions with our EthRPC.
+
+A smart contract function call looks as follows:
+
+0x{4 byte function selector}{encoded parameters}
+
+The function specifier is determined from the function name and parameter types it takes in as follows:
+
+"exampleFunctionName(address,uint256,bool)" -> encoding function -> 4 byte selector
+
+Pythereum provides functionality to automatically unpack ABIs into objects.
+These objects generate functions based on those contained in the ABI so users can intuitively call them as follows:
+
+.. code-block:: python
+  :linenos:
+
+  abi = ContractABI(ABI_DATA)  # Contains a function swapOwners which takes in two accounts
+  tx = Transaction(
+    to=contract_address
+    ...  # Automatically encodes the swapOrders function call as per the ABI
+    data=abi.swap_owners(address_one, address_two)  # Can be called using snake_case for extra pythonic-ness
+  )
+
+It is not currently possible to automatically get ABI or un-compiled contract data without external block explorers
