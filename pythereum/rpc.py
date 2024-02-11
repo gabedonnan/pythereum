@@ -281,7 +281,9 @@ class EthRPC:
         raw strings cannot be managed by this function and are ignored,
         it is expected that a provided string is either hex or the string representation of a block specifier
         """
-        if isinstance(block_specifier, int):  # Converts integer values from DefaultBlock to hex for parsing
+        if isinstance(
+            block_specifier, int
+        ):  # Converts integer values from DefaultBlock to hex for parsing
             block_specifier = hex(block_specifier)
         elif isinstance(block_specifier, list) or isinstance(block_specifier, tuple):
             # Converts integers in an iterable to hex and ignores others such as Block or str data types
@@ -420,7 +422,9 @@ class EthRPC:
         return msg
 
     @asynccontextmanager
-    async def subscribe(self, method: SubscriptionType, max_message_num: int = -1) -> Subscription:
+    async def subscribe(
+        self, method: SubscriptionType, max_message_num: int = -1
+    ) -> Subscription:
         """
         :param method: The subscription's type, determined by a preset enum of possible types
         :param max_message_num: The maximum number of messages the subscription can receive,
@@ -1456,8 +1460,8 @@ class EthRPC:
         if the function does not exist for the given params an error will be raised
         """
         return await self._send_message(method_name, params, websocket)
-       
-        
+
+
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights

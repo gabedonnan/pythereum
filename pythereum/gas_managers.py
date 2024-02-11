@@ -5,7 +5,10 @@
 import statistics
 from contextlib import asynccontextmanager
 
-from pythereum.exceptions import PythereumManagerException, PythereumInvalidReturnException
+from pythereum.exceptions import (
+    PythereumManagerException,
+    PythereumInvalidReturnException,
+)
 from pythereum.common import EthDenomination, GasStrategy, BlockTag
 from pythereum.rpc import EthRPC
 from pythereum.dclasses import TransactionFull, Transaction
@@ -98,7 +101,9 @@ class NaiveGasManager:
             case GasStrategy.custom:
                 res = self.custom_pricing(prices)
             case _:
-                raise PythereumManagerException(f"Invalid strategy of type {strategy} used")
+                raise PythereumManagerException(
+                    f"Invalid strategy of type {strategy} used"
+                )
         return round(res)
 
     async def fill_transaction(
@@ -158,7 +163,9 @@ class NaiveGasManager:
 
     def custom_pricing(self, prices):
         # Override this function when subclassing for custom pricing implementation
-        raise PythereumManagerException("Custom pricing strategy not defined for this class")
+        raise PythereumManagerException(
+            "Custom pricing strategy not defined for this class"
+        )
 
 
 class InformedGasManager:

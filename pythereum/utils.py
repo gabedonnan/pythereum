@@ -34,10 +34,10 @@ def to_checksum_address(address: HexStr | str) -> HexStr:
     for i in range(0, 40, 2):
         if (hashed[i // 2] >> 4) >= 8:
             chars[i] = chars[i].upper()
-        if (hashed[i // 2] & 0x0f) >= 8:
+        if (hashed[i // 2] & 0x0F) >= 8:
             chars[i + 1] = chars[i + 1].upper()
 
-    return HexStr(''.join(chars))
+    return HexStr("".join(chars))
 
 
 def recover_raw_transaction(tx: TransactionFull) -> HexStr:

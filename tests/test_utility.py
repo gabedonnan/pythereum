@@ -18,17 +18,20 @@ def test_eth_conversion():
 
 
 def test_to_checksum_address():
-    assert to_checksum_address(
-        "0x5fC2E691E520bbd3499f409bb9602DBA94184672".lower()
-    ) == "0x5fC2E691E520bbd3499f409bb9602DBA94184672"
+    assert (
+        to_checksum_address("0x5fC2E691E520bbd3499f409bb9602DBA94184672".lower())
+        == "0x5fC2E691E520bbd3499f409bb9602DBA94184672"
+    )
 
-    assert to_checksum_address(
-        "5fC2E691E520bbd3499f409bb9602DBA94184672".lower()
-    ) == "0x5fC2E691E520bbd3499f409bb9602DBA94184672"
+    assert (
+        to_checksum_address("5fC2E691E520bbd3499f409bb9602DBA94184672".lower())
+        == "0x5fC2E691E520bbd3499f409bb9602DBA94184672"
+    )
 
-    assert to_checksum_address(
-        "0x5fC2E691E520bbd3499f409bb9602DBA94184672"
-    ) == "0x5fC2E691E520bbd3499f409bb9602DBA94184672"
+    assert (
+        to_checksum_address("0x5fC2E691E520bbd3499f409bb9602DBA94184672")
+        == "0x5fC2E691E520bbd3499f409bb9602DBA94184672"
+    )
 
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy

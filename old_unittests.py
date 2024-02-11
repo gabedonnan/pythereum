@@ -286,8 +286,7 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def test_mempool_geth(self):
         async with EthRPC(
-            "https://docs-demo.quiknode.pro/",
-                use_socket_pool=False
+            "https://docs-demo.quiknode.pro/", use_socket_pool=False
         ) as erpc:
             print((await erpc.get_mempool_geth()).pending)
 
