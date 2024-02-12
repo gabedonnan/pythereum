@@ -657,3 +657,47 @@ These objects generate functions based on those contained in the ABI so users ca
   )
 
 It is not currently possible to automatically get ABI or un-compiled contract data without external block explorers
+
+Deploying a Smart Contract
+==========================
+
+Deploying a contract is much the same as sending any regular transaction with some small changes.
+
+.. code-block:: python
+  :linenos:
+
+  import asyncio
+  import solcx  # Solidity compiler
+  from eth_account import Account
+  from pythereum import EthRPC, Transaction
+
+  async def my_first_contract(contract_bytecode: str):
+    # Create an arbitrary account wallet
+    acct = Account.create()
+
+    tx = Transaction(
+        from_address=acct.address,
+        to_address=None,  # The to address is 0x80, which is equivalent to None
+        value=0,          # Contracts must be sent to this address to publish them
+        chain_id=1,
+        nonce=0,
+        max_fee_per_gas=0,
+        max_priority_fee_per_gas=0,
+        data=contract_bytecode,
+    )
+
+    async with EthRPC(ENDPOINT_URL, pool_size=1) as rpc:
+      gas_price = await rpc.estimate_gas(tx)
+      tx["gas"] = gas_price
+      signed_tx = acct.sign_transaction(tx).rawTransaction
+
+      print(await rpc.send_raw_transaction(signed_tx))  # Print contract address
+
+
+  if __name__ == "__main__":
+    bytecode = solcx.compile_files(  # Compile some solidity code with solcx
+        ["foo.sol"],
+        output_values=["abi", "bin-runtime"],
+        solc_version="0.7.0"
+    )["<stdin>:foo"]["bin"]
+    asyncio.run(my_first_transaction(bytecode))
