@@ -1,7 +1,7 @@
 # MIT License
 # Copyright (C) 2023 Gabriel "gabedonnan" Donnan
 # Further copyright info available at the end of the file
-
+import rlp
 from Crypto.Hash import keccak
 
 from pythereum import PythereumGenericException
@@ -94,6 +94,14 @@ def convert_eth(
             )
 
     return (convert_from.value * quantity) / convert_to.value
+
+
+def _sha3(seed):
+    return keccak.new(digest_bits=256, data=seed).digest()
+
+
+def calculate_contract_address(sender: str | HexStr, nonce: int):
+    return _sha3(rlp.encode([sender, nonce]))[12:]
 
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy

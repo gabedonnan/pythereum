@@ -57,6 +57,7 @@ from pythereum.utils import (
     to_checksum_address,
     recover_raw_transaction,
     convert_eth,
+    calculate_contract_address,
 )
 
 from pythereum.abi import ContractABI
