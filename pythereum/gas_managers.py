@@ -1,12 +1,15 @@
 # MIT License
 # Copyright (C) 2023 Gabriel "gabedonnan" Donnan
 # Further copyright info available at the end of the file
-
 import statistics
 from contextlib import asynccontextmanager
 
-from pythereum.exceptions import PythereumManagerException, PythereumInvalidReturnException
+from pythereum.exceptions import (
+    PythereumManagerException,
+    PythereumInvalidReturnException,
+)
 from pythereum.common import EthDenomination, GasStrategy, BlockTag
+from pythereum.logs import logger
 from pythereum.rpc import EthRPC
 from pythereum.dclasses import TransactionFull, Transaction
 
@@ -42,6 +45,7 @@ class NaiveGasManager:
             if max_priority_price is not None
             else EthDenomination.milli
         )
+        self.logger = logger.getChild("NaiveGasManager")
 
     async def _get_latest_receipts(
         self, use_stored_results: bool = False
@@ -59,7 +63,8 @@ class NaiveGasManager:
             self.latest_transactions = transactions
         if len(transactions) == 0:
             raise PythereumInvalidReturnException(
-                f"Invalid vlue: {transactions} returned from _get_latest_receipts"
+                f"Invalid vlue: {transactions} returned from _get_latest_receipts",
+                self.logger,
             )
         return transactions
 
@@ -98,7 +103,9 @@ class NaiveGasManager:
             case GasStrategy.custom:
                 res = self.custom_pricing(prices)
             case _:
-                raise PythereumManagerException(f"Invalid strategy of type {strategy} used")
+                raise PythereumManagerException(
+                    f"Invalid strategy of type {strategy} used", self.logger
+                )
         return round(res)
 
     async def fill_transaction(
@@ -117,7 +124,7 @@ class NaiveGasManager:
             }
 
         if isinstance(tx, list):
-            for sub_tx in tx:
+            for i, sub_tx in enumerate(tx):
                 sub_tx["gas"] = min(
                     await self.suggest(strategy["gas"], "gas", use_stored),
                     self.max_gas_price,
@@ -138,6 +145,11 @@ class NaiveGasManager:
                     ),
                     self.max_priority_price,
                 )
+
+                self.logger.debug(
+                    f"Gas suggestion for sub_tx {i}: gas={sub_tx['gas']}, maxFeePerGas={sub_tx['maxFeePerGas']}, "
+                    f"maxPriorityFeePerGas={sub_tx['maxPriorityFeePerGas']}"
+                )
         elif tx is not None:
             tx["gas"] = min(
                 await self.suggest(strategy["gas"], "gas", use_stored),
@@ -155,10 +167,16 @@ class NaiveGasManager:
                 ),
                 self.max_priority_price,
             )
+            self.logger.debug(
+                f"Gas suggestion: gas={tx['gas']}, maxFeePerGas={tx['maxFeePerGas']}, "
+                f"maxPriorityFeePerGas={tx['maxPriorityFeePerGas']}"
+            )
 
     def custom_pricing(self, prices):
         # Override this function when subclassing for custom pricing implementation
-        raise PythereumManagerException("Custom pricing strategy not defined for this class")
+        raise PythereumManagerException(
+            "Custom pricing strategy not defined for this class", self.logger
+        )
 
 
 class InformedGasManager:
@@ -203,6 +221,7 @@ class InformedGasManager:
         }
         self.fail_multiplier = fail_multiplier
         self.success_multiplier = success_multiplier
+        self.logger = logger.getChild("InformedGasManager")
 
     async def _set_initial_price(self):
         latest_block = await self.rpc.get_block_by_number(BlockTag.latest, True)
@@ -210,7 +229,8 @@ class InformedGasManager:
         self.latest_transactions = transactions
         if len(transactions) == 0:
             raise PythereumInvalidReturnException(
-                f"Invalid vlue: {transactions} returned from _get_latest_receipts"
+                f"Invalid vlue: {transactions} returned from _get_latest_receipts",
+                self.logger,
             )
         for key, attribute in zip(
             self.prices.keys(), ("gas", "max_fee_per_gas", "max_priority_fee_per_gas")
@@ -246,7 +266,7 @@ class InformedGasManager:
 
     def fill_transaction(self, tx: dict | Transaction | list[dict] | list[Transaction]):
         if isinstance(tx, list):
-            for sub_tx in tx:
+            for i, sub_tx in enumerate(tx):
                 sub_tx["gas"] = min(self.prices["gas"], self.max_prices["gas"])
 
                 sub_tx["maxFeePerGas"] = min(
@@ -256,6 +276,10 @@ class InformedGasManager:
                 sub_tx["maxPriorityFeePerGas"] = min(
                     self.prices["maxPriorityFeePerGas"],
                     self.max_prices["maxPriorityFeePerGas"],
+                )
+                self.logger.debug(
+                    f"Gas suggestion for sub_tx {i}: gas={sub_tx['gas']}, maxFeePerGas={sub_tx['maxFeePerGas']}, "
+                    f"maxPriorityFeePerGas={sub_tx['maxPriorityFeePerGas']}"
                 )
         else:
             tx["gas"] = min(self.prices["gas"], self.max_prices["gas"])
@@ -267,6 +291,10 @@ class InformedGasManager:
             tx["maxPriorityFeePerGas"] = min(
                 self.prices["maxPriorityFeePerGas"],
                 self.max_prices["maxPriorityFeePerGas"],
+            )
+            self.logger.debug(
+                f"Gas suggestion: gas={tx['gas']}, maxFeePerGas={tx['maxFeePerGas']}, "
+                f"maxPriorityFeePerGas={tx['maxPriorityFeePerGas']}"
             )
 
 
@@ -306,6 +334,7 @@ class GasManager:
             "maxFeePerGas": 0,
             "maxPriorityFeePerGas": 0,
         }
+        self.logger = logger.getChild("GasManager")
 
     def __str__(self):
         return f"GasManager(rpc={self.rpc.__str__()})"
@@ -351,10 +380,12 @@ class GasManager:
         if self.naive_latest_transactions is not None:
             naive.latest_transactions = self.naive_latest_transactions
         try:
+            self.logger.info("Starting Naive Gas Manager")
             if not connected:
                 await naive.rpc.start_pool()
             yield naive
         finally:
+            self.logger.info("Stopping Naive Gas Manager")
             self.naive_latest_transactions = naive.latest_transactions
             if not connected:
                 await naive.rpc.close_pool()
@@ -409,10 +440,12 @@ class GasManager:
 
         connected = informed.rpc.pool_connected()
         try:
+            self.logger.info("Starting Informed Gas Manager")
             if not connected:
                 await informed.rpc.start_pool()
             yield informed
         finally:
+            self.logger.info("Stopping Informed Gas Manager")
             self.informed_tx_prices["gas"] = informed.prices["gas"]
             self.informed_tx_prices["maxFeePerGas"] = informed.prices["maxFeePerGas"]
             self.informed_tx_prices["maxPriorityFeePerGas"] = informed.prices[

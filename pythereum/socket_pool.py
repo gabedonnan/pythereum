@@ -4,7 +4,8 @@
 
 from asyncio import Queue, gather
 from contextlib import asynccontextmanager
-from websockets import connect, WebSocketClientProtocol
+from websockets import connect, ClientConnection
+from pythereum.logs import logger
 
 
 class WebsocketPool:
@@ -21,13 +22,13 @@ class WebsocketPool:
         connection_timeout: int = 20,
     ):
         self._url = url
-        self._id = 0
         self._max_pool_size = pool_size
         self._max_payload_size = connection_max_payload_size
         self._timeout = connection_timeout
         self._sockets_used = 0
         self._sockets = Queue(maxsize=pool_size)
         self.connected = False
+        self.logger = logger.getChild("WebsocketPool")
 
     async def start(self) -> None:
         """
@@ -48,11 +49,14 @@ class WebsocketPool:
             )
         )
         await gather(*(self._sockets.put(socket) for socket in sockets))
+        self.logger.info(
+            f"Starting socket pool: url={self._url}, size={self._max_pool_size}, timeout={self._timeout}"
+        )
         self._sockets_used = 0
         self.connected = True
 
     @asynccontextmanager
-    async def get_socket(self) -> WebSocketClientProtocol:
+    async def get_socket(self) -> ClientConnection:
         """
         :return: Returns a list of websockets to use
         The websockets will be returned to the main pool upon exiting the with statement in which this should be called
@@ -80,6 +84,7 @@ class WebsocketPool:
             self._sockets.task_done()
         self._sockets_used = 0
         self.connected = False
+        self.logger.info(f"Stopping socket pool: url={self._url}")
 
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy

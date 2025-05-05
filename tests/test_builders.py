@@ -3,6 +3,8 @@
 # Further copyright info available at the end of the file
 
 import pytest
+import logging
+import sys
 
 import pythereum as pye
 
@@ -17,6 +19,19 @@ The flashbots builder requires a wallet address and a signed payload to include 
 
 More comprehensive tests will be generated for these at a later date
 """
+
+handler = logging.StreamHandler(stream=sys.stdout)
+formatter = logging.Formatter(
+    "%(asctime)s [%(levelname)s] [%(name)s] : %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
+handler.setFormatter(formatter)
+
+root = logging.getLogger()
+root.handlers = []
+root.addHandler(handler)
+root.setLevel(logging.DEBUG)
+
+logging.getLogger("websockets").setLevel(logging.WARNING)
 
 
 @pytest.mark.asyncio
@@ -60,18 +75,6 @@ async def test_flashbots_builder():
             assert str(e) == (
                 "Error 403: Invalid BuilderRPC request for url https://relay.flashbots.net of form ("
                 "method=eth_sendPrivateRawTransaction, params=[{'tx': None, 'preferences': None}])"
-                "\nPlease consult your endpoint's documentation for info on error codes."
-            )
-
-
-@pytest.mark.asyncio
-async def test_loki_builder():
-    async with pye.BuilderRPC(pye.LokiBuilder()) as brpc:
-        try:
-            await brpc.send_private_transaction(None)
-        except PythereumRequestException as e:
-            assert str(e) == (
-                "Error -32603: Timeout for builder https://rpc.lokibuilder.xyz/"
                 "\nPlease consult your endpoint's documentation for info on error codes."
             )
 

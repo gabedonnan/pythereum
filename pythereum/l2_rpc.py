@@ -16,6 +16,7 @@ class OptimismRPC(EthRPC):
 
     def __init__(self, url: str):
         super().__init__(url, 0, False)
+        self.logger = super().logger.getChild("OptimismRPC")
 
     async def optimism_output_at_block(
         self,

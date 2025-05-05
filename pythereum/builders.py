@@ -15,6 +15,7 @@ from pythereum.common import HexStr
 from pythereum.dclasses import Bundle, MEVBundle
 from pythereum.exceptions import PythereumBuilderException, PythereumRequestException
 from pythereum.rpc import parse_results
+from pythereum.logs import logger
 
 
 class Builder(ABC):
@@ -213,35 +214,6 @@ class FlashbotsBuilder(Builder):
         return [{"tx": tx, "preferences": preferences}]
 
 
-class LokiBuilder(Builder):
-    def __init__(self):
-        super().__init__(
-            "https://rpc.lokibuilder.xyz/",
-            "eth_sendPrivateRawTransaction",
-            "eth_sendBundle",
-            "eth_cancelBundle",
-            "Loki",
-            {
-                "txs",
-                "blockNumber",
-                "minTimestamp",
-                "maxTimestamp",
-                "revertingTxHashes",
-                "replacementUuid",
-                "refundPercent",
-                "refundRecipient",
-                "refundTxHashes",
-            },
-        )
-
-    def format_private_transaction(
-        self,
-        tx: str | HexStr | list[str] | list[HexStr],
-        max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
-    ) -> list[Any]:
-        return [tx]
-
-
 # Tuple of the types of builders which use flashbots headers for their transactions
 FLASHBOTS_BUILDER_TYPES = (
     FlashbotsBuilder,
@@ -255,7 +227,6 @@ ALL_BUILDERS = (
     RsyncBuilder(),
     BeaverBuilder(),
     FlashbotsBuilder(),
-    LokiBuilder(),
 )
 
 
@@ -267,12 +238,9 @@ class BuilderRPC:
     def __init__(
         self,
         builders: Builder | list[Builder],
-        private_key: str
-        | bytes
-        | HexStr
-        | list[str]
-        | list[bytes]
-        | list[HexStr] = None,
+        private_key: (
+            str | bytes | HexStr | list[str] | list[bytes] | list[HexStr]
+        ) = None,
     ):
         if isinstance(builders, Builder):
             builders = [builders]
@@ -287,6 +255,7 @@ class BuilderRPC:
         self.private_key: bytes = private_key
         self.session = None
         self._id = 0
+        self.logger = logger.getChild("BuilderRPC")
 
     async def __aenter__(self):
         await self.start_session()
@@ -334,6 +303,9 @@ class BuilderRPC:
                 if use_flashbots_signature and self.private_key is not None
                 else None
             )
+            self.logger.debug(
+                f"Sending builder message: header={header_data}, body={constructed_json}"
+            )
             async with self.session.post(
                 builder.url, json=constructed_json, headers=header_data
             ) as resp:
@@ -342,20 +314,26 @@ class BuilderRPC:
                         resp.status,
                         f"Invalid BuilderRPC request for url {builder.url} of form "
                         f"(method={method}, params={params})",
+                        self.logger,
                     )
 
                 msg = await resp.json()
         else:
             raise PythereumBuilderException(
-                "BuilderRPC session not started. Either context manage this class or call BuilderRPC.start_session()"
+                "BuilderRPC session not started. Either context manage this class or call BuilderRPC.start_session()",
+                self.logger,
             )
 
-        return parse_results(msg, builder=builder.url)
+        parsed_results = parse_results(msg, builder=builder.url)
+        self.logger.debug(f"Received builder response: msg={parsed_results}")
+        return parsed_results
 
     async def start_session(self):
+        self.logger.info("Starting Builder RPC Session")
         self.session = aiohttp.ClientSession()
 
     async def close_session(self):
+        self.logger.info("Stopping Builder RPC Session")
         await self.session.close()
 
     async def send_private_transaction(

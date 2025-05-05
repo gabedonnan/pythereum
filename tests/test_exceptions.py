@@ -11,7 +11,7 @@ from pythereum.exceptions import (
     PythereumBuilderException,
     PythereumManagerException,
     PythereumGenericException,
-    PythereumABIException
+    PythereumABIException,
 )
 
 

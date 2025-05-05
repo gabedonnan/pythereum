@@ -3,11 +3,26 @@
 # Further copyright info available at the end of the file
 
 import asyncio
+import logging
+import sys
 
 from pythereum import EthRPC, SubscriptionType
 from dotenv import dotenv_values
 
 config = dotenv_values("../.env")  # Pulls variables from .env into a dictionary
+
+handler = logging.StreamHandler(stream=sys.stdout)
+formatter = logging.Formatter(
+    "%(asctime)s [%(levelname)s] [%(name)s] : %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
+handler.setFormatter(formatter)
+
+root = logging.getLogger()
+root.handlers = []
+root.addHandler(handler)
+root.setLevel(logging.DEBUG)
+
+logging.getLogger("websockets").setLevel(logging.WARNING)
 
 
 async def listen_blocks(url):
@@ -30,10 +45,8 @@ async def listen_blocks(url):
 
             # Iterates through the transactions found in retrieved data
             for tx in block.transactions:
-                print(tx)
-                # Gets and prints the receipts for each transaction
-                # r = await erpc.get_transaction_receipt(tx.hash)
-                # print(r)
+                ...
+
     await erpc.close_pool()
 
 

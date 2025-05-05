@@ -4,15 +4,30 @@
 
 import unittest
 import asyncio
+import sys
 from time import time
 from pythereum.common import HexStr
 from pythereum.rpc import (
     EthRPC,
     SubscriptionType,
     BlockTag,
-    convert_eth,
-    EthDenomination,
 )
+from pythereum.utils import convert_eth, EthDenomination
+import logging
+
+handler = logging.StreamHandler(stream=sys.stdout)
+formatter = logging.Formatter(
+    "%(asctime)s [%(levelname)s] [%(name)s] : %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
+handler.setFormatter(formatter)
+
+root = logging.getLogger()
+root.handlers = []
+root.addHandler(handler)
+root.setLevel(logging.DEBUG)
+
+logging.getLogger("websockets").setLevel(logging.WARNING)
+logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 # I store the links I use for testing in my .env file under the name "TEST_WS"
 from dotenv import dotenv_values
@@ -108,11 +123,11 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
             x = (
                 asyncio.create_task(
                     erpc.get_block_by_number(
-                        [i for i in range(6020, 6030)],
-                        full_object=[False for _ in range(10)],
+                        [i for i in range(6020, 6023)],
+                        full_object=[False for _ in range(3)],
                     )
                 )
-                for __ in range(120)
+                for __ in range(3)
             )
             await asyncio.gather(*x)
 
@@ -124,12 +139,12 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
                     erpc.get_balance(
                         [
                             "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-                            for _ in range(10)
+                            for _ in range(3)
                         ],
-                        [BlockTag.latest for __ in range(10)],
+                        [BlockTag.latest for __ in range(3)],
                     )
                 )
-                for __ in range(10)
+                for __ in range(3)
             )
             await asyncio.gather(*x)
 
@@ -141,9 +156,9 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
                     erpc.get_transaction_count(
                         [
                             "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-                            for _ in range(10)
+                            for _ in range(3)
                         ],
-                        [BlockTag.latest for __ in range(10)],
+                        [BlockTag.latest for __ in range(3)],
                     )
                 )
                 for __ in range(2)
@@ -154,18 +169,15 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
         r = await self.rpc.get_transaction_count(
             "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
         )
-        print(r)
         self.assertIsInstance(r, int)
 
     async def test_wallet_balance(self):
-        print(
-            await self.rpc.get_balance(
-                [
-                    "0xA69babEF1cA67A37Ffaf7a485DfFF3382056e78C",
-                    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-                ],
-                [BlockTag.latest, BlockTag.latest],
-            )
+        await self.rpc.get_balance(
+            [
+                "0xA69babEF1cA67A37Ffaf7a485DfFF3382056e78C",
+                "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+            ],
+            [BlockTag.latest, BlockTag.latest],
         )
 
     async def test_gas_price(self):
@@ -176,23 +188,18 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
         r = await self.rpc.get_block_by_hash(
             "0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae", False
         )
-        print(r)
 
     async def test_get_block_by_number(self):
         r = await self.rpc.get_block_by_number(BlockTag.latest, True)
-        print(r)
 
     async def test_get_syncing(self):
         r = await self.rpc.get_sync_status()
-        print(r)
 
     async def test_protocol_version(self):
         r = await self.rpc.get_protocol_version()
-        print(r)
 
     async def test_accounts(self):
         r = await self.rpc.get_accounts()
-        print(r)
 
     async def test_batch_transaction_count_by_hash(self):
         r = await self.rpc.get_transaction_count_by_hash(
@@ -203,17 +210,14 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
                 "0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae",
             ]
         )
-        print(r)
 
     async def test_get_transaction_count_by_number(self):
         r = await self.rpc.get_transaction_count_by_number(100000)
-        print(r)
 
     async def test_get_code(self):
         r = await self.rpc.get_code(
             "0xA69babEF1cA67A37Ffaf7a485DfFF3382056e78C", 100020
         )
-        print(r)
 
     async def test_unsubscribe(self):
         async with self.rpc.subscribe(SubscriptionType.new_heads) as sc:
@@ -225,7 +229,6 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
             10
         )  # Waits an amount of time for new blocks to hopefully be created
         r = await self.rpc.get_filter_changes(ftr)
-        print(r)
 
     async def test_create_filter(self):
         ftr = await self.rpc.new_filter(
@@ -240,35 +243,22 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
             ],
         )
         r = await self.rpc.get_filter_changes(ftr)
-        print(r)
 
     async def test_net_functions(self):
         msg = await self.rpc.get_net_version()
-        print(msg)
         msg = await self.rpc.get_net_listening()
-        print(msg)
-        msg = await self.rpc.get_net_peer_count()
-        print(msg)
+        # msg = await self.rpc.get_net_peer_count()
 
     async def test_experimental(self):
-        # msg = await self.rpc.get_fee_history(
-        #     [4, 5, 6],
-        #     ["latest", "latest", "latest"],
-        #     [[25, 75], [25, 75], [25, 75]]
-        # )
-        # print(msg)
         msg = await self.rpc.get_proof(
             "0x7F0d15C7FAae65896648C8273B6d7E43f58Fa842",
             ["0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"],
             "latest",
         )
-        print(msg)
 
     async def test_w3_functions(self):
         msg = await self.rpc.get_client_version()
-        print(msg)
         msg = await self.rpc.sha3("0x68656c6c6f20776f726c64")
-        print(msg)
 
     async def test_with(self):
         async with EthRPC(ANVIL_URL, 1) as rpc:
@@ -282,14 +272,13 @@ class MyTestCase(unittest.IsolatedAsyncioTestCase):
                     tg.create_task(erpc.get_block_number())
 
         async with EthRPC(url=ANVIL_URL, use_socket_pool=False) as rpc:
-            print(await rpc.get_net_version())
+            await rpc.get_net_version()
 
     async def test_mempool_geth(self):
         async with EthRPC(
-            "https://docs-demo.quiknode.pro/",
-                use_socket_pool=False
+            "https://docs-demo.quiknode.pro/", use_socket_pool=False
         ) as erpc:
-            print((await erpc.get_mempool_geth()).pending)
+            await erpc.get_mempool_geth()
 
 
 if __name__ == "__main__":

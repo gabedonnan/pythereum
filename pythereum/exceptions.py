@@ -2,14 +2,17 @@
 # Copyright (C) 2023 Gabriel "gabedonnan" Donnan
 # Further copyright info available at the end of the file
 
+import logging
+
 
 class PythereumBaseException(Exception):
     """
     Base exception class for Ethereum RPC interactions.
     """
 
-    def __init__(self, message: str):
+    def __init__(self, message: str, logger: logging.Logger):
         self.message = message
+        logger.exception(message)
         super().__init__(self.message)
 
 
@@ -18,10 +21,10 @@ class PythereumRequestException(PythereumBaseException):
     Raised when an error is returned from the Ethereum RPC.
     """
 
-    def __init__(self, code: int, message: str = "Generic ERPC Error"):
+    def __init__(self, code: int, message: str, logger: logging.Logger):
         self.code = code  # Error code, e.g., HTTP error code or custom ERPC code
         full_message = f"Error {code}: {message}\nPlease consult your endpoint's documentation for info on error codes."
-        super().__init__(full_message)
+        super().__init__(full_message, logger)
 
 
 class PythereumInvalidReturnException(PythereumBaseException):
@@ -66,8 +69,10 @@ class PythereumGenericException(PythereumBaseException):
     """
 
 
-class PythereumABIException(Exception):
-    ...
+class PythereumABIException(PythereumBaseException):
+    """
+    Raised for exceptions in Pythereum's ABIs
+    """
 
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy

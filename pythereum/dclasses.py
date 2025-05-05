@@ -8,7 +8,10 @@ import re
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json, LetterCase, config
 from pythereum.common import HexStr
+from pythereum.logs import logger
 from pythereum.exceptions import PythereumDecoderException, PythereumEncoderException
+
+decode_logger = logger.getChild("Decoder")
 
 
 def hex_int_decoder(hex_string: str | None) -> int | None:
@@ -18,7 +21,8 @@ def hex_int_decoder(hex_string: str | None) -> int | None:
         return int(hex_string, 16)
     else:
         raise PythereumDecoderException(
-            f'{type(hex_string)} "{hex_string}" is an invalid input to decoder "hex_int_decoder"'
+            f'{type(hex_string)} "{hex_string}" is an invalid input to decoder "hex_int_decoder"',
+            decode_logger,
         )
 
 
@@ -27,7 +31,8 @@ def hex_int_encoder(int_val: int | None) -> str | None:
         return None
     elif not isinstance(int_val, int):
         raise PythereumEncoderException(
-            f'{type(int_val)} {int_val} is an invalid input to encoder "hex_int_encoder"'
+            f'{type(int_val)} {int_val} is an invalid input to encoder "hex_int_encoder"',
+            decode_logger,
         )
     return hex(int_val)
 
@@ -41,7 +46,8 @@ def hex_decoder(hex_string: str | None) -> HexStr | None:
         return None
     else:
         raise PythereumDecoderException(
-            f'{type(hex_string)} "{hex_string}" is an invalid input to decoder "hex_decoder"'
+            f'{type(hex_string)} "{hex_string}" is an invalid input to decoder "hex_decoder"',
+            decode_logger,
         )
 
 
@@ -53,7 +59,8 @@ def hex_encoder(hex_obj: HexStr | None) -> str | None:
         return None
     elif not isinstance(hex_obj, HexStr):
         raise PythereumEncoderException(
-            f'{type(hex_obj)} {hex_obj} is an invalid input to encoder "hex_encoder"'
+            f'{type(hex_obj)} {hex_obj} is an invalid input to encoder "hex_encoder"',
+            decode_logger,
         )
     return str(hex_obj)
 
@@ -519,6 +526,7 @@ class TransactionFull:
     s: HexStr | None = field(
         default=None, metadata=config(decoder=hex_decoder, encoder=hex_encoder)
     )
+
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass

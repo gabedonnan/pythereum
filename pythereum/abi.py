@@ -8,10 +8,11 @@ from re import compile
 from functools import partial
 from eth_abi import encode
 from eth_utils import function_signature_to_4byte_selector
-from .exceptions import PythereumABIException
+from pythereum.exceptions import PythereumABIException
+from pythereum.logs import logger
 
 
-snake_case = compile(r'(?<!^)(?=[A-Z])')
+snake_case = compile(r"(?<!^)(?=[A-Z])")
 
 
 class ContractABI:
@@ -19,6 +20,7 @@ class ContractABI:
     Takes an ethereum contract ABI as input, and generates functions from it.
     This allows users to encode call data simply via abi_instance.abi_specified_function_name(abi_specified_args)
     """
+
     def __init__(self, data: list[dict] | str, to_snake_case: bool = True):
         if isinstance(data, str):
             data = json.loads(data)
@@ -26,15 +28,23 @@ class ContractABI:
         for func in data:
             if "name" in func:
                 if to_snake_case:
-                    setattr(self, snake_case.sub("_", func["name"]).lower(), partial(self._encode_call, func["name"]))
+                    setattr(
+                        self,
+                        snake_case.sub("_", func["name"]).lower(),
+                        partial(self._encode_call, func["name"]),
+                    )
                 else:
-                    setattr(self, func["name"], partial(self._encode_call, func["name"]))
+                    setattr(
+                        self, func["name"], partial(self._encode_call, func["name"])
+                    )
 
         self._functions = {
-            func["name"]: [
-                (inp["name"], inp["type"]) for inp in func["inputs"]
-            ] for func in data if "name" in func
+            func["name"]: [(inp["name"], inp["type"]) for inp in func["inputs"]]
+            for func in data
+            if "name" in func
         }
+
+        self.logger = logger.getChild("ContractABI")
 
     def get_args(self, name: str) -> list[tuple]:
         """
@@ -45,20 +55,31 @@ class ContractABI:
         """
         if name in self._functions:
             return self._functions[name]
-        elif (pascal_name := name.replace("_", " ").title().replace(" ", "")) in self._functions:
+        elif (
+            pascal_name := name.replace("_", " ").title().replace(" ", "")
+        ) in self._functions:
             return self._functions[pascal_name]
         else:
-            raise PythereumABIException(f"Neither {name} nor {pascal_name} is defined in this ABI")
+            raise PythereumABIException(
+                f"Neither {name} nor {pascal_name} is defined in this ABI", self.logger
+            )
 
     def _encode_call(self, name: str, *args) -> str:
         required_args: list[tuple] = self._functions[name]
 
         if len(args) != len(required_args):
-            raise PythereumABIException(f"Incorrect arguments, required arguments are {self.get_args(name)}")
+            raise PythereumABIException(
+                f"Incorrect arguments, required arguments are {self.get_args(name)}",
+                self.logger,
+            )
 
         arg_types = [arg[1] for arg in required_args]
         function_signature = name + "(" + ",".join(arg_types) + ")"
-        return "0x" + function_signature_to_4byte_selector(function_signature).hex() + encode(arg_types, args).hex()
+        return (
+            "0x"
+            + function_signature_to_4byte_selector(function_signature).hex()
+            + encode(arg_types, args).hex()
+        )
 
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy

@@ -4,6 +4,9 @@
 
 # Example demonstration of builder submission, alongside implementations of gas and nonce managers
 import asyncio
+import logging
+import sys
+
 from eth_account import Account
 from pythereum import (
     BuilderRPC,
@@ -21,6 +24,19 @@ from dotenv import dotenv_values
 erpc_url = dotenv_values("../.env")[
     "TEST_WS"
 ]  # Pulls variables from .env into a dictionary
+
+handler = logging.StreamHandler(stream=sys.stdout)
+formatter = logging.Formatter(
+    "%(asctime)s [%(levelname)s] [%(name)s] : %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
+handler.setFormatter(formatter)
+
+root = logging.getLogger()
+root.handlers = []
+root.addHandler(handler)
+root.setLevel(logging.DEBUG)
+
+logging.getLogger("websockets").setLevel(logging.WARNING)
 
 
 async def building():
@@ -48,7 +64,7 @@ async def building():
 
     print(tx)
 
-    signed_tx = Account.sign_transaction(tx, acct.key).rawTransaction
+    signed_tx = Account.sign_transaction(tx, acct.key).raw_transaction
 
     async with BuilderRPC(
         [TitanBuilder(), RsyncBuilder(), LokiBuilder()], private_key=acct.key

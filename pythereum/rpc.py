@@ -32,6 +32,9 @@ from pythereum.dclasses import (
     Proof,
     MempoolInfo,
 )
+from pythereum.logs import logger
+
+parser_logger = logger.getChild("Parser")
 
 
 def parse_results(
@@ -56,10 +59,10 @@ def parse_results(
             errmsg = res["error"]["message"] + (
                 "" if builder is None else f" for builder {builder}"
             )
-            raise PythereumRequestException(res["error"]["code"], errmsg)
+            raise PythereumRequestException(res["error"]["code"], errmsg, parser_logger)
         else:
             raise PythereumInvalidReturnException(
-                f"Invalid return value from RPC, return format: {res}"
+                f"Invalid return value from RPC, return format: {res}", parser_logger
             )
 
     return res["result"]
@@ -74,7 +77,7 @@ class Subscription:
     def __init__(
         self,
         subscription_id: str,
-        socket: websockets.WebSocketClientProtocol,
+        socket: websockets.ClientConnection,
         subscription_type: SubscriptionType = SubscriptionType.new_heads,
         max_message_num: int = -1,
     ):
@@ -90,6 +93,9 @@ class Subscription:
             SubscriptionType.syncing: self.syncing_decoder,
         }[subscription_type]
 
+        self.logger = logger.getChild(f"Subscription:{subscription_id}")
+        self.logger.info(f"Starting subscription")
+
     async def recv(self) -> Block | Log | HexStr | Sync:
         """
         infinite async generator function which will yield new information retrieved from a websocket
@@ -98,8 +104,10 @@ class Subscription:
         while self.max_message_num == -1 or counter < self.max_message_num:
             res = await self.socket.recv()
             res = parse_results(res, is_subscription=True)
+            decoded = self.decode_function(res)
+            self.logger.debug(f"Subscription received: {decoded}")
             counter += 1
-            yield self.decode_function(res)
+            yield decoded
 
     @staticmethod
     def new_heads_decoder(data: Any) -> Block:
@@ -144,6 +152,7 @@ class NonceManager:
         self.rpc = rpc
         self.nonces = {}
         self._close_pool = True
+        self.logger = logger.getChild("NonceManager")
 
     def __getitem__(self, key):
         return self.nonces[HexStr(key)]
@@ -159,7 +168,7 @@ class NonceManager:
                 self._close_pool = False
         else:
             raise PythereumManagerException(
-                "NonceManager was never given EthRPC or RPC Url instance"
+                "NonceManager was never given EthRPC or RPC Url instance", self.logger
             )
         return self
 
@@ -223,6 +232,7 @@ class EthRPC:
             self._pool = None
             self.session = ClientSession()
         self._http_url = url.replace("wss://", "https://").replace("ws://", "http://")
+        self.logger = logger.getChild(f"EthRPC")
 
     def _next_id(self) -> None:
         """
@@ -241,12 +251,14 @@ class EthRPC:
     def _filter_option_formatter(
         from_block: DefaultBlock | list[DefaultBlock],
         to_block: DefaultBlock | list[DefaultBlock],
-        address: str
-        | HexStr
-        | list[str]
-        | list[HexStr]
-        | list[list[str]]
-        | list[list[HexStr]],
+        address: (
+            str
+            | HexStr
+            | list[str]
+            | list[HexStr]
+            | list[list[str]]
+            | list[list[HexStr]]
+        ),
         topics: str | HexStr | list[str] | list[HexStr],
     ) -> dict | list[dict]:
         """
@@ -281,7 +293,9 @@ class EthRPC:
         raw strings cannot be managed by this function and are ignored,
         it is expected that a provided string is either hex or the string representation of a block specifier
         """
-        if isinstance(block_specifier, int):  # Converts integer values from DefaultBlock to hex for parsing
+        if isinstance(
+            block_specifier, int
+        ):  # Converts integer values from DefaultBlock to hex for parsing
             block_specifier = hex(block_specifier)
         elif isinstance(block_specifier, list) or isinstance(block_specifier, tuple):
             # Converts integers in an iterable to hex and ignores others such as Block or str data types
@@ -349,8 +363,10 @@ class EthRPC:
         Exposes the ability to start the ERPC's socket pool before the first method call
         """
         if self._pool is not None:
+            self.logger.info(f"Starting RPC pool: url={self._http_url}")
             await self._pool.start()
         else:
+            self.logger.info(f"Starting RPC session: url={self._http_url}")
             if not self.session.closed:
                 await self.session.close()
             self.session = ClientSession()
@@ -360,15 +376,17 @@ class EthRPC:
         Closes the socket pool, this is important to not leave hanging open connections
         """
         if self._pool is not None:
+            self.logger.info(f"Stopping RPC pool: url={self._http_url}")
             await self._pool.quit()
         else:
+            self.logger.info(f"Stopping RPC session: url={self._http_url}")
             await self.session.close()
 
     async def _send_message(
         self,
         method: str,
         params: list[Any],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
         is_subscription: bool = False,
     ) -> Any:
         """
@@ -387,6 +405,8 @@ class EthRPC:
             else self._build_json(method, params)
         )
 
+        self.logger.debug(f"Sending message: msg={built_msg}")
+
         if websocket is None:
             # Gets a new websocket if one is not supplied to the function
             if self._pool is not None:
@@ -400,7 +420,12 @@ class EthRPC:
             # Using a given websocket
             await websocket.send(built_msg)
             msg = await websocket.recv()
-        return parse_results(msg, is_subscription)
+
+        parsed_msg = parse_results(msg, is_subscription)
+
+        self.logger.debug(f"Received response message: msg={parsed_msg}")
+
+        return parsed_msg
 
     async def _send_message_aio(self, built_msg: str) -> dict:
         """
@@ -415,12 +440,15 @@ class EthRPC:
                 raise PythereumRequestException(
                     resp.status,
                     f"Bad EthRPC aiohttp request for url {self._http_url} of form {built_msg}",
+                    self.logger,
                 )
             msg = await resp.json()
         return msg
 
     @asynccontextmanager
-    async def subscribe(self, method: SubscriptionType, max_message_num: int = -1) -> Subscription:
+    async def subscribe(
+        self, method: SubscriptionType, max_message_num: int = -1
+    ) -> Subscription:
         """
         :param method: The subscription's type, determined by a preset enum of possible types
         :param max_message_num: The maximum number of messages the subscription can receive,
@@ -448,7 +476,8 @@ class EthRPC:
             finally:
                 if subscription_id == "":
                     raise PythereumSubscriptionException(
-                        f"Subscription of type {method.value} rejected by destination."
+                        f"Subscription of type {method.value} rejected by destination.",
+                        self.logger,
                     )
                 await self._unsubscribe(subscription_id, ws)
 
@@ -457,7 +486,7 @@ class EthRPC:
     async def _get_subscription(
         self,
         method: SubscriptionType,
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> str:
         """
         Supporting function for self.subscribe, opening a subscription for the provided websocket
@@ -467,7 +496,7 @@ class EthRPC:
     async def _unsubscribe(
         self,
         subscription_id: str | HexStr,
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ):
         """
         :param subscription_id: String subscription id returned by eth_subscribe
@@ -480,7 +509,7 @@ class EthRPC:
         return msg
 
     async def get_block_number(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> int:
         """
         :return: Integer number indicating the number of the most recently formed block
@@ -496,7 +525,7 @@ class EthRPC:
         self,
         address: str | HexStr | list[str] | list[HexStr],
         block_specifier: DefaultBlock | list[DefaultBlock] = BlockTag.latest,
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> int | list[int]:
         """
         Gets the number of transactions sent from a given EOA address
@@ -523,7 +552,7 @@ class EthRPC:
         self,
         contract_address: str | HexStr | list[str] | list[HexStr],
         block_specifier: DefaultBlock | list[DefaultBlock] = BlockTag.latest,
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> int | list[int]:
         """
         Gets the balance of the account a given address points to
@@ -547,7 +576,7 @@ class EthRPC:
                 ]
 
     async def get_gas_price(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> int:
         """
         Returns the current price per gas in Wei
@@ -564,7 +593,7 @@ class EthRPC:
         self,
         block_specifier: DefaultBlock | list[DefaultBlock],
         full_object: bool | list[bool] = True,
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> Block | list[Block] | None:
         """
         Returns a Block object which represents a block's state
@@ -589,7 +618,7 @@ class EthRPC:
         self,
         data: str | HexStr | list[str] | list[HexStr],
         full_object: bool | list[bool] = True,
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> Block | list[Block]:
         """
         Returns a Block object which represents a block's state
@@ -613,7 +642,7 @@ class EthRPC:
         self,
         transaction: dict | Transaction | list[dict] | list[Transaction],
         block_specifier: DefaultBlock | list[DefaultBlock] = BlockTag.latest,
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ):
         """
         Executes a message call immediately without creating a transaction on the blockchain, useful for tests
@@ -632,7 +661,7 @@ class EthRPC:
         self,
         tx_hash: str | HexStr | list[str] | list[HexStr],
         retries: int = 0,
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> Receipt | list[Receipt]:
         """
         Gets the receipt of a transaction given its hash, the definition of a receipt can be seen in dclasses.py
@@ -665,7 +694,7 @@ class EthRPC:
     async def send_raw_transaction(
         self,
         raw_transaction: str | HexStr | list[str] | list[HexStr],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ):
         """
         Returns the receipt of a transaction by transaction hash
@@ -682,7 +711,7 @@ class EthRPC:
     async def send_transaction(
         self,
         transaction: dict | list[dict],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ):
         """
         Sends a new method call transaction or contract creation
@@ -690,7 +719,7 @@ class EthRPC:
         return await self._send_message("eth_sendTransaction", [transaction], websocket)
 
     async def get_protocol_version(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> int:
         """
         Gets the ethereum protocol version the current node is using
@@ -703,7 +732,7 @@ class EthRPC:
                 return int(msg, 16)
 
     async def get_sync_status(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> bool | Sync:
         """
         Returns whether the connected node is syncing to the ethereum network
@@ -718,13 +747,13 @@ class EthRPC:
                 return Sync.from_dict(msg, infer_missing=True)
 
     async def get_coinbase(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> str | HexStr:
         msg = await self._send_message("eth_coinbase", [], websocket)
         return HexStr(msg) if msg is not None else msg
 
     async def get_chain_id(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> int:
         """
         Get the chain id to which the current node is connected, will be 1 for main chain ethereum
@@ -737,7 +766,7 @@ class EthRPC:
                 return int(msg, 16)
 
     async def is_mining(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> bool:
         """
         Gets whether the current node is mining a block, this is now meaningless with proof-of-stake
@@ -745,7 +774,7 @@ class EthRPC:
         return await self._send_message("eth_mining", [], websocket)
 
     async def get_hashrate(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> int:
         """
         Gets the rate at which a node is computing hashes for mining, now meaningless with proof-of-stake
@@ -758,7 +787,7 @@ class EthRPC:
                 return int(msg, 16)
 
     async def get_accounts(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> list[str | HexStr]:
         """
         Returns a list of addresses owned by client.
@@ -769,7 +798,7 @@ class EthRPC:
     async def get_transaction_count_by_hash(
         self,
         data: str | HexStr | list[str] | list[HexStr],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> int | list[int]:
         """
         Returns the number of transactions in a block from a block matching the given block hash.
@@ -790,7 +819,7 @@ class EthRPC:
     async def get_transaction_count_by_number(
         self,
         block_specifier: DefaultBlock | list[DefaultBlock],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> int | list[int]:
         """
         Returns the number of transactions in a block matching the given block number.
@@ -812,7 +841,7 @@ class EthRPC:
     async def get_uncle_count_by_hash(
         self,
         data: str | HexStr | list[str] | list[HexStr],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> int | list[int]:
         """
         Returns the number of uncles in a block from a block matching the given block hash.
@@ -833,7 +862,7 @@ class EthRPC:
     async def get_uncle_count_by_number(
         self,
         block_specifier: DefaultBlock | list[DefaultBlock],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> int | list[int]:
         """
         Returns the number of uncles in a block from a block matching the given block number.
@@ -856,7 +885,7 @@ class EthRPC:
         self,
         data: str | HexStr | list[str] | list[HexStr],
         block_specifier: DefaultBlock | list[DefaultBlock],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> str | HexStr | list[str] | list[HexStr]:
         """
         Returns code at a given address for a given block number.
@@ -871,7 +900,7 @@ class EthRPC:
         self,
         data: str | HexStr | list[str] | list[HexStr],
         message: str | HexStr | list[str] | list[HexStr],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> str | HexStr | list[str] | list[HexStr]:
         """
         Calculates the ethereum specific signature.
@@ -893,7 +922,7 @@ class EthRPC:
     async def sign_transaction(
         self,
         tx: TransactionFull | dict | list[TransactionFull] | list[dict],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> HexStr | list[HexStr]:
         """
         Signs a transaction that can be submitted to the network at a later time using with eth_sendRawTransaction.
@@ -915,7 +944,7 @@ class EthRPC:
         self,
         transaction: dict | list[dict],
         block_specifier: DefaultBlock | list[DefaultBlock] = BlockTag.latest,
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> int | list[int]:
         """
         Generates and returns an estimate of how much gas is necessary to allow the transaction to complete.
@@ -942,7 +971,7 @@ class EthRPC:
     async def get_transaction_by_hash(
         self,
         data: str | HexStr | list[str] | list[HexStr],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> TransactionFull | list[TransactionFull]:
         """
         Returns the information about a transaction requested by transaction hash.
@@ -967,7 +996,7 @@ class EthRPC:
         self,
         data: str | HexStr | list[str] | list[HexStr],
         index: int | list[int],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> TransactionFull | list[TransactionFull]:
         """
         Returns information about a transaction by block hash and transaction index position.
@@ -995,7 +1024,7 @@ class EthRPC:
         self,
         block_specifier: DefaultBlock | list[DefaultBlock],
         index: int | list[int],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> TransactionFull | list[TransactionFull]:
         """
         Returns information about a transaction by block number and transaction index position.
@@ -1026,7 +1055,7 @@ class EthRPC:
         self,
         data: str | HexStr | list[str] | list[HexStr],
         index: int | list[int],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> Block | list[Block]:
         """
         Returns information about an uncle of a block by hash and uncle index position.
@@ -1051,7 +1080,7 @@ class EthRPC:
         self,
         block_specifier: DefaultBlock | list[DefaultBlock],
         index: int | list[int],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> Block | list[Block]:
         """
         Returns information about an uncle of a block by number and uncle index position.
@@ -1077,11 +1106,10 @@ class EthRPC:
         self,
         block_count: DefaultBlock | list[DefaultBlock],
         newest_block: DefaultBlock | list[DefaultBlock],
-        reward_percentiles: list[HexStr]
-        | list[int]
-        | list[list[HexStr]]
-        | list[list[int]] = None,
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        reward_percentiles: (
+            list[HexStr] | list[int] | list[list[HexStr]] | list[list[int]]
+        ) = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> FeeHistory | list[FeeHistory]:
         """
         Returns a collection of historical gas information from which you can decide what to submit as your
@@ -1119,7 +1147,7 @@ class EthRPC:
         data: str | HexStr | list[str] | list[HexStr],
         storage_keys: list[HexStr] | list[str] | list[list[HexStr]] | list[list[str]],
         block_specifier: DefaultBlock | list[DefaultBlock] = BlockTag.latest,
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> Proof | list[Proof]:
         block_specifier = self._block_formatter(block_specifier)
         msg = await self._send_message(
@@ -1139,14 +1167,16 @@ class EthRPC:
         self,
         from_block: DefaultBlock | list[DefaultBlock],
         to_block: DefaultBlock | list[DefaultBlock],
-        address: str
-        | HexStr
-        | list[str]
-        | list[HexStr]
-        | list[list[str]]
-        | list[list[HexStr]],
+        address: (
+            str
+            | HexStr
+            | list[str]
+            | list[HexStr]
+            | list[list[str]]
+            | list[list[HexStr]]
+        ),
         topics: list[str] | list[HexStr] | list[list[str]] | list[list[HexStr]],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> int | list[int]:
         """
         Creates a filter object based on filter parameters to notify when the state changes.
@@ -1177,7 +1207,7 @@ class EthRPC:
                 ]
 
     async def new_block_filter(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> int:
         """
         Creates a filter in the endpoint to notify when a new block arrives.
@@ -1191,7 +1221,7 @@ class EthRPC:
                 return int(msg, 16)
 
     async def new_pending_transaction_filter(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> int:
         """
         Creates a filter in the endpoint to notify when new pending transactions arrive.
@@ -1207,7 +1237,7 @@ class EthRPC:
     async def uninstall_filter(
         self,
         filter_id: int | str | list[int] | list[str],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> bool | list[bool]:
         """
         Uninstalls a filter with a given name.
@@ -1224,7 +1254,7 @@ class EthRPC:
     async def get_filter_changes(
         self,
         filter_id: int | str | list[int] | list[str],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> list[HexStr] | list[list[HexStr]]:
         """
         Returns a list of all logs matching filter with given id.
@@ -1245,13 +1275,14 @@ class EthRPC:
                 return [HexStr(result) for result in msg]
             case _:
                 raise PythereumInvalidReturnException(
-                    f"Unexpected return of form {msg} in get_filter_changes"
+                    f"Unexpected return of form {msg} in get_filter_changes",
+                    self.logger,
                 )
 
     async def get_filter_logs(
         self,
         filter_id: int | str | list[int] | list[str],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> list[Log] | list[list[Log]]:
         """
         Returns a list of all logs matching the filter with the provided ID
@@ -1273,21 +1304,24 @@ class EthRPC:
                 return [Log.from_dict(result) for result in msg]
             case _:
                 raise PythereumInvalidReturnException(
-                    f"Unexpected return of form {msg} in get_filter_changes"
+                    f"Unexpected return of form {msg} in get_filter_changes",
+                    self.logger,
                 )
 
     async def get_logs(
         self,
         from_block: DefaultBlock | list[DefaultBlock],
         to_block: DefaultBlock | list[DefaultBlock],
-        address: str
-        | HexStr
-        | list[str]
-        | list[HexStr]
-        | list[list[str]]
-        | list[list[HexStr]],
+        address: (
+            str
+            | HexStr
+            | list[str]
+            | list[HexStr]
+            | list[list[str]]
+            | list[list[HexStr]]
+        ),
         topics: list[str] | list[HexStr] | list[list[str]] | list[list[HexStr]],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> list[Log] | list[list[Log]]:
         """
         :param from_block: Block from which the filter is active
@@ -1315,13 +1349,14 @@ class EthRPC:
                 return [Log.from_dict(result) for result in msg]
             case _:
                 raise PythereumInvalidReturnException(
-                    f"Unexpected return of form {msg} in get_filter_changes"
+                    f"Unexpected return of form {msg} in get_filter_changes",
+                    self.logger,
                 )
 
     # Web3 functions
 
     async def get_client_version(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> str:
         """
         Returns the current node's client version
@@ -1331,7 +1366,7 @@ class EthRPC:
     async def sha3(
         self,
         data: str | HexStr | list[str] | list[HexStr],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> HexStr | list[HexStr]:
         """
         Returns Keccak-256 of the given data
@@ -1347,13 +1382,13 @@ class EthRPC:
                 return [HexStr(result) for result in msg]
             case _:
                 raise PythereumInvalidReturnException(
-                    f"Unexpected return of form {msg} in sha3"
+                    f"Unexpected return of form {msg} in sha3", self.logger
                 )
 
     # Net functions
 
     async def get_net_version(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> int:
         """
         Returns the network version ID that the current node is connected to
@@ -1366,7 +1401,7 @@ class EthRPC:
                 return int(msg)
 
     async def get_net_listening(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> bool:
         """
         Returns whether a client is actively listening for network connections
@@ -1374,7 +1409,7 @@ class EthRPC:
         return await self._send_message("net_listening", [], websocket)
 
     async def get_net_peer_count(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> int:
         """
         Returns the number of peers connected to the connected node
@@ -1392,7 +1427,7 @@ class EthRPC:
         self,
         tx_limit: int,
         tx_filter: dict,
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> TransactionFull | list[TransactionFull]:
         """
         Access the memory pool for a given OpenEthereum parity node, does not work on other node types
@@ -1412,7 +1447,7 @@ class EthRPC:
     # Geth functions
 
     async def get_mempool_geth(
-        self, websocket: websockets.WebSocketClientProtocol | None = None
+        self, websocket: websockets.ClientConnection | None = None
     ) -> MempoolInfo | None:
         """
         Access the memory pool for a geth node, does not work on other node types
@@ -1444,7 +1479,7 @@ class EthRPC:
         self,
         method_name: str | HexStr | list[str] | list[HexStr],
         params: list[Any] | list[list[Any]],
-        websocket: websockets.WebSocketClientProtocol | None = None,
+        websocket: websockets.ClientConnection | None = None,
     ) -> Any:
         """
         Sends a custom method name method_name to the endpoint's url with the given parameter list
@@ -1456,8 +1491,8 @@ class EthRPC:
         if the function does not exist for the given params an error will be raised
         """
         return await self._send_message(method_name, params, websocket)
-       
-        
+
+
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
