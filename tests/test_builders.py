@@ -96,8 +96,6 @@ async def test_all_builders():
                 "Error -32602: invalid argument 0: json: cannot unmarshal non-string into "
                 "Go value of type hexutil.Bytes for builder https://builder0x69.io/"
                 "\nPlease consult your endpoint's documentation for info on error codes.",
-                "Error -32603: Timeout for builder https://rpc.lokibuilder.xyz/"
-                "\nPlease consult your endpoint's documentation for info on error codes.",
             )
 
 
