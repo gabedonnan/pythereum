@@ -4,7 +4,7 @@
 
 import pytest
 
-from pythereum import convert_eth, EthDenomination
+from pythereum import convert_eth, EthDenomination, to_checksum_address
 
 
 def test_eth_conversion():
@@ -15,6 +15,23 @@ def test_eth_conversion():
 
     assert convert_eth(1e18, "wei", "eth") == 1
     assert convert_eth(1, "eth", "wei") == 1e18
+
+
+def test_to_checksum_address():
+    assert (
+        to_checksum_address("0x5fC2E691E520bbd3499f409bb9602DBA94184672".lower())
+        == "0x5fC2E691E520bbd3499f409bb9602DBA94184672"
+    )
+
+    assert (
+        to_checksum_address("5fC2E691E520bbd3499f409bb9602DBA94184672".lower())
+        == "0x5fC2E691E520bbd3499f409bb9602DBA94184672"
+    )
+
+    assert (
+        to_checksum_address("0x5fC2E691E520bbd3499f409bb9602DBA94184672")
+        == "0x5fC2E691E520bbd3499f409bb9602DBA94184672"
+    )
 
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy

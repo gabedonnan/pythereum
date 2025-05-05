@@ -31,11 +31,11 @@ class ContractABI:
                     setattr(
                         self,
                         snake_case.sub("_", func["name"]).lower(),
-                        partial(self._encode_call, func["name"]),
+                        partial(self.encode_call, func["name"]),
                     )
                 else:
                     setattr(
-                        self, func["name"], partial(self._encode_call, func["name"])
+                        self, func["name"], partial(self.encode_call, func["name"])
                     )
 
         self._functions = {
@@ -43,6 +43,8 @@ class ContractABI:
             for func in data
             if "name" in func
         }
+
+        self.snake_case = to_snake_case
 
         self.logger = logger.getChild("ContractABI")
 
@@ -59,26 +61,60 @@ class ContractABI:
             pascal_name := name.replace("_", " ").title().replace(" ", "")
         ) in self._functions:
             return self._functions[pascal_name]
-        else:
-            raise PythereumABIException(
-                f"Neither {name} nor {pascal_name} is defined in this ABI", self.logger
-            )
 
-    def _encode_call(self, name: str, *args) -> str:
+        raise PythereumABIException(
+            f"Neither {name} nor {pascal_name} is defined in this ABI"
+        )
+
+    @property
+    def stored_functions(self):
+        """
+        Gets a list of the stored function names
+        """
+        return list(self._functions.keys())
+
+    def add_function(
+        self,
+        function_name: str,
+        argument_types: list | tuple,
+        argument_names: list | tuple | None = None,
+    ) -> None:
+        """
+        Adds a new function to an ABI
+        """
+        if argument_names is None:
+            self._functions[function_name] = [
+                ("_", arg_type) for arg_type in argument_types
+            ]
+        else:
+            self._functions[function_name] = list(zip(argument_names, argument_types))
+         
+        if self.snake_case:
+            setattr(
+                self,
+                snake_case.sub("_", function_name).lower(),
+                partial(self.encode_call, function_name),
+            )
+        else:
+            setattr(self, function_name, partial(self.encode_call, function_name))
+
+    def encode_call(self, name: str, *args) -> str:
+        """
+        Encodes an ABI call to a stored function with the specified arguments
+        """
         required_args: list[tuple] = self._functions[name]
 
         if len(args) != len(required_args):
             raise PythereumABIException(
-                f"Incorrect arguments, required arguments are {self.get_args(name)}",
-                self.logger,
+                f"Incorrect arguments, required arguments are {self.get_args(name)}", self.logger
             )
 
         arg_types = [arg[1] for arg in required_args]
         function_signature = name + "(" + ",".join(arg_types) + ")"
         return (
-            "0x"
-            + function_signature_to_4byte_selector(function_signature).hex()
-            + encode(arg_types, args).hex()
+                "0x"
+                + function_signature_to_4byte_selector(function_signature).hex()
+                + encode(arg_types, args).hex()
         )
 
 

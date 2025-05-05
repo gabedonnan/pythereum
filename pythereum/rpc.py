@@ -447,13 +447,17 @@ class EthRPC:
 
     @asynccontextmanager
     async def subscribe(
-        self, method: SubscriptionType, max_message_num: int = -1
+        self,
+        method: SubscriptionType,
+        max_message_num: int = -1,
+        filters: dict | None = None,
     ) -> Subscription:
         """
         :param method: The subscription's type, determined by a preset enum of possible types
         :param max_message_num: The maximum number of messages the subscription can receive,
             default -1 for infinite subscription.
             Eventually this will be replaced with a fleshed out filter to cancel subscriptions based on conditions.
+        :param filters: The filters for log subscription types
 
         This function is decorated with an async context manager such that it can be used in an async with statement
 
@@ -465,7 +469,7 @@ class EthRPC:
         async with self._pool.get_socket() as ws:
             subscription_id = ""
             try:
-                subscription_id = await self._get_subscription(method, ws)
+                subscription_id = await self._get_subscription(method, filters, ws)
                 sub = Subscription(
                     subscription_id=subscription_id,
                     socket=ws,
@@ -486,12 +490,17 @@ class EthRPC:
     async def _get_subscription(
         self,
         method: SubscriptionType,
+        filters: dict | None = None,
         websocket: websockets.ClientConnection | None = None,
     ) -> str:
         """
         Supporting function for self.subscribe, opening a subscription for the provided websocket
         """
-        return await self._send_message("eth_subscribe", [method.value], websocket)
+        params = [method.value]
+        if filters is not None:
+            params.append(filters)
+
+        return await self._send_message("eth_subscribe", params, websocket)
 
     async def _unsubscribe(
         self,
