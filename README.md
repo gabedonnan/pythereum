@@ -33,6 +33,7 @@ The following builder classes are currently implemented:
 - Builder0x69
 - Flashbots Builder
 - Beaver Builder
+- Aqua Builder (refund-only; not included in `ALL_BUILDERS`)
 
 
 Titan Builder and Flashbots now have support for [mevboost](https://mevboost.pics) bundles.

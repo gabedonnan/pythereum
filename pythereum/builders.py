@@ -214,6 +214,41 @@ class FlashbotsBuilder(Builder):
         return [{"tx": tx, "preferences": preferences}]
 
 
+class AquaBuilder(Builder):
+    """
+    Aqua Builder (https://aquabuilder.online), an independent rbuilder-based mainnet builder.
+    Refund-only: bundles must include refundPercent and/or refundRecipient, otherwise the
+    endpoint answers with a JSON-RPC error. For that reason it is not part of ALL_BUILDERS;
+    add it explicitly when your bundles carry refund fields.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "https://rpc.aquabuilder.online",
+            "eth_sendRawTransaction",
+            "eth_sendBundle",
+            "eth_cancelBundle",
+            "aqua",
+            {
+                "txs",
+                "blockNumber",
+                "minTimestamp",
+                "maxTimestamp",
+                "revertingTxHashes",
+                "refundPercent",
+                "refundRecipient",
+                "refundTxHashes",
+            },
+        )
+
+    def format_private_transaction(
+        self,
+        tx: str | HexStr | list[str] | list[HexStr],
+        max_block_number: str | HexStr | list[str] | list[HexStr] | None = None,
+    ) -> list[Any]:
+        return [tx]
+
+
 # Tuple of the types of builders which use flashbots headers for their transactions
 FLASHBOTS_BUILDER_TYPES = (
     FlashbotsBuilder,

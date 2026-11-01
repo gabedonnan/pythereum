@@ -19,6 +19,7 @@ from pythereum.builders import (
     TitanBuilder,
     RsyncBuilder,
     FlashbotsBuilder,
+    AquaBuilder,
     ALL_BUILDERS,
 )
 
